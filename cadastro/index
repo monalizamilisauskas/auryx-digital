@@ -504,7 +504,7 @@ async function submitForm(){
   btnNext.disabled = true; btnNext.textContent = I18N[lang]["nav.sending"];
   document.getElementById("fatalMsg").classList.remove("show");
   try{
-    const res = await fetch("REPLACE_WITH_N8N_WEBHOOK_URL", {
+    const res = await fetch("https://cutcall.app.n8n.cloud/webhook/onboarding-self-service", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify(data)

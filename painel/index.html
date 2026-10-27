@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
   :root{
     --ink:#000000; --panel:#0A0A0A; --panel-2:#141414; --panel-3:#1B1811;
@@ -109,6 +109,34 @@
 
   .refresh-row{ display:flex; justify-content:flex-end; margin-top:20px; }
   .refresh-row .btn{ font-size:12.5px; padding:9px 18px; }
+
+  .link-btn{ background:none; border:none; color:var(--muted); font-size:13px; cursor:pointer; margin-top:16px; text-decoration:underline; font-family:'Inter',sans-serif; }
+  .link-btn:hover{ color:var(--parchment); }
+  .ok-msg{ background:rgba(124,184,143,0.1); border:1px solid rgba(124,184,143,0.3); color:var(--good); border-radius:8px; padding:11px 14px; font-size:13px; margin-bottom:18px; display:none; }
+  .ok-msg.show{ display:block; }
+  .badge{ display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--gold); border:1px solid var(--line-strong); border-radius:20px; padding:4px 10px; margin-left:10px; vertical-align:middle; }
+  .panel{ border:1px solid var(--line); border-radius:12px; background:var(--panel); padding:24px 22px; margin-bottom:20px; }
+  .panel h2{ font-family:'Fraunces',serif; font-weight:500; font-size:19px; margin:0 0 6px; }
+  .panel .sub{ color:var(--muted); font-size:13.5px; margin:0 0 16px; line-height:1.5; }
+  .usage-bar{ height:10px; background:var(--panel-3); border-radius:6px; overflow:hidden; margin:12px 0 8px; }
+  .usage-fill{ height:100%; background:linear-gradient(90deg, var(--gold), var(--gold-bright)); width:0; transition:width .6s; }
+  .usage-fill.alto{ background:linear-gradient(90deg, #c98a27, var(--bad)); }
+  .usage-row{ display:flex; justify-content:space-between; font-size:13.5px; color:var(--muted); }
+  .usage-row strong{ color:var(--parchment); font-size:15px; }
+  .planos{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:14px; }
+  @media (max-width:700px){ .planos{ grid-template-columns:1fr; } }
+  .plano{ border:1px solid var(--line); border-radius:10px; padding:16px; background:var(--panel-2); }
+  .plano .n{ font-family:'Fraunces',serif; font-size:17px; margin-bottom:4px; }
+  .plano .p{ color:var(--gold-bright); font-weight:600; margin-bottom:4px; }
+  .plano .l{ color:var(--muted); font-size:12.5px; margin-bottom:12px; }
+  .plano .btn{ width:100%; text-align:center; display:block; text-decoration:none; padding:9px; font-size:13px; }
+  .pedido{ border-top:1px solid var(--line); padding:14px 0; }
+  .pedido:first-child{ border-top:none; padding-top:0; }
+  .pedido .t{ display:flex; justify-content:space-between; gap:12px; font-size:14px; margin-bottom:6px; }
+  .pedido .t span{ color:var(--muted); font-size:12.5px; white-space:nowrap; }
+  .pedido .d{ color:var(--muted); font-size:13px; line-height:1.6; }
+  .pedido .d b{ color:var(--parchment); font-weight:500; }
+  .pedido a{ color:var(--gold-bright); font-size:12.5px; }
 </style>
 </head>
 <body>
@@ -123,8 +151,9 @@
   <div class="login-card" id="loginCard">
     <p class="eyebrow">Painel do cliente</p>
     <h1>Entrar</h1>
-    <p class="sub">Acesse os números da sua AI Secretária.</p>
+    <p class="sub">Acompanhe a sua AI Secretária.</p>
     <div class="error-msg" id="loginError"></div>
+    <div class="ok-msg" id="loginOk"></div>
     <form id="loginForm">
       <div class="field">
         <label for="email">E-mail</label>
@@ -136,137 +165,194 @@
       </div>
       <button type="submit" class="btn btn-primary" id="loginBtn">Entrar</button>
     </form>
+    <button class="link-btn" id="forgotBtn" type="button">Esqueci minha senha</button>
   </div>
 
-  <!-- DASHBOARD -->
+  <!-- CRIAR / TROCAR SENHA (link do e-mail) -->
+  <div class="login-card" id="passwordCard" style="display:none;">
+    <p class="eyebrow">Painel do cliente</p>
+    <h1>Crie sua senha</h1>
+    <p class="sub">Use pelo menos 8 caracteres. É com ela que você entra no painel.</p>
+    <div class="error-msg" id="passwordError"></div>
+    <form id="passwordForm">
+      <div class="field">
+        <label for="newPassword">Nova senha</label>
+        <input type="password" id="newPassword" required minlength="8" autocomplete="new-password">
+      </div>
+      <div class="field">
+        <label for="newPassword2">Repita a senha</label>
+        <input type="password" id="newPassword2" required minlength="8" autocomplete="new-password">
+      </div>
+      <button type="submit" class="btn btn-primary" id="passwordBtn">Salvar senha e entrar</button>
+    </form>
+  </div>
+
+  <!-- PAINEL -->
   <div class="dash" id="dash">
     <div class="dash-head">
       <p class="eyebrow">Painel do cliente</p>
-      <h1 id="bizName">Seu negócio</h1>
-      <p class="sub">Últimos 7 dias</p>
+      <h1><span id="bizName">Seu negócio</span><span class="badge" id="planBadge"></span></h1>
+      <p class="sub" id="trialInfo"></p>
     </div>
-
-    <div id="dashContent">
-      <div class="metric-grid">
-        <div class="metric-card">
-          <div class="label">Mensagens</div>
-          <div class="value neutral" id="mMensagens">—</div>
-        </div>
-        <div class="metric-card">
-          <div class="label">Agendamentos fechados</div>
-          <div class="value" id="mAgendamentos">—</div>
-        </div>
-        <div class="metric-card">
-          <div class="label">Transferidos p/ humano</div>
-          <div class="value neutral" id="mHandoffs">—</div>
-        </div>
-        <div class="metric-card">
-          <div class="label">Resolvido pela IA</div>
-          <div class="value" id="mTaxa">—</div>
-        </div>
-      </div>
-      <p class="period-note">Atualizado agora mesmo — os números refletem os últimos 7 dias.</p>
-      <div class="refresh-row"><button class="btn" id="refreshBtn">Atualizar</button></div>
-    </div>
+    <div id="dashContent"></div>
+    <div class="refresh-row"><button class="btn" id="refreshBtn">Atualizar</button></div>
   </div>
 </main>
 
 <script>
-const SUPABASE_URL = "https://skwngzuqbrfbfpsgtura.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNrd25nenVxYnJmYmZwc2d0dXJhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3ODEyOTEsImV4cCI6MjEwMTM1NzI5MX0.mkHEBjw0GJ6e4N9vqKfQUPlh8ukZXxhuvowdFwgC9hA";
+const SUPABASE_URL = "https://ypqmrjvuotctiyydfpgb.supabase.co";
+const SUPABASE_KEY = "sb_publishable_V87H9FaZ0gHFm1krAnpZRg_an0puUit"; // chave pública; os dados são protegidos pelo login
+const PAINEL_URL = "https://auryx.digital/painel";
 
-const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// O link do e-mail (convite ou recuperação) chega com "type=invite" ou "type=recovery" no endereço.
+const hashInicial = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+const precisaCriarSenha = ["invite", "recovery"].includes(hashInicial.get("type"));
+const erroNoLink = hashInicial.get("error_description");
 
-const loginCard = document.getElementById('loginCard');
-const dash = document.getElementById('dash');
-const logoutBtn = document.getElementById('logoutBtn');
-const loginForm = document.getElementById('loginForm');
-const loginError = document.getElementById('loginError');
-const loginBtn = document.getElementById('loginBtn');
+const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-function showError(msg){
-  loginError.textContent = msg;
-  loginError.classList.add('show');
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+const moeda = (v) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 });
+const dataBR = (iso) => new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+const dataHoraBR = (iso) => new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+
+function mostrar(tela){
+  $("loginCard").style.display = tela === "login" ? "block" : "none";
+  $("passwordCard").style.display = tela === "senha" ? "block" : "none";
+  $("dash").classList.toggle("show", tela === "painel");
+  $("logoutBtn").style.display = tela === "painel" ? "inline-block" : "none";
 }
-function clearError(){
-  loginError.classList.remove('show');
-  loginError.textContent = '';
-}
+function aviso(id, msg){ const el = $(id); el.textContent = msg; el.classList.toggle("show", !!msg); }
 
-function showDash(){
-  loginCard.style.display = 'none';
-  dash.classList.add('show');
-  logoutBtn.style.display = 'inline-block';
-}
-function showLogin(){
-  loginCard.style.display = 'block';
-  dash.classList.remove('show');
-  logoutBtn.style.display = 'none';
-}
-
-async function loadMetrics(){
-  const content = document.getElementById('dashContent');
-  const { data, error } = await supa.rpc('get_dashboard_metrics');
-
+async function carregarPainel(){
+  const content = $("dashContent");
+  content.innerHTML = '<div class="empty-state"><p>Carregando…</p></div>';
+  const { data, error } = await supa.rpc("get_painel");
   if (error){
-    content.innerHTML = `<div class="empty-state"><p>Não conseguimos carregar seus dados agora. Tente atualizar a página em alguns instantes, ou fale com a gente em hello@auryx.digital.</p></div>`;
+    content.innerHTML = '<div class="empty-state"><p>Não conseguimos carregar seus dados agora. Tente atualizar em alguns instantes ou fale com a gente em hello@auryx.digital.</p></div>';
     return;
   }
-
-  const row = Array.isArray(data) ? data[0] : data;
-  if (!row){
-    content.innerHTML = `<div class="empty-state"><p>Ainda não há dados suficientes para mostrar aqui.</p></div>`;
+  if (!data){
+    $("bizName").textContent = "Painel";
+    content.innerHTML = '<div class="empty-state"><p>Não encontramos um negócio ligado a este e-mail. Fale com a gente em hello@auryx.digital.</p></div>';
     return;
   }
-
-  document.getElementById('bizName').textContent = row.nome_negocio || 'Seu negócio';
-  document.getElementById('mMensagens').textContent = row.mensagens_semana ?? '0';
-  document.getElementById('mAgendamentos').textContent = row.agendamentos_semana ?? '0';
-  document.getElementById('mHandoffs').textContent = row.handoffs_semana ?? '0';
-  document.getElementById('mTaxa').textContent = (row.taxa_resolucao === null || row.taxa_resolucao === undefined)
-    ? '—'
-    : row.taxa_resolucao + '%';
+  render(data);
 }
 
-loginForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  clearError();
-  const email = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value;
-
-  loginBtn.disabled = true;
-  loginBtn.innerHTML = '<span class="spinner"></span>Entrando...';
-
-  const { data, error } = await supa.auth.signInWithPassword({ email, password });
-
-  loginBtn.disabled = false;
-  loginBtn.textContent = 'Entrar';
-
-  if (error){
-    showError('E-mail ou senha incorretos. Confira e tente de novo.');
-    return;
+function render(d){
+  $("bizName").textContent = d.nome || "Seu negócio";
+  $("planBadge").textContent = d.plano_nome || "";
+  const emTeste = d.plano_id === "trial";
+  let trialTxt = "";
+  if (emTeste && d.trial_fim){
+    const dias = Math.ceil((new Date(d.trial_fim) - Date.now()) / 86400000);
+    trialTxt = dias > 0
+      ? "Teste grátis até " + dataBR(d.trial_fim) + " (" + dias + (dias === 1 ? " dia restante)" : " dias restantes)")
+      : "Seu teste grátis terminou em " + dataBR(d.trial_fim) + ". Escolha um plano para continuar.";
   }
+  $("trialInfo").textContent = trialTxt;
 
-  showDash();
-  await loadMetrics();
-});
+  const usadas = Number(d.mensagens_usadas || 0);
+  const limite = d.limite_mensagens ? Number(d.limite_mensagens) : null;
+  const pct = limite ? Math.min(100, Math.round(usadas / limite * 100)) : 0;
+  const s = d.semana || {};
+  let html = '';
 
-logoutBtn.addEventListener('click', async () => {
-  await supa.auth.signOut();
-  showLogin();
-});
+  html += '<div class="panel"><h2>Uso de mensagens</h2>'
+    + '<p class="sub">' + (emTeste ? "Mensagens respondidas pela secretária durante o teste." : "Mensagens respondidas pela secretária neste mês.") + '</p>'
+    + '<div class="usage-row"><span><strong>' + usadas + '</strong> ' + (limite ? 'de ' + limite + ' mensagens' : 'mensagens') + '</span>'
+    + (limite ? '<span>' + Math.max(0, limite - usadas) + ' restantes</span>' : '') + '</div>'
+    + (limite ? '<div class="usage-bar"><div class="usage-fill' + (pct >= 90 ? ' alto' : '') + '" style="width:' + pct + '%"></div></div>' : '')
+    + '</div>';
 
-document.getElementById('refreshBtn').addEventListener('click', loadMetrics);
+  html += '<div class="metric-grid">'
+    + '<div class="metric-card"><div class="label">Mensagens recebidas</div><div class="value neutral">' + (s.mensagens || 0) + '</div></div>'
+    + '<div class="metric-card"><div class="label">Conversas</div><div class="value neutral">' + (s.conversas || 0) + '</div></div>'
+    + '<div class="metric-card"><div class="label">Pedidos recebidos</div><div class="value">' + (s.pedidos || 0) + '</div></div>'
+    + '<div class="metric-card"><div class="label">Passadas p/ equipe</div><div class="value neutral">' + (s.transferidas || 0) + '</div></div>'
+    + '</div><p class="period-note">Últimos 7 dias.</p>';
 
-/* On load, check if already logged in */
-(async () => {
-  const { data: { session } } = await supa.auth.getSession();
-  if (session){
-    showDash();
-    await loadMetrics();
+  const pedidos = d.pedidos_recentes || [];
+  html += '<div class="panel" style="margin-top:20px;"><h2>Pedidos recentes</h2>'
+    + '<p class="sub">Pedidos que a secretária coletou e passou para a sua equipe.</p>';
+  if (!pedidos.length){
+    html += '<p class="sub" style="margin:0;">Nenhum pedido ainda.</p>';
   } else {
-    showLogin();
+    pedidos.forEach(p => {
+      const titulo = (d.itens && d.itens[p.item]) || p.item;
+      const campos = Object.entries(p.dados || {}).map(([k, v]) => '<b>' + esc(k) + ':</b> ' + esc(v)).join(' · ');
+      html += '<div class="pedido"><div class="t">' + esc(titulo) + '<span>' + dataHoraBR(p.created_at) + '</span></div>'
+        + '<div class="d">' + campos + '</div>'
+        + '<a href="https://wa.me/' + esc(p.remetente) + '" target="_blank" rel="noopener">Responder no WhatsApp</a></div>';
+    });
   }
+  html += '</div>';
+
+  if (emTeste && (d.planos || []).length){
+    html += '<div class="panel"><h2>Escolha seu plano</h2><p class="sub">Continue com a sua secretária depois do teste grátis. Depois de contratar, você personaliza as respostas e os serviços aqui no painel.</p><div class="planos">';
+    d.planos.forEach(p => {
+      html += '<div class="plano"><div class="n">' + esc(p.nome) + '</div><div class="p">' + moeda(p.preco_brl) + '/mês</div>'
+        + '<div class="l">Até ' + Number(p.limite || 0).toLocaleString("pt-BR") + ' mensagens/mês</div>'
+        + (p.link ? '<a class="btn btn-primary" href="' + esc(p.link) + '" target="_blank" rel="noopener">Assinar</a>' : '')
+        + '</div>';
+    });
+    html += '</div></div>';
+  }
+
+  $("dashContent").innerHTML = html;
+}
+
+$("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  aviso("loginError", ""); aviso("loginOk", "");
+  const btn = $("loginBtn");
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Entrando...';
+  const { error } = await supa.auth.signInWithPassword({ email: $("email").value.trim(), password: $("password").value });
+  btn.disabled = false; btn.textContent = "Entrar";
+  if (error){ aviso("loginError", "E-mail ou senha incorretos. Confira e tente de novo."); return; }
+  mostrar("painel"); carregarPainel();
+});
+
+$("forgotBtn").addEventListener("click", async () => {
+  aviso("loginError", ""); aviso("loginOk", "");
+  const email = $("email").value.trim();
+  if (!email){ aviso("loginError", "Digite o seu e-mail acima e clique de novo em “Esqueci minha senha”."); return; }
+  const { error } = await supa.auth.resetPasswordForEmail(email, { redirectTo: PAINEL_URL });
+  if (error){ aviso("loginError", "Não conseguimos enviar o e-mail agora. Tente de novo em alguns minutos."); return; }
+  aviso("loginOk", "Se este e-mail tiver cadastro, enviamos um link para criar uma nova senha.");
+});
+
+$("passwordForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  aviso("passwordError", "");
+  const s1 = $("newPassword").value, s2 = $("newPassword2").value;
+  if (s1.length < 8){ aviso("passwordError", "A senha precisa ter pelo menos 8 caracteres."); return; }
+  if (s1 !== s2){ aviso("passwordError", "As duas senhas não são iguais."); return; }
+  const btn = $("passwordBtn");
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Salvando...';
+  const { error } = await supa.auth.updateUser({ password: s1 });
+  btn.disabled = false; btn.textContent = "Salvar senha e entrar";
+  if (error){ aviso("passwordError", "Não foi possível salvar a senha. Abra de novo o link do e-mail ou peça um novo em “Esqueci minha senha”."); return; }
+  history.replaceState(null, "", window.location.pathname);
+  mostrar("painel"); carregarPainel();
+});
+
+$("logoutBtn").addEventListener("click", async () => { await supa.auth.signOut(); mostrar("login"); });
+$("refreshBtn").addEventListener("click", carregarPainel);
+
+(async function iniciar(){
+  if (erroNoLink){
+    mostrar("login");
+    aviso("loginError", "Este link expirou ou já foi usado. Digite seu e-mail e clique em “Esqueci minha senha” para receber um novo.");
+    history.replaceState(null, "", window.location.pathname);
+    return;
+  }
+  const { data: { session } } = await supa.auth.getSession();
+  if (session && precisaCriarSenha){ mostrar("senha"); return; }
+  if (session){ mostrar("painel"); carregarPainel(); return; }
+  mostrar("login");
 })();
 </script>
 </body>

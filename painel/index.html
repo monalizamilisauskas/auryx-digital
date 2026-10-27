@@ -137,6 +137,21 @@
   .pedido .d{ color:var(--muted); font-size:13px; line-height:1.6; }
   .pedido .d b{ color:var(--parchment); font-weight:500; }
   .pedido a{ color:var(--gold-bright); font-size:12.5px; }
+  .faq-row{ position:relative; border:1px solid var(--line); border-radius:10px; padding:12px 40px 12px 12px; margin-bottom:12px; background:var(--panel-2); }
+  .faq-row input, .faq-row textarea{ width:100%; background:var(--panel-3); border:1px solid var(--line); color:var(--parchment); border-radius:8px; padding:10px 12px; font-size:14px; font-family:'Inter',sans-serif; }
+  .faq-row textarea{ min-height:64px; margin-top:8px; resize:vertical; }
+  .faq-row input:focus, .faq-row textarea:focus{ outline:none; border-color:var(--gold); }
+  .faq-del{ position:absolute; top:8px; right:8px; background:none; border:none; color:var(--muted); font-size:18px; cursor:pointer; }
+  .faq-del:hover{ color:var(--bad); }
+  .servicos{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin:8px 0 6px; }
+  @media (max-width:600px){ .servicos{ grid-template-columns:1fr; } }
+  .servico{ display:flex; gap:10px; align-items:center; border:1px solid var(--line); border-radius:10px; padding:11px 12px; background:var(--panel-2); font-size:14px; cursor:pointer; }
+  .servico input{ accent-color:var(--gold); width:16px; height:16px; }
+  .subtitulo{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--gold); margin:22px 0 10px; }
+  .acoes{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:18px; }
+  .acoes .msg{ font-size:13px; }
+  .acoes .msg.ok{ color:var(--good); } .acoes .msg.erro{ color:var(--bad); }
+  .bloqueado{ color:var(--muted); font-size:14px; line-height:1.6; }
 </style>
 </head>
 <body>
@@ -210,6 +225,8 @@ const precisaCriarSenha = ["invite", "recovery"].includes(hashInicial.get("type"
 const erroNoLink = hashInicial.get("error_description");
 
 const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let emailLogado = "";
+let faqEdicao = [];
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
@@ -238,6 +255,8 @@ async function carregarPainel(){
     content.innerHTML = '<div class="empty-state"><p>Não encontramos um negócio ligado a este e-mail. Fale com a gente em hello@auryx.digital.</p></div>';
     return;
   }
+  const { data: u } = await supa.auth.getUser();
+  emailLogado = (u && u.user && u.user.email) || "";
   render(data);
 }
 
@@ -295,13 +314,76 @@ function render(d){
     d.planos.forEach(p => {
       html += '<div class="plano"><div class="n">' + esc(p.nome) + '</div><div class="p">' + moeda(p.preco_brl) + '/mês</div>'
         + '<div class="l">Até ' + Number(p.limite || 0).toLocaleString("pt-BR") + ' mensagens/mês</div>'
-        + (p.link ? '<a class="btn btn-primary" href="' + esc(p.link) + '" target="_blank" rel="noopener">Assinar</a>' : '')
+        + (p.link ? '<a class="btn btn-primary" href="' + esc(linkPagamento(p.link, d.id)) + '" target="_blank" rel="noopener">Assinar</a>' : '')
         + '</div>';
     });
     html += '</div></div>';
   }
 
+  html += '<div class="panel" id="personalizar"></div>';
   $("dashContent").innerHTML = html;
+  renderPersonalizar(d);
+}
+
+// O Stripe guarda de qual negócio e e-mail veio a assinatura (para ativar o plano certo).
+function linkPagamento(link, businessId){
+  try{
+    const u = new URL(link);
+    if (businessId) u.searchParams.set("client_reference_id", "negocio_" + businessId);
+    if (emailLogado) u.searchParams.set("prefilled_email", emailLogado);
+    return u.toString();
+  }catch(e){ return link; }
+}
+
+/* ---------- Personalizar a secretária (só para planos pagos) ---------- */
+function renderPersonalizar(d){
+  const box = $("personalizar");
+  if (!d.pode_personalizar){
+    box.innerHTML = '<h2>Personalizar sua secretária 🔒</h2>'
+      + '<p class="bloqueado">Disponível depois de assinar um plano: você edita as perguntas e respostas da secretária e escolhe quais serviços ela oferece aos seus clientes.</p>';
+    return;
+  }
+  faqEdicao = (Array.isArray(d.faq) ? d.faq : []).map(f => ({ pergunta: f.pergunta || "", resposta: f.resposta || "" }));
+  const servicos = d.servicos || [];
+  box.innerHTML = '<h2>Personalizar sua secretária</h2>'
+    + '<p class="sub">A secretária responde exatamente com o que estiver aqui. Se faltar uma informação, ela diz que a equipe vai confirmar, e nunca inventa.</p>'
+    + '<div class="subtitulo">Perguntas e respostas</div><div id="faqLista"></div>'
+    + '<button class="btn" type="button" id="faqAdd">+ Adicionar pergunta</button>'
+    + (servicos.length ? '<div class="subtitulo">Serviços que você oferece</div>'
+      + '<p class="sub" style="margin-bottom:8px;">Desmarque o que você não faz: a secretária deixa de oferecer e tira do menu.</p>'
+      + '<div class="servicos">' + servicos.map(s => '<label class="servico"><input type="checkbox" data-servico="' + esc(s.id) + '"' + (s.ativo ? ' checked' : '') + '> ' + esc(s.titulo) + '</label>').join('') + '</div>' : '')
+    + '<div class="acoes"><button class="btn btn-primary" type="button" id="salvarPers">Salvar alterações</button><span class="msg" id="persMsg"></span></div>';
+  renderFaqLista();
+  $("faqAdd").addEventListener("click", () => { faqEdicao.push({ pergunta: "", resposta: "" }); renderFaqLista(); });
+  $("salvarPers").addEventListener("click", salvarPersonalizacao);
+}
+
+function renderFaqLista(){
+  const lista = $("faqLista");
+  lista.innerHTML = "";
+  faqEdicao.forEach((f, i) => {
+    const row = document.createElement("div"); row.className = "faq-row";
+    const q = document.createElement("input"); q.value = f.pergunta; q.placeholder = "Pergunta (ex.: Vocês atendem aos domingos?)";
+    q.addEventListener("input", () => { f.pergunta = q.value; });
+    const a = document.createElement("textarea"); a.value = f.resposta; a.placeholder = "Sua resposta";
+    a.addEventListener("input", () => { f.resposta = a.value; });
+    const del = document.createElement("button"); del.type = "button"; del.className = "faq-del"; del.textContent = "×"; del.title = "Remover";
+    del.addEventListener("click", () => { faqEdicao.splice(i, 1); renderFaqLista(); });
+    row.appendChild(del); row.appendChild(q); row.appendChild(a); lista.appendChild(row);
+  });
+  $("faqAdd").style.display = faqEdicao.length >= 30 ? "none" : "inline-block";
+}
+
+async function salvarPersonalizacao(){
+  const msg = $("persMsg"); const btn = $("salvarPers");
+  msg.className = "msg"; msg.textContent = "";
+  const desativados = Array.from(document.querySelectorAll("[data-servico]")).filter(c => !c.checked).map(c => c.getAttribute("data-servico"));
+  const faq = faqEdicao.map(f => ({ pergunta: f.pergunta.trim(), resposta: f.resposta.trim() })).filter(f => f.pergunta && f.resposta);
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Salvando...';
+  const { error } = await supa.rpc("salvar_personalizacao", { p_faq: faq, p_desativados: desativados });
+  btn.disabled = false; btn.textContent = "Salvar alterações";
+  if (error){ msg.className = "msg erro"; msg.textContent = "Não foi possível salvar agora. Tente de novo em alguns instantes."; return; }
+  msg.className = "msg ok"; msg.textContent = "Salvo! A secretária já usa as informações novas.";
 }
 
 $("loginForm").addEventListener("submit", async (e) => {

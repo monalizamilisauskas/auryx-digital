@@ -156,6 +156,13 @@
 
   .connect-box{ margin-top:26px; padding:18px 18px 16px; border:1px solid var(--line); border-radius:var(--radius); background:var(--panel); }
   .connect-title{ margin:0 0 6px; font-weight:600; color:var(--parchment); font-size:14.5px; }
+  .faq-extra{ margin-top:30px; padding-top:22px; border-top:1px solid var(--line); }
+  .faq-row{ position:relative; margin-bottom:16px; padding:14px 40px 14px 14px; border:1px solid var(--line); border-radius:var(--radius); background:var(--panel); }
+  .faq-row input, .faq-row textarea{ background:var(--panel-2); }
+  .faq-row textarea{ min-height:60px; margin-top:8px; }
+  .faq-remove{ position:absolute; top:10px; right:10px; background:none; border:none; color:var(--muted); font-size:18px; cursor:pointer; line-height:1; padding:4px; }
+  .faq-remove:hover{ color:var(--error); }
+  .btn-small{ padding:9px 18px; font-size:13.5px; }
   .fatal{ display:none; }
   .fatal.show{ display:block; color:var(--error); font-size:13.5px; margin-top:16px; }
 </style>
@@ -245,6 +252,13 @@
       <div class="field" data-field="faq_adicional">
         <label data-i18n="s2.adicional.label">Mais alguma coisa que seus clientes costumam perguntar? <span style="color:var(--muted); font-weight:400;" data-i18n="s2.adicional.optional">(opcional)</span></label>
         <input type="text" name="faq_adicional" data-i18n-ph="s2.adicional.ph">
+      </div>
+
+      <div class="faq-extra">
+        <p class="connect-title" data-i18n="s2.extra.title">Perguntas do seu negócio</p>
+        <p class="help" data-i18n="s2.extra.help">Responda as perguntas que seus clientes costumam fazer. Deixe em branco ou remova as que não se aplicam, e adicione outras. Sua IA responde exatamente com o que você escrever.</p>
+        <div id="faqExtraList"></div>
+        <button type="button" class="btn btn-ghost btn-small" id="btnAddFaq" data-i18n="s2.extra.add">+ Adicionar pergunta</button>
       </div>
     </section>
 
@@ -349,6 +363,10 @@ const I18N = {
     "s2.pagamento.label":"Quais formas de pagamento vocês aceitam?","s2.pagamento.ph":"Ex: dinheiro, cartão, transferência",
     "s2.adicional.label":"Mais alguma coisa que seus clientes costumam perguntar?","s2.adicional.optional":"(opcional)",
     "s2.adicional.ph":"Ex: garantia do serviço",
+    "s2.extra.title":"Perguntas do seu negócio",
+    "s2.extra.help":"Responda as perguntas que seus clientes costumam fazer. Deixe em branco ou remova as que não se aplicam, e adicione outras. Sua IA responde exatamente com o que você escrever.",
+    "s2.extra.add":"+ Adicionar pergunta","s2.extra.q.ph":"Pergunta (ex: Vocês atendem aos domingos?)",
+    "s2.extra.a.ph":"Sua resposta","s2.extra.remove":"Remover","review.faq_extra":"Perguntas do negócio",
     "s3.eyebrow":"03 — Preferências","s3.title":"Como sua IA deve falar",
     "s3.sub":"Ajustamos o idioma e o fuso horário para cada conversa e cada agendamento.",
     "s3.idioma.label":"Idioma padrão","s3.idioma.pt":"Português","s3.idioma.en":"English",
@@ -395,6 +413,10 @@ const I18N = {
     "s2.pagamento.label":"What payment methods do you accept?","s2.pagamento.ph":"e.g. cash, card, bank transfer",
     "s2.adicional.label":"Anything else customers usually ask?","s2.adicional.optional":"(optional)",
     "s2.adicional.ph":"e.g. warranty on the work",
+    "s2.extra.title":"Your business questions",
+    "s2.extra.help":"Answer the questions your customers usually ask. Leave blank or remove the ones that don't apply, and add your own. Your AI answers exactly with what you write.",
+    "s2.extra.add":"+ Add question","s2.extra.q.ph":"Question (e.g. Are you open on Sundays?)",
+    "s2.extra.a.ph":"Your answer","s2.extra.remove":"Remove","review.faq_extra":"Business questions",
     "s3.eyebrow":"03 — Preferences","s3.title":"How your AI should speak",
     "s3.sub":"We tailor the language and time zone for every conversation and booking.",
     "s3.idioma.label":"Default language","s3.idioma.pt":"Português","s3.idioma.en":"English",
@@ -458,6 +480,7 @@ document.querySelectorAll(".langtoggle button").forEach(btn=>{
     btn.classList.add("active");
     lang = btn.getAttribute("data-lang");
     applyI18n();
+    renderFaqExtra();
   });
 });
 
@@ -501,6 +524,8 @@ function validateStep(n){
 
 function buildReview(){
   const data = collectData();
+  const extras = faqExtraPreenchido();
+  if (extras.length) data.faq_extra = extras.map(f => f.pergunta).join(" · ");
   const list = document.getElementById("reviewList");
   list.innerHTML = "";
   Object.entries(data).forEach(([k,v])=>{
@@ -538,6 +563,62 @@ btnNext.addEventListener("click", async ()=>{
 
 btnBack.addEventListener("click", ()=>{
   if (currentStep > 1){ currentStep--; showStep(currentStep); }
+});
+
+/* ---------------- Perguntas do negócio (sugestões por tipo + personalizadas) ---------------- */
+const SUPABASE_URL = "https://ypqmrjvuotctiyydfpgb.supabase.co";
+const SUPABASE_KEY = "sb_publishable_V87H9FaZ0gHFm1krAnpZRg_an0puUit"; // chave pública: só lê os modelos de negócio
+const MAX_FAQ_EXTRA = 10;
+let faqExtra = []; // { pergunta, resposta, sugerida }
+
+function renderFaqExtra(){
+  const list = document.getElementById("faqExtraList");
+  list.innerHTML = "";
+  faqExtra.forEach((item, i)=>{
+    const row = document.createElement("div"); row.className = "faq-row";
+    const q = document.createElement("input"); q.type = "text"; q.value = item.pergunta;
+    q.placeholder = I18N[lang]["s2.extra.q.ph"];
+    q.addEventListener("input", ()=>{ item.pergunta = q.value; });
+    const a = document.createElement("textarea"); a.value = item.resposta;
+    a.placeholder = I18N[lang]["s2.extra.a.ph"];
+    a.addEventListener("input", ()=>{ item.resposta = a.value; });
+    const del = document.createElement("button"); del.type = "button"; del.className = "faq-remove";
+    del.textContent = "×"; del.title = I18N[lang]["s2.extra.remove"];
+    del.addEventListener("click", ()=>{ faqExtra.splice(i, 1); renderFaqExtra(); });
+    row.appendChild(del); row.appendChild(q); row.appendChild(a);
+    list.appendChild(row);
+  });
+  document.getElementById("btnAddFaq").style.display = faqExtra.length >= MAX_FAQ_EXTRA ? "none" : "inline-block";
+}
+
+async function carregarSugestoes(tipo){
+  // Mantém o que o dono já escreveu; troca só as sugestões ainda sem resposta.
+  faqExtra = faqExtra.filter(f => !f.sugerida || f.resposta.trim());
+  if (tipo){
+    try{
+      const res = await fetch(SUPABASE_URL + "/rest/v1/modelos_negocio?select=sugestoes_faq&tipo=eq." + encodeURIComponent(tipo),
+        { headers: { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY } });
+      const rows = res.ok ? await res.json() : [];
+      const sugestoes = (rows[0] && rows[0].sugestoes_faq) || [];
+      sugestoes.forEach(s=>{
+        if (faqExtra.length < MAX_FAQ_EXTRA && !faqExtra.some(f => f.pergunta === s)){
+          faqExtra.push({ pergunta: s, resposta: "", sugerida: true });
+        }
+      });
+    }catch(e){ /* sem sugestões: o dono pode adicionar perguntas à mão */ }
+  }
+  renderFaqExtra();
+}
+
+function faqExtraPreenchido(){
+  return faqExtra
+    .map(f => ({ pergunta: f.pergunta.trim(), resposta: f.resposta.trim() }))
+    .filter(f => f.pergunta && f.resposta);
+}
+
+document.querySelector('select[name="tipo_negocio"]').addEventListener("change", (e)=> carregarSugestoes(e.target.value));
+document.getElementById("btnAddFaq").addEventListener("click", ()=>{
+  if (faqExtra.length < MAX_FAQ_EXTRA){ faqExtra.push({ pergunta: "", resposta: "", sugerida: false }); renderFaqExtra(); }
 });
 
 /* ---------------- Conectar WhatsApp (Embedded Signup da Meta) ---------------- */
@@ -592,6 +673,7 @@ async function submitForm(){
     if (!info || evento === "CANCEL" || evento === "ERROR"){ showFatal("err.cancel"); return; }
     const d = info.dados;
     const data = Object.assign(collectData(), {
+      faq_extra: faqExtraPreenchido(),
       code: code,
       evento: evento,
       phone_number_id: d.phone_number_id || "",

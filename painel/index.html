@@ -164,6 +164,11 @@
     font-size:12px; text-align:center; vertical-align:middle; background:var(--panel-3); color:var(--muted); border:1px solid var(--line); }
   .contador.alerta{ background:var(--gold); color:#000; border-color:var(--gold); font-weight:600; }
   .sec-corpo{ margin-top:18px; }
+  .ajuda{ margin-top:8px; font-size:13px; color:var(--muted); line-height:1.55; max-width:640px; }
+  .ajuda summary{ cursor:pointer; color:var(--gold-bright); font-size:13px; width:max-content; }
+  .ajuda p{ margin:8px 0 0; }
+  .ajuda ul{ margin:6px 0 0; padding-left:18px; }
+  .ajuda b{ color:var(--parchment); font-weight:500; }
   .abas{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
   .aba{ font-family:'Inter',sans-serif; font-size:13px; padding:7px 12px; border-radius:999px; cursor:pointer;
     background:transparent; color:var(--muted); border:1px solid var(--line); }
@@ -327,9 +332,17 @@ function render(d){
     + '</div>';
 
   const convs = d.conversas_equipe || [];
-  html += '<div class="panel"><div class="sec-head"><div><h2>Conversas com a sua equipe'
+  html += '<div class="panel"><div class="sec-head"><div><h2>Clientes esperando atendimento'
     + '<span class="contador' + (convs.length ? ' alerta' : '') + '">' + convs.length + '</span></h2>'
-    + '<p class="sub">' + (convs.length ? 'Clientes esperando uma pessoa da equipe. A secretária está em silêncio nessas conversas.' : 'Nenhum cliente esperando a equipe agora.') + '</p></div>'
+    + '<p class="sub">' + (convs.length ? (convs.length === 1 ? '1 cliente esperando' : convs.length + ' clientes esperando') + ' alguém da sua equipe. A secretária pausou essas conversas.' : 'Nenhum cliente esperando agora.') + '</p>'
+    + '<details class="ajuda"><summary>Como funciona?</summary>'
+    + '<p>A secretária pausa a conversa e o cliente aparece aqui quando:</p><ul>'
+    + '<li>ele pede para falar com uma pessoa;</li>'
+    + '<li>manda um caso urgente ou delicado (voo cancelado, reembolso, nome errado na passagem, cobrança indevida);</li>'
+    + '<li>alguém da sua equipe responde o cliente pelo celular.</li></ul>'
+    + '<p>Você recebe um aviso no WhatsApp. Clique em <b>Ver conversas</b> → <b>Responder no WhatsApp</b> e atenda. '
+    + 'Ao terminar, clique em <b>Devolver para a secretária</b> para ela voltar a atender esse cliente. Se ninguém devolver, ela volta sozinha depois de 12 horas.</p>'
+    + '</details></div>'
     + (convs.length ? '<button class="btn" type="button" id="toggleConv">' + (tela.convAberta ? 'Fechar' : 'Ver conversas') + '</button>' : '')
     + '</div>';
   if (convs.length && tela.convAberta){
@@ -380,7 +393,13 @@ function renderPedidos(){
   const todos = d.pedidos || [];
   const pend = Number(d.pedidos_pendentes || 0);
   let html = '<div class="sec-head"><div><h2>Pedidos<span class="contador' + (pend ? ' alerta' : '') + '">' + pend + '</span></h2>'
-    + '<p class="sub">' + (pend ? (pend === 1 ? '1 pedido esperando resposta.' : pend + ' pedidos esperando resposta.') : (todos.length ? 'Nenhum pedido pendente.' : 'Nenhum pedido ainda.')) + '</p></div>'
+    + '<p class="sub">' + (pend ? (pend === 1 ? '1 pedido esperando resposta.' : pend + ' pedidos esperando resposta.') : (todos.length ? 'Nenhum pedido pendente.' : 'Nenhum pedido ainda.')) + '</p>'
+    + '<details class="ajuda"><summary>Como funciona?</summary>'
+    + '<p>Quando um cliente pede uma cotação, a secretária faz as perguntas (destino, datas, pessoas...) e o pedido chega aqui como <b>Pendente</b>, '
+    + 'e você recebe um aviso no WhatsApp.</p>'
+    + '<p>Toque no pedido para ver os detalhes e clique em <b>Responder no WhatsApp</b> para mandar a proposta. Depois mude o status: '
+    + '<b>Respondido</b> quando enviar a proposta, <b>Venda fechada</b> ou <b>Não fechou</b> no final. Assim a aba Pendentes mostra só o que falta responder.</p>'
+    + '</details></div>'
     + (todos.length ? '<button class="btn" type="button" id="togglePed">' + (tela.pedAberto ? 'Fechar' : 'Ver pedidos') + '</button>' : '')
     + '</div>';
   if (todos.length && tela.pedAberto){

@@ -258,10 +258,6 @@
   nav.topbar{ background:rgba(5,10,22,0.8); }
   h1.hero-title em{ color:var(--gold-bright); text-shadow:0 0 36px rgba(59,130,246,0.35); }
   .hero{ overflow:hidden; }
-  .hero::after{
-    content:''; position:absolute; left:0; right:0; bottom:0; height:180px; pointer-events:none; opacity:.55;
-    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 180' preserveAspectRatio='none'%3E%3Cpath d='M0 180 L0 120 L120 70 L210 110 L330 40 L430 95 L520 60 L640 125 L760 50 L880 105 L990 35 L1100 100 L1210 65 L1330 115 L1440 75 L1440 180 Z' fill='%230B1530'/%3E%3Cpath d='M0 120 L120 70 L210 110 L330 40 L430 95 L520 60 L640 125 L760 50 L880 105 L990 35 L1100 100 L1210 65 L1330 115 L1440 75' fill='none' stroke='%233B82F6' stroke-opacity='.35' stroke-width='1.2'/%3E%3C/svg%3E") bottom/100% 100% no-repeat;
-  }
   .hero .wrap{ position:relative; z-index:1; }
   .btn-primary{ background:linear-gradient(180deg, #3B82F6, #2563EB); color:#fff; box-shadow:0 10px 30px -10px rgba(37,99,235,0.7), inset 0 1px 0 rgba(255,255,255,0.18); }
   .btn-primary:hover{ box-shadow:0 12px 36px -8px rgba(59,130,246,0.85), inset 0 1px 0 rgba(255,255,255,0.18); }
@@ -279,6 +275,36 @@
   .phone-avatar, .plan-badge{ color:#fff; }
   .eyebrow{ color:var(--gold-bright); } .eyebrow::before{ background:var(--gold-bright); }
   .trial-callout{ color:var(--gold-bright); }
+
+  /* ===== Movimento (28/10/2026): brilho que se move, balões de conversa no topo, seções que aparecem ao rolar ===== */
+  .aurora{ position:fixed; inset:-20%; pointer-events:none; z-index:0; opacity:.9;
+    background:
+      radial-gradient(40% 35% at 30% 20%, rgba(37,99,235,0.16), transparent 70%),
+      radial-gradient(35% 30% at 75% 35%, rgba(56,189,248,0.08), transparent 70%),
+      radial-gradient(30% 30% at 50% 80%, rgba(37,99,235,0.07), transparent 70%);
+    animation:aurora 26s ease-in-out infinite alternate; }
+  @keyframes aurora{ 0%{ transform:translate3d(-4%,-2%,0) scale(1); } 50%{ transform:translate3d(3%,2%,0) scale(1.06); } 100%{ transform:translate3d(-2%,4%,0) scale(1.02); } }
+  body::before{ animation:grade 40s linear infinite; }
+  @keyframes grade{ to{ background-position:64px 64px; } }
+  .bolhas{ position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:0; }
+  .bolha{ position:absolute; bottom:-60px; padding:8px 13px; border-radius:14px; font-size:12.5px; white-space:nowrap;
+    color:#C7D7FE; background:rgba(30,58,138,0.35); border:1px solid rgba(96,165,250,0.22); backdrop-filter:blur(2px);
+    opacity:0; animation:sobe linear infinite; }
+  .bolha.cli{ background:rgba(22,33,58,0.55); color:#AFC0DA; border-color:rgba(148,163,184,0.18); border-bottom-left-radius:4px; }
+  .bolha.ia{ border-bottom-right-radius:4px; }
+  @keyframes sobe{ 0%{ transform:translateY(0) scale(.92); opacity:0; } 12%{ opacity:var(--op,.5); } 80%{ opacity:var(--op,.5); } 100%{ transform:translateY(-640px) scale(1); opacity:0; } }
+  .reveal-on .rv{ opacity:0; transform:translateY(26px); transition:opacity .8s cubic-bezier(.22,1,.36,1), transform .8s cubic-bezier(.22,1,.36,1); }
+  .reveal-on .rv.visto{ opacity:1; transform:none; }
+  .mission-card, .scenario-card, .plan, .trust-item, .pain-item{ transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease, background .25s ease; }
+  .scenario-card:hover, .plan:hover{ transform:translateY(-4px); border-color:rgba(96,165,250,0.45); box-shadow:0 18px 40px -20px rgba(37,99,235,0.55); }
+  .mission-card:hover, .trust-item:hover, .pain-item:hover{ box-shadow:inset 0 0 0 1px rgba(96,165,250,0.35); }
+  .btn-primary{ position:relative; overflow:hidden; }
+  .btn-primary::after{ content:''; position:absolute; top:0; bottom:0; width:40%; left:-60%; transform:skewX(-20deg);
+    background:linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent); animation:brilho 4.5s ease-in-out infinite; }
+  @keyframes brilho{ 0%,70%{ left:-60%; } 100%{ left:130%; } }
+  .phone{ animation:flutua 6s ease-in-out infinite; }
+  @keyframes flutua{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-8px); } }
+  @media (prefers-reduced-motion: reduce){ .aurora, .bolhas, .btn-primary::after{ display:none; } .phone, body::before{ animation:none; } .reveal-on .rv{ opacity:1; transform:none; } }
 </style>
 </head>
 <body>
@@ -705,6 +731,64 @@ function playDemo(i){
   }
 }
 playDemo(0);
+
+// Movimento: brilho, balões de conversa no topo, seções que aparecem ao rolar e números que contam.
+(function(){
+  const reduzir = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const aurora = document.createElement('div'); aurora.className = 'aurora'; aurora.setAttribute('aria-hidden', 'true');
+  document.body.prepend(aurora);
+  if (reduzir) return;
+
+  const hero = document.querySelector('.hero');
+  if (hero){
+    const box = document.createElement('div'); box.className = 'bolhas'; box.setAttribute('aria-hidden', 'true');
+    hero.prepend(box);
+    const FRASES = [["Oi! Tem horário hoje?","cli"],["Claro! Às 15h30 serve?","ia"],["Quanto custa?","cli"],["Agendado ✓","ia"],["Vocês atendem sábado?","cli"],["Sim, das 9h às 13h 😊","ia"],["Preciso de um orçamento","cli"],["Já passei para a equipe ✓","ia"]];
+    const qtd = window.innerWidth < 720 ? 6 : 12;
+    for (let i = 0; i < qtd; i++){
+      const [texto, lado] = FRASES[i % FRASES.length];
+      const b = document.createElement('div');
+      b.className = 'bolha ' + lado; b.textContent = texto;
+      // Longe do título: no computador, só do lado direito (perto do celular); no celular, bem apagados nas laterais.
+      const celular = window.innerWidth < 720;
+      const lugar = celular ? (55 + Math.random() * 25) : (52 + Math.random() * 34);
+      b.style.left = lugar + '%';
+      b.style.setProperty('--op', ((celular ? 0.12 : 0.2) + Math.random() * 0.18).toFixed(2));
+      b.style.animationDuration = (14 + Math.random() * 12).toFixed(1) + 's';
+      b.style.animationDelay = (-Math.random() * 24).toFixed(1) + 's';
+      box.appendChild(b);
+    }
+  }
+
+  if ('IntersectionObserver' in window){
+    document.documentElement.classList.add('reveal-on');
+    const alvos = document.querySelectorAll('section h2, section .lead, .mission-card, .scenario-card, .plan, .trust-item, .pain-item, .how-step, .compare, .faq-item, .not-chatbot, .vchip, .demo-stage, .price-hero');
+    const obs = new IntersectionObserver((itens) => {
+      itens.forEach((it) => { if (it.isIntersecting){ it.target.classList.add('visto'); obs.unobserve(it.target); } });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+    alvos.forEach((el, i) => {
+      if (el.closest('.hero')) return;
+      el.classList.add('rv');
+      const irmaos = el.parentElement ? Array.from(el.parentElement.children).indexOf(el) : 0;
+      el.style.transitionDelay = Math.min(irmaos, 6) * 70 + 'ms';
+      obs.observe(el);
+    });
+
+    // Números do painel de exemplo contam do zero até o valor.
+    const numeros = Array.from(document.querySelectorAll('.not-chatbot div')).filter((d) => /^\d+%?$/.test(d.textContent.trim()) && !d.children.length);
+    const obsN = new IntersectionObserver((itens) => {
+      itens.forEach((it) => {
+        if (!it.isIntersecting) return;
+        obsN.unobserve(it.target);
+        const el = it.target; const fim = parseInt(el.textContent, 10); const pct = el.textContent.includes('%');
+        const t0 = performance.now();
+        const passo = (t) => { const p = Math.min(1, (t - t0) / 1200); el.textContent = Math.round(fim * (1 - Math.pow(1 - p, 3))) + (pct ? '%' : ''); if (p < 1) requestAnimationFrame(passo); };
+        requestAnimationFrame(passo);
+      });
+    }, { threshold: 0.5 });
+    numeros.forEach((n) => obsN.observe(n));
+  }
+})();
 </script>
 </body>
 </html>

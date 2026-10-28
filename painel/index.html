@@ -264,7 +264,7 @@ const ROTULOS = { nome: "Nome", tipo: "Tipo", destino: "Destino", datas: "Datas"
   orcamento: "Orçamento", servico: "Serviço", viagem: "Viagem", assunto: "Assunto", roteiro: "Roteiro", interesse: "Interesse" };
 let faqEdicao = [];
 // O que está aberto na tela continua aberto quando o painel atualiza.
-const tela = { convAberta: false, pedAberto: false, aba: "pendente", pedido: null, limite: 20 };
+const tela = { convAberta: false, pedAberto: false, persAberta: false, aba: "pendente", pedido: null, limite: 20 };
 let dadosPainel = null;
 const STATUS = { pendente: "Pendente", respondido: "Respondido", fechado: "Venda fechada", nao_fechou: "Não fechou" };
 
@@ -474,15 +474,26 @@ function renderPersonalizar(d){
   }
   faqEdicao = (Array.isArray(d.faq) ? d.faq : []).map(f => ({ pergunta: f.pergunta || "", resposta: f.resposta || "" }));
   const servicos = d.servicos || [];
-  box.innerHTML = '<h2>Personalizar sua secretária</h2>'
+  const ativos = servicos.filter(s => s.ativo).length;
+  const resumo = faqEdicao.length + (faqEdicao.length === 1 ? ' pergunta cadastrada' : ' perguntas cadastradas')
+    + (servicos.length ? ' · ' + ativos + ' de ' + servicos.length + ' serviços ativos' : '');
+  // Abre e fecha só escondendo: o que foi digitado e ainda não salvo continua lá.
+  box.innerHTML = '<div class="sec-head"><div><h2>Personalizar sua secretária</h2><p class="sub">' + esc(resumo) + '</p></div>'
+    + '<button class="btn" type="button" id="togglePers">' + (tela.persAberta ? 'Fechar' : 'Abrir') + '</button></div>'
+    + '<div class="sec-corpo" id="persCorpo"' + (tela.persAberta ? '' : ' style="display:none;"') + '>'
     + '<p class="sub">A secretária responde exatamente com o que estiver aqui. Se faltar uma informação, ela diz que a equipe vai confirmar, e nunca inventa.</p>'
     + '<div class="subtitulo">Perguntas e respostas</div><div id="faqLista"></div>'
     + '<button class="btn" type="button" id="faqAdd">+ Adicionar pergunta</button>'
     + (servicos.length ? '<div class="subtitulo">Serviços que você oferece</div>'
       + '<p class="sub" style="margin-bottom:8px;">Desmarque o que você não faz: a secretária deixa de oferecer e tira do menu.</p>'
       + '<div class="servicos">' + servicos.map(s => '<label class="servico"><input type="checkbox" data-servico="' + esc(s.id) + '"' + (s.ativo ? ' checked' : '') + '> ' + esc(s.titulo) + '</label>').join('') + '</div>' : '')
-    + '<div class="acoes"><button class="btn btn-primary" type="button" id="salvarPers">Salvar alterações</button><span class="msg" id="persMsg"></span></div>';
+    + '<div class="acoes"><button class="btn btn-primary" type="button" id="salvarPers">Salvar alterações</button><span class="msg" id="persMsg"></span></div></div>';
   renderFaqLista();
+  $("togglePers").addEventListener("click", () => {
+    tela.persAberta = !tela.persAberta;
+    $("persCorpo").style.display = tela.persAberta ? "" : "none";
+    $("togglePers").textContent = tela.persAberta ? "Fechar" : "Abrir";
+  });
   $("faqAdd").addEventListener("click", () => { faqEdicao.push({ pergunta: "", resposta: "" }); renderFaqLista(); });
   $("salvarPers").addEventListener("click", salvarPersonalizacao);
 }

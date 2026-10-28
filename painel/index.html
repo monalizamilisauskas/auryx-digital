@@ -168,6 +168,11 @@
   .ajuda summary{ cursor:pointer; color:var(--gold-bright); font-size:13px; width:max-content; }
   .ajuda p{ margin:8px 0 0; }
   .ajuda ul{ margin:6px 0 0; padding-left:18px; }
+  .campo{ margin-bottom:16px; }
+  .campo label{ display:block; font-size:13px; color:var(--parchment); margin-bottom:6px; }
+  .campo input{ width:100%; background:var(--panel-3); border:1px solid var(--line); color:var(--parchment); border-radius:8px; padding:10px 12px; font-size:14px; font-family:'Inter',sans-serif; }
+  .campo input:focus{ outline:none; border-color:var(--gold); }
+  .campo small{ display:block; color:var(--muted); font-size:12.5px; margin-top:6px; line-height:1.5; }
   .ajuda b{ color:var(--parchment); font-weight:500; }
   .abas{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
   .aba{ font-family:'Inter',sans-serif; font-size:13px; padding:7px 12px; border-radius:999px; cursor:pointer;
@@ -244,7 +249,7 @@
   <!-- PAINEL -->
   <div class="dash" id="dash">
     <div class="dash-head">
-      <p class="eyebrow">Painel do cliente</p>
+      <p class="eyebrow" id="saudacao">Painel do cliente</p>
       <h1><span id="bizName">Seu negócio</span><span class="badge" id="planBadge"></span></h1>
       <p class="sub" id="trialInfo"></p>
     </div>
@@ -269,7 +274,7 @@ const ROTULOS = { nome: "Nome", tipo: "Tipo", destino: "Destino", datas: "Datas"
   orcamento: "Orçamento", servico: "Serviço", viagem: "Viagem", assunto: "Assunto", roteiro: "Roteiro", interesse: "Interesse" };
 let faqEdicao = [];
 // O que está aberto na tela continua aberto quando o painel atualiza.
-const tela = { convAberta: false, pedAberto: false, persAberta: false, aba: "pendente", pedido: null, limite: 20 };
+const tela = { convAberta: false, pedAberto: false, persAberta: false, dadosAbertos: false, aba: "pendente", pedido: null, limite: 20 };
 let dadosPainel = null;
 const STATUS = { pendente: "Pendente", respondido: "Respondido", fechado: "Venda fechada", nao_fechou: "Não fechou" };
 
@@ -307,6 +312,8 @@ async function carregarPainel(){
 
 function render(d){
   $("bizName").textContent = d.nome || "Seu negócio";
+  const primeiroNome = String(d.contato_nome || "").trim().split(/\s+/)[0];
+  $("saudacao").textContent = primeiroNome ? "Olá, " + primeiroNome + "! 👋" : "Painel do cliente";
   $("planBadge").textContent = d.plano_nome || "";
   const emTeste = d.plano_id === "trial";
   let trialTxt = "";
@@ -378,10 +385,12 @@ function render(d){
   }
 
   html += '<div class="panel" id="personalizar"></div>';
+  html += '<div class="panel" id="seusDados"></div>';
   $("dashContent").innerHTML = html;
   dadosPainel = d;
   renderPedidos();
   renderPersonalizar(d);
+  renderDados(d);
   if ($("toggleConv")) $("toggleConv").addEventListener("click", () => { tela.convAberta = !tela.convAberta; render(dadosPainel); });
   document.querySelectorAll("[data-devolver]").forEach(b => b.addEventListener("click", () => devolverConversa(b)));
 }
@@ -543,6 +552,47 @@ async function salvarPersonalizacao(){
   btn.disabled = false; btn.textContent = "Salvar alterações";
   if (error){ msg.className = "msg erro"; msg.textContent = "Não foi possível salvar agora. Tente de novo em alguns instantes."; return; }
   msg.className = "msg ok"; msg.textContent = "Salvo! A secretária já usa as informações novas.";
+}
+
+/* ---------- Seus dados: nome do negócio (usado pela secretária), nome do dono e WhatsApp de avisos ---------- */
+function renderDados(d){
+  const box = $("seusDados");
+  const resumo = (d.nome || "") + (d.contato_nome ? " · " + d.contato_nome : "");
+  const agencia = /viage/i.test(String(d.tipo_negocio || ""));
+  const rotuloNome = agencia ? "Nome da sua agência" : "Nome do seu negócio";
+  box.innerHTML = '<div class="sec-head"><div><h2>Seus dados</h2><p class="sub">' + esc(resumo) + '</p></div>'
+    + '<button class="btn" type="button" id="toggleDados">' + (tela.dadosAbertos ? 'Fechar' : 'Editar') + '</button></div>'
+    + '<div class="sec-corpo" id="dadosCorpo"' + (tela.dadosAbertos ? '' : ' style="display:none;"') + '>'
+    + '<div class="campo"><label for="dNome">' + rotuloNome + '</label><input id="dNome" maxlength="80" value="' + esc(d.nome || "") + '">'
+    + '<small>É o nome que a secretária usa com os clientes: “Sou a assistente virtual da ' + esc(d.nome || (agencia ? "sua agência" : "sua empresa")) + '”.</small></div>'
+    + '<div class="campo"><label for="dContato">Seu nome</label><input id="dContato" maxlength="80" value="' + esc(d.contato_nome || "") + '">'
+    + '<small>Para o painel te cumprimentar pelo nome.</small></div>'
+    + '<div class="campo"><label for="dWhats">WhatsApp para receber os avisos</label><input id="dWhats" inputmode="tel" maxlength="20" value="' + esc(d.whatsapp_avisos || "") + '">'
+    + '<small>Com código do país e DDD, só números. Ex.: 5511999998888. É para onde vão os avisos de pedidos e de clientes esperando.</small></div>'
+    + '<div class="acoes"><button class="btn btn-primary" type="button" id="salvarDados">Salvar</button><span class="msg" id="dadosMsg"></span></div>'
+    + '</div>';
+  $("toggleDados").addEventListener("click", () => {
+    tela.dadosAbertos = !tela.dadosAbertos;
+    $("dadosCorpo").style.display = tela.dadosAbertos ? "" : "none";
+    $("toggleDados").textContent = tela.dadosAbertos ? "Fechar" : "Editar";
+  });
+  $("salvarDados").addEventListener("click", salvarDados);
+}
+
+async function salvarDados(){
+  const msg = $("dadosMsg"); const btn = $("salvarDados");
+  const nome = $("dNome").value.trim();
+  const contato = $("dContato").value.trim();
+  const whats = $("dWhats").value.replace(/\D/g, "");
+  msg.className = "msg"; msg.textContent = "";
+  if (nome.length < 2){ msg.className = "msg erro"; msg.textContent = "Escreva o nome da sua agência."; return; }
+  if (whats && (whats.length < 10 || whats.length > 15)){ msg.className = "msg erro"; msg.textContent = "Confira o WhatsApp: código do país + DDD + número, só números."; return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Salvando...';
+  const { error } = await supa.rpc("salvar_dados", { p_nome: nome, p_contato_nome: contato, p_whatsapp: whats });
+  btn.disabled = false; btn.textContent = "Salvar";
+  if (error){ msg.className = "msg erro"; msg.textContent = "Não foi possível salvar agora. Tente de novo em alguns instantes."; return; }
+  tela.dadosAbertos = false;
+  await carregarPainel();
 }
 
 $("loginForm").addEventListener("submit", async (e) => {

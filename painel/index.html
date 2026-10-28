@@ -412,7 +412,7 @@
   </div>
 </main>
 
-<script src="respostas.js?v=2"></script>
+<script src="respostas.js?v=3"></script>
 <script>
 const SUPABASE_URL = "https://ypqmrjvuotctiyydfpgb.supabase.co";
 const SUPABASE_KEY = "sb_publishable_V87H9FaZ0gHFm1krAnpZRg_an0puUit"; // chave pública; os dados são protegidos pelo login
@@ -668,6 +668,7 @@ function irPara(view){
   tela.confHorario = null;
   tela.resp = null;
   tela.rrEditar = null;
+  tela.rrWa = false;
   try { localStorage.setItem("painelView", view); } catch (e) {}
   render(dadosPainel);
   window.scrollTo({ top: 0 });
@@ -1218,7 +1219,9 @@ function renderRespostas(){
     + '<p>Aqui você pode <b>favoritar</b> (aparecem primeiro), <b>editar</b>, <b>esconder</b> as que não usa e criar as suas. '
     + 'Nos textos, use {nome}, {negocio}, {destino}, {datas} e {assunto}: o painel troca pelos dados de cada cliente.</p></details>'
     + '<div class="acoes" style="margin:14px 0;"><input id="rrBusca" class="rr-busca" style="flex:1;min-width:200px;margin:0;" placeholder="Buscar (ex.: bagagem, reembolso, Pix)" value="' + esc(busca) + '">'
-    + '<button class="btn btn-primary" type="button" id="rrNova">+ Nova resposta</button><span class="msg" id="rrMsg"></span></div>';
+    + '<button class="btn btn-primary" type="button" id="rrNova">+ Nova resposta</button>'
+    + '<button class="btn" type="button" id="rrWa">' + (tela.rrWa ? 'Voltar para a biblioteca' : '📱 Levar para o WhatsApp Business') + '</button><span class="msg" id="rrMsg"></span></div>';
+  if (tela.rrWa){ box.innerHTML = html + blocoWhatsAppBusiness(visiveis); ligarRespostas(); return; }
   if (tela.rrEditar) html += formEditarResposta();
   html += '<div id="rrCorpo">' + corpoRespostas() + '</div>';
   if (escondidas.length) html += '<details class="ajuda" style="margin-top:16px;"' + (tela.rrVerEscondidas ? ' open' : '') + ' id="rrEscondidas"><summary>Respostas escondidas (' + escondidas.length + ')</summary>'
@@ -1226,6 +1229,38 @@ function renderRespostas(){
       + '<div class="ped-acoes" style="margin:0;"><button class="btn" type="button" data-rrmostrar="' + esc(m.id) + '">Mostrar de novo</button></div></div>').join("") + '</details>';
   box.innerHTML = html;
   ligarRespostas();
+}
+// Respostas rápidas do app WhatsApp Business: a equipe digita "/" na conversa e escolhe. O app não importa lista,
+// então o painel mostra cada resposta pronta (sem variáveis, com o nome do negócio) e um atalho para copiar e cadastrar.
+function atalhoWhatsApp(titulo, usados){
+  let base = semAcento(titulo).replace(/[^a-z0-9 ]+/g, " ").trim().split(/\s+/).filter(w => w.length > 2 || /\d/.test(w)).slice(0, 2).join("").slice(0, 20) || "resposta";
+  let a = base, i = 2;
+  while (usados.has(a)) a = base.slice(0, 22) + (i++);
+  usados.add(a);
+  return a;
+}
+function blocoWhatsAppBusiness(lista){
+  const ordem = lista.filter(m => m.fav).concat(lista.filter(m => !m.fav));
+  const usados = new Set();
+  const ctx = { nome: "", dados: {}, assunto: "" };
+  let html = '<div class="aviso info" style="display:block;margin-bottom:16px;"><div class="txt"><b>Use as respostas direto no WhatsApp</b>'
+    + 'No WhatsApp Business do número da empresa, a sua equipe digita <strong>/</strong> na conversa e aparece a lista de respostas prontas para escolher. '
+    + 'O WhatsApp não deixa importar uma lista, então cadastre cada resposta uma vez:</div>'
+    + '<ol class="passos">'
+    + '<li>No celular, abra o <b>WhatsApp Business</b> → <b>Configurações</b> (ou os três pontinhos ⋮ → Ferramentas comerciais) → <b>Ferramentas comerciais</b> → <b>Respostas rápidas</b>.</li>'
+    + '<li>Toque em <b>+</b>. Em <b>Mensagem</b>, cole o texto (botão <b>Copiar texto</b> aqui embaixo). Em <b>Atalho</b>, cole o atalho (botão <b>Copiar atalho</b>). Salve.</li>'
+    + '<li>Na conversa, digite <b>/</b> para ver todas, ou <b>/</b> + o começo do atalho (ex.: <b>/proposta</b>). A mensagem entra na caixa de texto: complete o que estiver entre [colchetes] e envie.</li>'
+    + '</ol><div class="txt" style="margin-top:10px;">O WhatsApp aceita até 50 respostas rápidas e não preenche o nome do cliente sozinho. Por isso o texto aqui vem sem o nome. '
+    + 'As favoritas aparecem primeiro: comece por elas. Para ter o nome e os dados do pedido preenchidos automaticamente, use o botão <strong>Responder no WhatsApp</strong> do painel.</div></div>';
+  html += ordem.slice(0, 50).map(m => {
+    const atalho = m.atalho && !usados.has(m.atalho) ? (usados.add(m.atalho), m.atalho) : atalhoWhatsApp(m.titulo, usados);
+    const texto = preencherModelo(m.texto, ctx);
+    return '<div class="rr-linha"><div class="rr-texto"><b>' + (m.fav ? '★ ' : '') + esc(m.titulo) + '</b><span class="quem"> · atalho /' + esc(atalho) + '</span><p>' + esc(texto) + '</p></div>'
+      + '<div class="ped-acoes" style="margin:0;"><button class="btn" type="button" data-copiar="' + esc(texto) + '">Copiar texto</button>'
+      + '<button class="btn" type="button" data-copiar="' + esc(atalho) + '">Copiar atalho</button></div></div>';
+  }).join("");
+  if (ordem.length > 50) html += '<p class="sub" style="margin-top:12px;">Mostrando 50 de ' + ordem.length + ' (limite do WhatsApp). Esconda na biblioteca as que a sua equipe não usa.</p>';
+  return html;
 }
 function corpoRespostas(){
   const visiveis = bibliotecaConta(false);
@@ -1297,8 +1332,21 @@ function ligarRespostas(){
       if (await salvar(Object.assign({}, R(), { meus: (R().meus || []).filter(x => x.id !== id) }))) renderRespostas();
     }));
   };
-  ligarCorpo();
-  $("rrBusca").addEventListener("input", (e) => { tela.rrBusca = e.target.value; $("rrCorpo").innerHTML = corpoRespostas(); ligarCorpo(); });
+  if ($("rrCorpo")) ligarCorpo();
+  $("rrBusca").addEventListener("input", (e) => {
+    tela.rrBusca = e.target.value;
+    if (tela.rrWa){ tela.rrWa = false; renderRespostas(); $("rrBusca").focus(); const v = $("rrBusca").value; $("rrBusca").setSelectionRange(v.length, v.length); return; }
+    $("rrCorpo").innerHTML = corpoRespostas(); ligarCorpo();
+  });
+  $("rrWa").addEventListener("click", () => { tela.rrWa = !tela.rrWa; tela.rrEditar = null; renderRespostas(); });
+  document.querySelectorAll("[data-copiar]").forEach(b => b.addEventListener("click", async () => {
+    const v = b.getAttribute("data-copiar");
+    try { await navigator.clipboard.writeText(v); } catch (e) {
+      const t = document.createElement("textarea"); t.value = v; document.body.appendChild(t); t.select(); try { document.execCommand("copy"); } catch (e2) {} t.remove();
+    }
+    const antes = b.textContent; b.textContent = "Copiado ✓"; setTimeout(() => { b.textContent = antes; }, 1500);
+  }));
+  if (!$("rrBusca") || !$("rrCorpo")) return;
   $("rrNova").addEventListener("click", () => { tela.rrEditar = { id: null, cat: tela.rrCat && tela.rrCat !== "Favoritas" ? tela.rrCat : "Minhas respostas", titulo: "", texto: "Olá, {nome}! " }; renderRespostas(); if ($("rrTitulo")) $("rrTitulo").focus(); });
   if ($("rrEscondidas")) $("rrEscondidas").addEventListener("toggle", (e) => { tela.rrVerEscondidas = e.target.open; });
   document.querySelectorAll("[data-rrmostrar]").forEach(b => b.addEventListener("click", async () => {

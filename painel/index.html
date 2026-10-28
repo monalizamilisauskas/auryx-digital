@@ -275,6 +275,13 @@
   .dia:first-child{ margin-top:0; }
   .ag-linha .hora{ font-weight:700; font-size:15px; min-width:52px; color:var(--parchment); }
   .ag-linha .quem{ color:var(--muted); font-size:13px; }
+  .status.agendado{ color:var(--gold-bright); border-color:rgba(96,165,250,0.45); }
+  .status.enviado{ color:var(--good); border-color:rgba(52,211,153,0.4); }
+  .status.falhou{ color:#FCA5A5; border-color:rgba(248,113,113,0.4); }
+  .fu-form{ border:1px solid var(--line-strong); border-radius:12px; padding:18px; margin:16px 0; background:var(--panel-2); }
+  .fu-previa{ border-radius:12px; background:#0E1830; border:1px solid var(--line); padding:12px 14px; margin-top:4px; }
+  .fu-previa span{ font-size:12px; color:var(--muted); }
+  .fu-previa p{ margin:6px 0 0; font-size:14px; line-height:1.5; color:#DBEAFE; background:#1E3A8A; display:inline-block; padding:9px 12px; border-radius:12px; border-bottom-left-radius:4px; }
   .agenda-ok{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:16px; padding:12px 14px; border:1px solid rgba(52,211,153,0.35);
     background:rgba(52,211,153,0.07); border-radius:10px; font-size:13.5px; color:var(--muted); }
   .agenda-ok svg{ color:var(--good); flex:none; }
@@ -382,8 +389,11 @@ let faqEdicao = [];
 // O que está aberto na tela continua aberto quando o painel atualiza.
 // Conta Google da Auryx (a mesma da credencial do Google Agenda no n8n): o dono compartilha a agenda dele com ela.
 const AGENDA_AURYX = "";
+// Envio do follow-up: liga quando a Meta aprovar o modelo de mensagem e o n8n estiver enviando.
+const FOLLOWUP_ATIVO = false;
+const STATUS_FU = { agendado: "Agendado", enviado: "Enviado", falhou: "Não enviado", cancelado: "Cancelado" };
 const STATUS_AG = { confirmado: "Confirmado", realizado: "Realizado", cancelado: "Cancelado", nao_compareceu: "Não compareceu" };
-const tela = { abaAg: "proximos", agendamento: null, view: (() => { try { return localStorage.getItem("painelView") || "inicio"; } catch (e) { return "inicio"; } })(), aba: "pendente", pedido: null, limite: 20 };
+const tela = { abaFu: "agendado", fuForm: null, abaAg: "proximos", agendamento: null, view: (() => { try { return localStorage.getItem("painelView") || "inicio"; } catch (e) { return "inicio"; } })(), aba: "pendente", pedido: null, limite: 20 };
 let dadosPainel = null;
 const STATUS = { pendente: "Pendente", respondido: "Respondido", fechado: "Venda fechada", nao_fechou: "Não fechou" };
 
@@ -451,6 +461,7 @@ function render(d){
   ];
   menu.push(["agenda", "Agendamentos", hoje]);   // sempre no menu; vazio, explica como começar
   if (usaPedidos) menu.push(["pedidos", "Pedidos", pend]);
+  menu.push(["followup", "Follow-up", 0]);
   menu.push(
     ["personalizar", "Personalizar" + (d.pode_personalizar ? "" : " 🔒"), 0],
     ["dados", "Seus dados", 0],
@@ -465,6 +476,7 @@ function render(d){
     agenda: ["Agendamentos", "Horários que a secretária marcou com os seus clientes"],
     conversas: ["Clientes esperando", "Conversas que a secretária pausou para alguém da equipe responder"],
     pedidos: ["Pedidos", "Orçamentos e pedidos que a secretária coletou para a sua equipe"],
+    followup: ["Follow-up", "Escolha o dia e a secretária manda uma mensagem para saber como foi"],
     personalizar: ["Personalizar", "Perguntas, respostas e serviços que a secretária usa"],
     dados: ["Seus dados", "Nome do negócio, seu nome e WhatsApp de avisos"],
     plano: [emTeste ? "Escolher plano" : "Plano", emTeste ? "Continue com a sua secretária depois do teste grátis" : "Seu plano atual"],
@@ -534,6 +546,7 @@ function render(d){
 
   if (tela.view === "pedidos") html += '<div class="panel" id="pedidosPainel"></div>';
   if (tela.view === "agenda") html += '<div class="panel" id="agendaPainel"></div>';
+  if (tela.view === "followup") html += '<div class="panel" id="followupPainel"></div>';
   if (tela.view === "personalizar") html += '<div class="panel" id="personalizar"></div>';
   if (tela.view === "dados") html += '<div class="panel" id="seusDados"></div>';
 
@@ -558,6 +571,7 @@ function render(d){
   $("dashContent").innerHTML = html;
   if ($("pedidosPainel")) renderPedidos();
   if ($("agendaPainel")) renderAgenda();
+  if ($("followupPainel")) renderFollowup();
   if ($("personalizar")) renderPersonalizar(d);
   if ($("seusDados")) renderDados(d);
   document.querySelectorAll("#dashContent [data-ir]").forEach(b => b.addEventListener("click", () => irPara(b.getAttribute("data-ir"))));
@@ -568,6 +582,7 @@ function icone(nome){
   const d = {
     inicio: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
     conversas: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
+    followup: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M12 8v4l2.5 1.5"/>',
     agenda: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 14h3v3H8z"/>',
     pedidos: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3"/>',
     personalizar: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
@@ -626,6 +641,7 @@ function renderPedidos(){
         const campos = Object.entries(p.dados || {}).map(([k, v]) => '<b>' + esc(ROTULOS[k] || (k.charAt(0).toUpperCase() + k.slice(1))) + ':</b> ' + esc(v)).join(' · ');
         html += '<div class="ped-detalhe"><div class="d">' + campos + '<br><b>Contato:</b> +' + esc(p.remetente) + '</div><div class="ped-acoes">'
           + '<a class="btn btn-primary" href="https://wa.me/' + esc(p.remetente) + '" target="_blank" rel="noopener">Responder no WhatsApp</a>';
+        html += '<button class="btn" type="button" data-fu-ped="' + p.id + '">Agendar follow-up</button>';
         Object.keys(STATUS).filter(s => s !== p.status).forEach(s => {
           const rotulo = s === "pendente" ? "Voltar para pendente" : s === "respondido" ? "Marcar como respondido" : STATUS[s];
           html += '<button class="btn" type="button" data-status="' + s + '" data-id="' + p.id + '">' + rotulo + '</button>';
@@ -644,6 +660,150 @@ function renderPedidos(){
     const id = Number(b.getAttribute("data-pedido")); tela.pedido = tela.pedido === id ? null : id; renderPedidos();
   }));
   box.querySelectorAll("[data-status]").forEach(b => b.addEventListener("click", () => mudarStatus(b)));
+  box.querySelectorAll("[data-fu-ped]").forEach(b => b.addEventListener("click", () => {
+    const p = (dadosPainel.pedidos || []).find(x => x.id === Number(b.getAttribute("data-fu-ped")));
+    if (!p) return;
+    const dd = p.dados || {};
+    const titulo = ((dadosPainel.itens || {})[p.item] || "").toLowerCase();
+    const assunto = dd.destino ? "a sua viagem para " + dd.destino : dd.servico ? "o seu " + String(dd.servico).toLowerCase() : titulo ? "o seu pedido de " + titulo : "";
+    novoFollowup({ remetente: p.remetente, nome: dd.nome || "", assunto, pedido_id: p.id });
+  }));
+}
+
+/* ---------- Follow-up: o dono escolhe o dia e a secretária manda "Como foi ___?" ---------- */
+function exemploAssunto(tipo){
+  const t = String(tipo || "").toLowerCase();
+  if (/viage|turis/.test(t)) return "a sua viagem para Miami";
+  if (/sal[aã]o|beleza|barb|cabel|est[eé]tica|unha/.test(t)) return "o seu corte e escova";
+  if (/cl[ií]nica|consult|odont|sa[uú]de|m[eé]dic|psic|fisio/.test(t)) return "a sua consulta";
+  if (/el[eé]tric|encan|hidr|reform|manuten|constru/.test(t)) return "a instalação do chuveiro";
+  if (/oficina|mec[aâ]n|auto|carro/.test(t)) return "a revisão do seu carro";
+  return "o serviço que fizemos para você";
+}
+function textoFollowup(nome, assunto){
+  const n = String(nome || "").trim().split(/\s+/)[0];
+  return "Olá" + (n ? ", " + n : "") + "! Aqui é da " + (dadosPainel.nome || "sua empresa") + " 😊 Como foi " + (assunto || "___") + "? Ficou tudo certo? Se quiser contar ou precisar de algo, é só responder por aqui.";
+}
+function hojeNegocio(dias){
+  const tz = dadosPainel.timezone || "America/Sao_Paulo";
+  return new Date(Date.now() + (dias || 0) * 86400000).toLocaleDateString("en-CA", { timeZone: tz });
+}
+function novoFollowup(pre){
+  tela.fuForm = Object.assign({ id: null, remetente: "", nome: "", assunto: "", data_envio: hojeNegocio(1) }, pre || {});
+  tela.view = "followup";
+  try { localStorage.setItem("painelView", "followup"); } catch (e) {}
+  render(dadosPainel);
+  window.scrollTo({ top: 0 });
+}
+function renderFollowup(){
+  const d = dadosPainel;
+  const box = $("followupPainel");
+  const todos = d.followups || [];
+  let html = '';
+  if (!d.tem_followup){
+    html += '<div class="aviso info" style="margin-bottom:16px;">' + icone("info") + '<div class="txt"><b>O follow-up não está no seu plano</b>'
+      + 'Com ele, você escolhe o dia e a secretária pergunta ao cliente como foi o serviço. Assim você cuida de cada cliente e fica sabendo de qualquer problema antes de virar reclamação.</div>'
+      + '<button class="btn" type="button" data-ir="plano">Ver planos</button></div>';
+  } else if (!FOLLOWUP_ATIVO){
+    html += '<div class="aviso info" style="margin-bottom:16px;">' + icone("info") + '<div class="txt"><b>Os envios começam em breve</b>'
+      + 'Estamos finalizando a aprovação da mensagem no WhatsApp. Você já pode agendar: os follow-ups ficam guardados e saem nas datas marcadas assim que a aprovação sair.</div></div>';
+  }
+  html += '<p class="sub">No dia que você escolher, a secretária manda uma mensagem para o cliente perguntando como foi. Se ele responder, a conversa continua com ela normalmente.</p>'
+    + '<details class="ajuda"><summary>Exemplos</summary><ul>'
+    + '<li>Agência: "Como foi <b>a sua viagem para Miami</b>?" no dia seguinte à volta.</li>'
+    + '<li>Salão: "Como foi <b>o seu corte e escova</b>?" dois dias depois.</li>'
+    + '<li>Clínica: "Como foi <b>a sua consulta</b>?" no dia seguinte.</li>'
+    + '<li>Prestador de serviço: "Como foi <b>a instalação do chuveiro</b>?" uma semana depois.</li></ul>'
+    + '<p>Dica: você também agenda direto de um pedido ou de um agendamento, pelo botão <b>Agendar follow-up</b>.</p></details>';
+  if (d.tem_followup){
+    if (tela.fuForm){
+      const f = tela.fuForm;
+      const opcoes = (d.clientes_recentes || []).map(c => '<option value="' + esc(c.remetente) + '">' + esc((c.nome ? c.nome + " · " : "") + "+" + c.remetente) + '</option>').join("");
+      html += '<div class="fu-form"><div class="subtitulo" style="margin-top:0;">' + (f.id ? 'Alterar follow-up' : 'Novo follow-up') + '</div>'
+        + '<div class="campo"><label for="fuFone">WhatsApp do cliente</label><input id="fuFone" list="fuClientes" inputmode="tel" placeholder="Escolha um cliente ou digite o número com DDI e DDD" value="' + esc(f.remetente) + '"><datalist id="fuClientes">' + opcoes + '</datalist></div>'
+        + '<div class="campo"><label for="fuNome">Nome do cliente</label><input id="fuNome" maxlength="60" placeholder="Ex.: Helena" value="' + esc(f.nome) + '"></div>'
+        + '<div class="campo"><label for="fuAssunto">Como foi…</label><input id="fuAssunto" maxlength="80" placeholder="Ex.: ' + esc(exemploAssunto(d.tipo_negocio)) + '" value="' + esc(f.assunto) + '"></div>'
+        + '<div class="campo"><label for="fuData">Dia do envio</label><input id="fuData" type="date" min="' + hojeNegocio(0) + '" value="' + esc(f.data_envio) + '"><small>A mensagem sai de manhã, no dia escolhido.</small></div>'
+        + '<div class="fu-previa"><span>Como o cliente vai receber:</span><p id="fuPrevia">' + esc(textoFollowup(f.nome, f.assunto)) + '</p></div>'
+        + '<div class="acoes"><button class="btn btn-primary" type="button" id="fuSalvar">' + (f.id ? 'Salvar alteração' : 'Agendar follow-up') + '</button>'
+        + '<button class="btn" type="button" id="fuCancelarForm">Cancelar</button><span class="msg" id="fuMsg"></span></div></div>';
+    } else {
+      html += '<div class="acoes" style="margin:16px 0 4px;"><button class="btn btn-primary" type="button" id="fuNovo">+ Agendar follow-up</button></div>';
+    }
+  }
+  if (todos.length){
+    const conta = (s) => todos.filter(f => f.status === s || (s === "enviado" && f.status === "falhou")).length;
+    html += '<div class="sec-corpo"><div class="abas">';
+    [["agendado", "Agendados"], ["enviado", "Enviados"], ["cancelado", "Cancelados"]].forEach(([s, n]) => {
+      html += '<button type="button" class="aba' + (tela.abaFu === s ? ' ativa' : '') + '" data-abafu="' + s + '">' + n + ' (' + conta(s) + ')</button>';
+    });
+    html += '</div>';
+    let lista = todos.filter(f => f.status === tela.abaFu || (tela.abaFu === "enviado" && f.status === "falhou"));
+    if (tela.abaFu === "agendado") lista = lista.slice().sort((a, b) => String(a.data_envio).localeCompare(String(b.data_envio)));
+    if (!lista.length) html += '<p class="sub" style="margin:0;">Nenhum follow-up aqui.</p>';
+    lista.forEach(f => {
+      const dia = new Date(f.data_envio + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" });
+      html += '<div class="pedido"><div class="ped-linha" style="cursor:default;"><span><b>' + esc(dia) + '</b> · ' + esc(f.nome || ("+" + f.remetente))
+        + ' <span class="quem">· Como foi ' + esc(f.assunto) + '?</span></span><span class="lado"><span class="status ' + esc(f.status) + '">' + esc(STATUS_FU[f.status] || f.status) + '</span></span></div>';
+      if (f.status === "agendado"){
+        html += '<div class="ped-acoes"><button class="btn" type="button" data-fu-editar="' + f.id + '">Alterar</button>'
+          + '<button class="btn" type="button" data-fu-cancelar="' + f.id + '">Cancelar envio</button><span class="msg" id="fuMsg' + f.id + '"></span></div>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+  } else if (!tela.fuForm){
+    html += '<p class="sub" style="margin-top:14px;">Nenhum follow-up agendado ainda.</p>';
+  }
+  box.innerHTML = html;
+  box.querySelectorAll("[data-ir]").forEach(b => b.addEventListener("click", () => irPara(b.getAttribute("data-ir"))));
+  if ($("fuNovo")) $("fuNovo").addEventListener("click", () => { tela.fuForm = { id: null, remetente: "", nome: "", assunto: "", data_envio: hojeNegocio(1) }; renderFollowup(); });
+  if ($("fuCancelarForm")) $("fuCancelarForm").addEventListener("click", () => { tela.fuForm = null; renderFollowup(); });
+  if ($("fuSalvar")) $("fuSalvar").addEventListener("click", salvarFollowup);
+  if ($("fuFone")) $("fuFone").addEventListener("change", () => {
+    const c = (d.clientes_recentes || []).find(x => x.remetente === $("fuFone").value.replace(/\D/g, ""));
+    if (c && c.nome && !$("fuNome").value) { $("fuNome").value = c.nome; atualizarPrevia(); }
+  });
+  ["fuNome", "fuAssunto"].forEach(id => { if ($(id)) $(id).addEventListener("input", atualizarPrevia); });
+  box.querySelectorAll("[data-abafu]").forEach(b => b.addEventListener("click", () => { tela.abaFu = b.getAttribute("data-abafu"); renderFollowup(); }));
+  box.querySelectorAll("[data-fu-editar]").forEach(b => b.addEventListener("click", () => {
+    const f = todos.find(x => x.id === Number(b.getAttribute("data-fu-editar")));
+    if (f) { tela.fuForm = { id: f.id, remetente: f.remetente, nome: f.nome || "", assunto: f.assunto, data_envio: String(f.data_envio).slice(0, 10) }; renderFollowup(); window.scrollTo({ top: 0 }); }
+  }));
+  box.querySelectorAll("[data-fu-cancelar]").forEach(b => b.addEventListener("click", () => cancelarFollowup(b)));
+}
+function atualizarPrevia(){ if ($("fuPrevia")) $("fuPrevia").textContent = textoFollowup($("fuNome").value, $("fuAssunto").value.trim()); }
+
+async function salvarFollowup(){
+  const msg = $("fuMsg"); const btn = $("fuSalvar"); const f = tela.fuForm;
+  const fone = $("fuFone").value.replace(/\D/g, "");
+  const nome = $("fuNome").value.trim();
+  const assunto = $("fuAssunto").value.trim().replace(/[?.!]+$/, "");
+  const data = $("fuData").value;
+  msg.className = "msg"; msg.textContent = "";
+  const erro = fone.length < 10 || fone.length > 15 ? "Confira o WhatsApp do cliente: código do país + DDD + número."
+    : assunto.length < 3 ? "Escreva sobre o que é o follow-up (ex.: " + exemploAssunto(dadosPainel.tipo_negocio) + ")."
+    : !data || data < hojeNegocio(0) ? "Escolha um dia de hoje em diante." : "";
+  if (erro){ msg.className = "msg erro"; msg.textContent = erro; return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Salvando...';
+  const { data: r, error } = await supa.rpc("salvar_followup", { p_id: f.id, p_remetente: fone, p_nome: nome, p_assunto: assunto, p_data: data,
+    p_pedido_id: f.pedido_id || null, p_agendamento_id: f.agendamento_id || null });
+  btn.disabled = false; btn.textContent = f.id ? "Salvar alteração" : "Agendar follow-up";
+  if (error || !r || !r.ok){ msg.className = "msg erro"; msg.textContent = "Não foi possível salvar agora. Tente de novo em alguns instantes."; return; }
+  tela.fuForm = null; tela.abaFu = "agendado";
+  await carregarPainel();
+}
+
+async function cancelarFollowup(btn){
+  const id = Number(btn.getAttribute("data-fu-cancelar"));
+  if (!confirm("Cancelar este follow-up? A mensagem não será enviada.")) return;
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Cancelando...';
+  const { data, error } = await supa.rpc("cancelar_followup", { p_id: id });
+  if (error || !data || !data.ok){ btn.disabled = false; btn.textContent = "Tentar de novo"; return; }
+  const f = (dadosPainel.followups || []).find(x => x.id === id);
+  if (f) f.status = "cancelado";
+  dadosPainel.followups_agendados = Math.max(0, Number(dadosPainel.followups_agendados || 0) - 1);
+  render(dadosPainel);
 }
 
 /* ---------- Agendamentos: horários marcados pela secretária, por dia, e o dono muda o status ---------- */
@@ -697,7 +857,8 @@ function renderAgenda(){
           + (a.endereco ? '<b>Endereço:</b> ' + esc(a.endereco) + '<br>' : '')
           + '<b>Data:</b> ' + esc(new Date(a.data_hora).toLocaleString("pt-BR", { timeZone: tz, weekday: "long", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }))
           + '<br><b>Contato:</b> +' + esc(a.remetente) + '</div><div class="ped-acoes">'
-          + '<a class="btn btn-primary" href="https://wa.me/' + esc(a.remetente) + '" target="_blank" rel="noopener">Falar no WhatsApp</a>';
+          + '<a class="btn btn-primary" href="https://wa.me/' + esc(a.remetente) + '" target="_blank" rel="noopener">Falar no WhatsApp</a>'
+          + '<button class="btn" type="button" data-fu-ag="' + a.id + '">Agendar follow-up</button>';
         Object.keys(STATUS_AG).filter(s => s !== a.status).forEach(s => {
           html += '<button class="btn" type="button" data-statusag="' + s + '" data-id="' + a.id + '">' + (s === "confirmado" ? "Voltar para confirmado" : STATUS_AG[s]) + '</button>';
         });
@@ -717,6 +878,10 @@ function renderAgenda(){
     const id = Number(b.getAttribute("data-ag")); tela.agendamento = tela.agendamento === id ? null : id; renderAgenda();
   }));
   box.querySelectorAll("[data-statusag]").forEach(b => b.addEventListener("click", () => mudarAgendamento(b)));
+  box.querySelectorAll("[data-fu-ag]").forEach(b => b.addEventListener("click", () => {
+    const a = (dadosPainel.agendamentos || []).find(x => x.id === Number(b.getAttribute("data-fu-ag")));
+    if (a) novoFollowup({ remetente: a.remetente, nome: a.nome || "", assunto: a.servico ? "o seu " + a.servico.charAt(0).toLowerCase() + a.servico.slice(1) : "", agendamento_id: a.id });
+  }));
 }
 
 // Conectar a agenda do Google: o dono compartilha a agenda com a conta da Auryx e informa aqui qual é a agenda dele.

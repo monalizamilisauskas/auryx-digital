@@ -997,6 +997,8 @@ function renderAgenda(){
 /* ---------- Central de Respostas Rápidas: biblioteca de textos para a equipe responder pelo WhatsApp ----------
    Biblioteca padrão em painel/respostas.js; o que a dona muda (minhas, editadas, favoritas, escondidas) fica em
    businesses.respostas_rapidas. O texto vai pelo WhatsApp da equipe (wa.me), não pela API da Meta. */
+// Editar, esconder e criar respostas: Premium, Completo e teste (sem a informação, ainda não rodou o SQL: libera).
+function podeEditarRespostas(){ return respostasRapidas.pode_editar !== false; }
 function semAcento(s){ return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
 function bibliotecaPadrao(){
   const B = window.RESPOSTAS_RAPIDAS || {};
@@ -1120,7 +1122,7 @@ function formResposta(chave){
     + '<small style="display:block;color:var(--muted);font-size:12.5px;margin-top:6px;line-height:1.5;">Complete o que está entre [colchetes]. O WhatsApp abre com o texto pronto: é só conferir e enviar.</small>'
     + '<div id="respTrava">' + travaResposta() + '</div>'
     + '<div class="acoes" style="margin-top:12px;"><a class="btn btn-primary" id="respAbrir" target="_blank" rel="noopener" href="' + esc(linkWhatsApp(ctx.remetente, tela.respTexto)) + '">Abrir no WhatsApp</a>'
-    + '<button class="btn" type="button" id="respNovoModelo">Salvar como minha resposta</button>'
+    + (podeEditarRespostas() ? '<button class="btn" type="button" id="respNovoModelo">Salvar como minha resposta</button>' : '')
     + '<button class="btn" type="button" id="respCancelar">Fechar</button><span class="msg" id="respMsg"></span></div>'
     + (tela.respSalvando ? '<div class="salvar-modelo"><input id="respTitulo" maxlength="60" placeholder="Nome da resposta, ex.: Chave Pix">'
       + '<select id="respCatNova">' + categoriasConta(bibliotecaConta(true)).concat(["Minhas respostas"]).filter((c, i, a) => a.indexOf(c) === i).map(c => '<option>' + esc(c) + '</option>').join("") + '</select>'
@@ -1184,7 +1186,7 @@ function ligarResposta(box, redesenhar){
     msg.textContent = "";
   });
   $("respCancelar").addEventListener("click", () => { tela.resp = null; tela.respTexto = null; tela.respSalvando = false; redesenhar(); });
-  $("respNovoModelo").addEventListener("click", () => { tela.respSalvando = !tela.respSalvando; redesenhar(); if ($("respTitulo")) $("respTitulo").focus(); });
+  if ($("respNovoModelo")) $("respNovoModelo").addEventListener("click", () => { tela.respSalvando = !tela.respSalvando; redesenhar(); if ($("respTitulo")) $("respTitulo").focus(); });
   if ($("respSalvarModelo")) $("respSalvarModelo").addEventListener("click", async () => {
     const titulo = $("respTitulo").value.trim(), texto = $("respTexto").value.trim();
     const msg = $("respMsg"); msg.className = "msg erro";
@@ -1215,13 +1217,17 @@ function renderRespostas(){
     + '<details class="ajuda"><summary>Como funciona?</summary>'
     + '<p>Em <b>Pedidos</b>, <b>Agendamentos</b> e <b>Clientes esperando</b>, o botão <b>Responder no WhatsApp</b> abre esta biblioteca com o nome do cliente e os dados do pedido já preenchidos. '
     + 'Você escolhe a resposta, ajusta o texto e o WhatsApp abre com a mensagem pronta.</p>'
-    + '<p>Aqui você pode <b>favoritar</b> (aparecem primeiro), <b>editar</b>, <b>esconder</b> as que não usa e criar as suas. '
-    + 'Nos textos, use {nome}, {negocio}, {destino}, {datas} e {assunto}: o painel troca pelos dados de cada cliente.</p></details>'
+    + (podeEditarRespostas()
+      ? '<p>Aqui você pode <b>favoritar</b> (aparecem primeiro), <b>editar</b>, <b>esconder</b> as que não usa e criar as suas. '
+        + 'Nos textos, use {nome}, {negocio}, {destino}, {datas} e {assunto}: o painel troca pelos dados de cada cliente.</p></details>'
+      : '<p>Aqui você vê todas as respostas e marca as <b>favoritas</b>, que aparecem primeiro.</p></details>'
+        + '<div class="aviso info" style="margin-top:14px;"><div class="txt"><b>🔒 Personalize as suas respostas</b>Nos planos Premium e Completo você edita os textos, esconde os que não usa e cria respostas próprias, como a sua chave Pix.</div>'
+        + '<button class="btn btn-primary" type="button" data-ir="plano">Ver planos</button></div>')
     + '<div class="acoes" style="margin:14px 0;"><input id="rrBusca" class="rr-busca" style="flex:1;min-width:200px;margin:0;" placeholder="Buscar (ex.: bagagem, reembolso, Pix)" value="' + esc(busca) + '">'
-    + '<button class="btn btn-primary" type="button" id="rrNova">+ Nova resposta</button><span class="msg" id="rrMsg"></span></div>';
-  if (tela.rrEditar) html += formEditarResposta();
+    + (podeEditarRespostas() ? '<button class="btn btn-primary" type="button" id="rrNova">+ Nova resposta</button>' : '') + '<span class="msg" id="rrMsg"></span></div>';
+  if (tela.rrEditar && podeEditarRespostas()) html += formEditarResposta();
   html += '<div id="rrCorpo">' + corpoRespostas() + '</div>';
-  if (escondidas.length) html += '<details class="ajuda" style="margin-top:16px;"' + (tela.rrVerEscondidas ? ' open' : '') + ' id="rrEscondidas"><summary>Respostas escondidas (' + escondidas.length + ')</summary>'
+  if (escondidas.length && podeEditarRespostas()) html += '<details class="ajuda" style="margin-top:16px;"' + (tela.rrVerEscondidas ? ' open' : '') + ' id="rrEscondidas"><summary>Respostas escondidas (' + escondidas.length + ')</summary>'
     + escondidas.map(m => '<div class="rr-linha"><div><b>' + esc(m.titulo) + '</b><span class="quem"> · ' + esc(m.cat) + '</span></div>'
       + '<div class="ped-acoes" style="margin:0;"><button class="btn" type="button" data-rrmostrar="' + esc(m.id) + '">Mostrar de novo</button></div></div>').join("") + '</details>';
   box.innerHTML = html;
@@ -1248,10 +1254,10 @@ function corpoRespostas(){
       + '<p>' + esc(m.texto) + '</p></div>'
       + '<div class="ped-acoes" style="margin:0;">'
       + '<button class="btn" type="button" data-rrfav="' + esc(m.id) + '">' + (m.fav ? '★ Favorita' : '☆ Favoritar') + '</button>'
-      + '<button class="btn" type="button" data-rreditar="' + esc(m.id) + '">Editar</button>'
-      + (m.meu ? '<button class="btn" type="button" data-rrapagar="' + esc(m.id) + '">Apagar</button>'
-               : '<button class="btn" type="button" data-rresconder="' + esc(m.id) + '">Esconder</button>')
-      + (m.editado ? '<button class="btn" type="button" data-rrrestaurar="' + esc(m.id) + '">Voltar ao original</button>' : '')
+      + (podeEditarRespostas() ? '<button class="btn" type="button" data-rreditar="' + esc(m.id) + '">Editar</button>'
+        + (m.meu ? '<button class="btn" type="button" data-rrapagar="' + esc(m.id) + '">Apagar</button>'
+                 : '<button class="btn" type="button" data-rresconder="' + esc(m.id) + '">Esconder</button>')
+        + (m.editado ? '<button class="btn" type="button" data-rrrestaurar="' + esc(m.id) + '">Voltar ao original</button>' : '') : '')
       + '</div></div>').join("");
 }
 function formEditarResposta(){
@@ -1299,13 +1305,14 @@ function ligarRespostas(){
   };
   ligarCorpo();
   $("rrBusca").addEventListener("input", (e) => { tela.rrBusca = e.target.value; $("rrCorpo").innerHTML = corpoRespostas(); ligarCorpo(); });
-  $("rrNova").addEventListener("click", () => { tela.rrEditar = { id: null, cat: tela.rrCat && tela.rrCat !== "Favoritas" ? tela.rrCat : "Minhas respostas", titulo: "", texto: "Olá, {nome}! " }; renderRespostas(); if ($("rrTitulo")) $("rrTitulo").focus(); });
+  document.querySelectorAll("#respostasPainel [data-ir]").forEach(b => b.addEventListener("click", () => irPara(b.getAttribute("data-ir"))));
+  if ($("rrNova")) $("rrNova").addEventListener("click", () => { tela.rrEditar = { id: null, cat: tela.rrCat && tela.rrCat !== "Favoritas" ? tela.rrCat : "Minhas respostas", titulo: "", texto: "Olá, {nome}! " }; renderRespostas(); if ($("rrTitulo")) $("rrTitulo").focus(); });
   if ($("rrEscondidas")) $("rrEscondidas").addEventListener("toggle", (e) => { tela.rrVerEscondidas = e.target.open; });
   document.querySelectorAll("[data-rrmostrar]").forEach(b => b.addEventListener("click", async () => {
     const id = b.getAttribute("data-rrmostrar");
     if (await salvar(Object.assign({}, R(), { ocultos: (R().ocultos || []).filter(x => x !== id) }))) renderRespostas();
   }));
-  if ($("rrForm")){
+  if ($("rrForm") && podeEditarRespostas()){
     $("rrCancelar").addEventListener("click", () => { tela.rrEditar = null; renderRespostas(); });
     $("rrSalvar").addEventListener("click", async () => {
       const titulo = $("rrTitulo").value.trim(), texto = $("rrTextoEd").value.trim(), cat = $("rrCatSel").value;

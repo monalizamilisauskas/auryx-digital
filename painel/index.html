@@ -450,7 +450,7 @@ function render(d){
     + '<span class="nome">' + esc(nome) + '</span>'
     + (n ? '<span class="contador alerta">' + n + '</span>' : '') + '</button>').join("");
   const titulos = {
-    inicio: [primeiroNome ? "Olá, " + primeiroNome + " 👋" : "Início", (d.nome ? d.nome + " · " : "") + "acompanhe a sua secretária, os clientes e " + (usaAgenda && !usaPedidos ? "a agenda" : usaAgenda ? "a agenda e os pedidos" : "os pedidos")],
+    inicio: [primeiroNome ? "Olá, " + primeiroNome + " 👋" : "Início", (d.nome ? d.nome + " · " : "") + "acompanhe a sua secretária, os clientes, " + (usaPedidos ? "a agenda e os pedidos" : "e a agenda")],
     agenda: ["Agendamentos", "Horários que a secretária marcou com os seus clientes"],
     conversas: ["Clientes esperando", "Conversas que a secretária pausou para alguém da equipe responder"],
     pedidos: ["Pedidos", "Orçamentos e pedidos que a secretária coletou para a sua equipe"],
@@ -485,11 +485,9 @@ function render(d){
       + '<div class="cartao destaque"><div class="l">Mensagens usadas</div><div class="n">' + usadas + (limite ? '<small>de ' + limite + '</small>' : '') + '</div>'
       + (limite ? '<div class="barra"><div style="width:' + pct + '%"></div></div><div class="x">' + Math.max(0, limite - usadas) + ' restantes ' + (emTeste ? 'no teste' : 'neste mês') + '</div>' : '') + '</div>'
       + '<button type="button" class="cartao" data-ir="conversas"><div class="l">Clientes esperando</div><div class="n' + (convs.length ? ' alerta' : '') + '">' + convs.length + '</div><div class="x">Ver clientes →</div></button>'
-      + (usaAgenda ? '<button type="button" class="cartao" data-ir="agenda"><div class="l">Agendamentos hoje</div><div class="n' + (hoje ? ' alerta' : '') + '">' + hoje + '</div><div class="x">Ver agenda →</div></button>' : '')
+      + '<button type="button" class="cartao" data-ir="agenda"><div class="l">Agendamentos hoje</div><div class="n' + (hoje ? ' alerta' : '') + '">' + hoje + '</div><div class="x">Ver agenda →</div></button>'
       + (usaPedidos ? '<button type="button" class="cartao" data-ir="pedidos"><div class="l">Pedidos pendentes</div><div class="n' + (pend ? ' alerta' : '') + '">' + pend + '</div><div class="x">Ver pedidos →</div></button>' : '')
-      + (usaAgenda && usaPedidos ? '' : usaAgenda
-          ? '<div class="cartao"><div class="l">Próximos 7 dias</div><div class="n">' + Number(d.agendamentos_semana || 0) + '</div><div class="x">Agendamentos confirmados</div></div>'
-          : '<div class="cartao"><div class="l">Pedidos na semana</div><div class="n">' + (s.pedidos || 0) + '</div><div class="x">Últimos 7 dias</div></div>')
+      + (usaPedidos ? '' : '<div class="cartao"><div class="l">Próximos 7 dias</div><div class="n">' + Number(d.agendamentos_semana || 0) + '</div><div class="x">Agendamentos confirmados</div></div>')
       + '</div>';
     html += '<div class="panel"><h2>Últimos 7 dias</h2><p class="sub">Como a secretária trabalhou nesta semana.</p><div class="metric-grid" style="margin:0;">'
       + '<div class="metric-card"><div class="label">Mensagens recebidas</div><div class="value neutral">' + (s.mensagens || 0) + '</div></div>'

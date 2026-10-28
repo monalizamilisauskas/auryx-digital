@@ -283,6 +283,16 @@
   .fu-previa{ border-radius:12px; background:#0E1830; border:1px solid var(--line); padding:12px 14px; margin-top:4px; }
   .fu-previa span{ font-size:12px; color:var(--muted); }
   .fu-previa p{ margin:6px 0 0; font-size:14px; line-height:1.5; color:#DBEAFE; background:#1E3A8A; display:inline-block; padding:9px 12px; border-radius:12px; border-bottom-left-radius:4px; }
+  .chip{ font-size:11.5px; padding:3px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); white-space:nowrap; }
+  .chip.ok{ color:var(--good); border-color:rgba(52,211,153,0.4); }
+  .chip.alerta{ color:#FCD34D; border-color:rgba(245,158,11,0.45); }
+  .dois-campos{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .dois-campos .campo{ margin-bottom:0; }
+  .lembrete-cfg{ margin-top:16px; padding:14px; border:1px solid var(--line); border-radius:10px; background:var(--panel-2); }
+  .lembrete-cfg select{ width:100%; max-width:420px; background:var(--panel-3); border:1px solid var(--line); color:var(--parchment); border-radius:8px; padding:9px 10px; font-size:14px; font-family:'Inter',sans-serif; margin-top:8px; }
+  .lembrete-cfg .msg{ display:block; font-size:13px; margin-top:6px; color:var(--good); } .lembrete-cfg .msg.erro{ color:var(--bad); }
+  .lembrete-cfg small{ display:block; color:var(--muted); font-size:12.5px; margin-top:8px; line-height:1.5; }
+  @media (max-width:560px){ .ag-linha .chip{ display:none; } .dois-campos{ grid-template-columns:1fr; } }
   .agenda-ok{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:16px; padding:12px 14px; border:1px solid rgba(52,211,153,0.35);
     background:rgba(52,211,153,0.07); border-radius:10px; font-size:13.5px; color:var(--muted); }
   .agenda-ok svg{ color:var(--good); flex:none; }
@@ -395,6 +405,8 @@ let faqEdicao = [];
 const AGENDA_AURYX = "";
 // Envio do follow-up: liga quando a Meta aprovar o modelo de mensagem e o n8n estiver enviando.
 const FOLLOWUP_ATIVO = false;
+// Confirmação e lembrete de horário pelo WhatsApp: muda para true quando o envio estiver ligado no n8n (modelos aprovados na Meta).
+const AVISOS_ATIVO = false;
 // Tipos de follow-up: cada um é um modelo aprovado na Meta; a dona só escreve a parte do meio ({{3}}).
 const TIPOS_FU = {
   como_foi: { nome: "Como foi", rotulo: "Como foi…", antes: "Como foi ", depois: "? Ficou tudo certo? Se quiser contar ou precisar de algo, é só responder por aqui.", abertura: " 😊 ",
@@ -611,6 +623,7 @@ function irPara(view){
   fecharMenu();
   tela.view = view;
   tela.pedido = null;
+  tela.confHorario = null;
   try { localStorage.setItem("painelView", view); } catch (e) {}
   render(dadosPainel);
   window.scrollTo({ top: 0 });
@@ -652,14 +665,17 @@ function renderPedidos(){
         + '<span class="lado">' + dataHoraBR(p.created_at) + '<span class="status ' + esc(p.status) + '">' + esc(STATUS[p.status] || p.status) + '</span>' + (aberto ? '▴' : '▾') + '</span></button>';
       if (aberto){
         const campos = Object.entries(p.dados || {}).map(([k, v]) => '<b>' + esc(ROTULOS[k] || (k.charAt(0).toUpperCase() + k.slice(1))) + ':</b> ' + esc(v)).join(' · ');
-        html += '<div class="ped-detalhe"><div class="d">' + campos + '<br><b>Contato:</b> +' + esc(p.remetente) + '</div><div class="ped-acoes">'
+        const agP = agendamentoDoPedido(p.id);
+        html += '<div class="ped-detalhe"><div class="d">' + campos + '<br><b>Contato:</b> +' + esc(p.remetente)
+          + (agP ? '<br><b>Horário confirmado:</b> ' + esc(quandoBR(agP.data_hora)) : '') + '</div><div class="ped-acoes">'
           + '<a class="btn btn-primary" href="https://wa.me/' + esc(p.remetente) + '" target="_blank" rel="noopener">Responder no WhatsApp</a>';
+        if (d.usa_agenda) html += '<button class="btn" type="button" data-conf="' + p.id + '">' + (agP ? 'Remarcar horário' : 'Confirmar horário') + '</button>';
         html += '<button class="btn" type="button" data-fu-ped="' + p.id + '">Agendar follow-up</button>';
         Object.keys(STATUS).filter(s => s !== p.status).forEach(s => {
           const rotulo = s === "pendente" ? "Voltar para pendente" : s === "respondido" ? "Marcar como respondido" : STATUS[s];
           html += '<button class="btn" type="button" data-status="' + s + '" data-id="' + p.id + '">' + rotulo + '</button>';
         });
-        html += '<span class="msg" id="pedMsg' + p.id + '"></span></div></div>';
+        html += '<span class="msg" id="pedMsg' + p.id + '"></span></div>' + (tela.confHorario === p.id ? formHorario(p.id) : '') + '</div>';
       }
       html += '</div>';
     });
@@ -673,6 +689,7 @@ function renderPedidos(){
     const id = Number(b.getAttribute("data-pedido")); tela.pedido = tela.pedido === id ? null : id; renderPedidos();
   }));
   box.querySelectorAll("[data-status]").forEach(b => b.addEventListener("click", () => mudarStatus(b)));
+  ligarHorario(box, renderPedidos);
   box.querySelectorAll("[data-fu-ped]").forEach(b => b.addEventListener("click", () => {
     const p = (dadosPainel.pedidos || []).find(x => x.id === Number(b.getAttribute("data-fu-ped")));
     if (!p) return;
@@ -879,7 +896,7 @@ function renderAgenda(){
     });
     html += '</div>';
     let lista = todos.filter(filtros[tela.abaAg]);
-    if (tela.abaAg !== "proximos") lista = lista.slice().sort((a, b) => new Date(b.data_hora) - new Date(a.data_hora));
+    lista = lista.slice().sort((a, b) => tela.abaAg === "proximos" ? new Date(a.data_hora) - new Date(b.data_hora) : new Date(b.data_hora) - new Date(a.data_hora));
     if (!lista.length) html += '<p class="sub" style="margin:0;">Nenhum agendamento aqui.</p>';
     let diaAtual = "";
     lista.forEach(a => {
@@ -895,18 +912,20 @@ function renderAgenda(){
       html += '<div class="pedido ag-linha"><button type="button" class="ped-linha" data-ag="' + a.id + '">'
         + '<span style="display:flex;gap:12px;align-items:center;"><span class="hora">' + hora + '</span><span>' + esc(a.servico || "Agendamento")
         + ' <span class="quem">· ' + esc(a.nome || ("+" + a.remetente)) + '</span></span></span>'
-        + '<span class="lado"><span class="status ' + esc(a.status) + '">' + esc(STATUS_AG[a.status] || a.status) + '</span>' + (aberto ? '▴' : '▾') + '</span></button>';
+        + '<span class="lado">' + chipAviso(a) + '<span class="status ' + esc(a.status) + '">' + esc(STATUS_AG[a.status] || a.status) + '</span>' + (aberto ? '▴' : '▾') + '</span></button>';
       if (aberto){
+        const remarcavel = a.pedido_id && a.status === "confirmado" && (d.pedidos || []).some(p => p.id === a.pedido_id);
         html += '<div class="ped-detalhe"><div class="d">'
           + (a.endereco ? '<b>Endereço:</b> ' + esc(a.endereco) + '<br>' : '')
           + '<b>Data:</b> ' + esc(new Date(a.data_hora).toLocaleString("pt-BR", { timeZone: tz, weekday: "long", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }))
-          + '<br><b>Contato:</b> +' + esc(a.remetente) + '</div><div class="ped-acoes">'
+          + '<br><b>Contato:</b> +' + esc(a.remetente) + linhaLembrete(a) + '</div><div class="ped-acoes">'
           + '<a class="btn btn-primary" href="https://wa.me/' + esc(a.remetente) + '" target="_blank" rel="noopener">Falar no WhatsApp</a>'
+          + (remarcavel ? '<button class="btn" type="button" data-conf="' + a.pedido_id + '">Remarcar horário</button>' : '')
           + '<button class="btn" type="button" data-fu-ag="' + a.id + '">Agendar follow-up</button>';
         Object.keys(STATUS_AG).filter(s => s !== a.status).forEach(s => {
           html += '<button class="btn" type="button" data-statusag="' + s + '" data-id="' + a.id + '">' + (s === "confirmado" ? "Voltar para confirmado" : STATUS_AG[s]) + '</button>';
         });
-        html += '<span class="msg" id="agMsg' + a.id + '"></span></div></div>';
+        html += '<span class="msg" id="agMsg' + a.id + '"></span></div>' + (remarcavel && tela.confHorario === a.pedido_id ? formHorario(a.pedido_id) : '') + '</div>';
       }
       html += '</div>';
     });
@@ -914,9 +933,11 @@ function renderAgenda(){
   } else if (d.agenda_conectada){
     html += '<p class="sub" style="margin-top:14px;">Ainda não há agendamentos. Quando a secretária marcar o primeiro horário com um cliente, ele aparece aqui.</p>';
   }
-  html += blocoAgenda(d);
+  html += blocoLembrete(d) + blocoAgenda(d);
   box.innerHTML = html;
   ligarAgenda();
+  ligarHorario(box, renderAgenda);
+  if ($("lembreteDias")) $("lembreteDias").addEventListener("change", (e) => salvarLembrete(e.target.value));
   box.querySelectorAll("[data-abaag]").forEach(b => b.addEventListener("click", () => { tela.abaAg = b.getAttribute("data-abaag"); tela.agendamento = null; renderAgenda(); }));
   box.querySelectorAll("[data-ag]").forEach(b => b.addEventListener("click", () => {
     const id = Number(b.getAttribute("data-ag")); tela.agendamento = tela.agendamento === id ? null : id; renderAgenda();
@@ -926,6 +947,124 @@ function renderAgenda(){
     const a = (dadosPainel.agendamentos || []).find(x => x.id === Number(b.getAttribute("data-fu-ag")));
     if (a) novoFollowup({ remetente: a.remetente, nome: a.nome || "", assunto: a.servico ? "o seu " + a.servico.charAt(0).toLowerCase() + a.servico.slice(1) : "", agendamento_id: a.id });
   }));
+}
+
+/* ---------- Confirmação e lembrete: a dona confirma o horário de um pedido e o cliente recebe a confirmação ---------- */
+function agendamentoDoPedido(id){
+  return (dadosPainel.agendamentos || []).find(a => a.pedido_id === id && a.status === "confirmado") || null;
+}
+function quandoBR(iso){
+  const tz = dadosPainel.timezone || "America/Sao_Paulo";
+  const dt = new Date(iso);
+  return dt.toLocaleDateString("pt-BR", { timeZone: tz, weekday: "long", day: "2-digit", month: "2-digit" })
+    + " às " + dt.toLocaleTimeString("pt-BR", { timeZone: tz, hour: "2-digit", minute: "2-digit" });
+}
+// Mesmo texto do modelo confirmacao_horario aprovado na Meta (decisoes/confirmacao-lembrete.md no ai-employees).
+function textoConfirmacao(servico, data, hora){
+  const s = String(servico || "").trim();
+  const quando = data && hora
+    ? new Date(data + "T12:00:00Z").toLocaleDateString("pt-BR", { timeZone: "UTC", weekday: "long", day: "2-digit", month: "2-digit" }) + " às " + hora
+    : "___";
+  return "Olá! Aqui é da equipe " + (dadosPainel.nome || "sua empresa") + ". Seu horário de " + (s ? s.charAt(0).toLowerCase() + s.slice(1) : "___")
+    + " está confirmado para " + quando + ". Se precisar remarcar, é só responder esta mensagem.";
+}
+function formHorario(pedidoId){
+  const d = dadosPainel;
+  const tz = d.timezone || "America/Sao_Paulo";
+  const p = (d.pedidos || []).find(x => x.id === pedidoId) || {};
+  const dd = p.dados || {};
+  const ag = agendamentoDoPedido(pedidoId);
+  const data = ag ? new Date(ag.data_hora).toLocaleDateString("en-CA", { timeZone: tz }) : "";
+  const hora = ag ? new Date(ag.data_hora).toLocaleTimeString("pt-BR", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }) : "";
+  const servico = (ag && ag.servico) || dd.servico || (d.itens && d.itens[p.item]) || "";
+  const endereco = (ag && ag.endereco) || dd.endereco || "";
+  const dias = Number(d.lembrete_antecedencia_dias != null ? d.lembrete_antecedencia_dias : 7);
+  return '<div class="fu-form" id="formHorario"><div class="subtitulo" style="margin-top:0;">' + (ag ? 'Remarcar horário' : 'Confirmar horário') + '</div>'
+    + '<div class="dois-campos" style="margin-bottom:14px;"><div class="campo"><label for="hrData">Dia</label><input id="hrData" type="date" min="' + hojeNegocio(0) + '" value="' + esc(data) + '"></div>'
+    + '<div class="campo"><label for="hrHora">Horário</label><input id="hrHora" type="time" value="' + esc(hora) + '"></div></div>'
+    + '<div class="campo"><label for="hrServico">Serviço</label><input id="hrServico" maxlength="80" placeholder="Ex.: Corte e escova" value="' + esc(servico) + '"></div>'
+    + '<div class="campo"><label for="hrEndereco">Endereço (se o atendimento for no local do cliente)</label><input id="hrEndereco" maxlength="160" value="' + esc(endereco) + '"></div>'
+    + '<div class="fu-previa"><span>' + (AVISOS_ATIVO ? 'O cliente recebe no WhatsApp:' : 'Mensagem de confirmação (o envio automático começa em breve; por enquanto, avise o cliente pelo WhatsApp):') + '</span>'
+    + '<p id="hrPrevia">' + esc(textoConfirmacao(servico, data, hora)) + '</p></div>'
+    + '<small style="display:block;color:var(--muted);font-size:12.5px;margin-top:8px;line-height:1.5;">'
+    + (dias === 0 ? 'Na véspera, às 10h, o cliente recebe um lembrete para confirmar ou remarcar.'
+      : 'Se o horário for daqui a ' + dias + (dias === 1 ? ' dia' : ' dias') + ' ou mais, na véspera, às 10h, o cliente recebe um lembrete para confirmar ou remarcar.') + '</small>'
+    + '<div class="acoes" style="margin-top:12px;"><button class="btn btn-primary" type="button" id="hrSalvar">' + (ag ? 'Salvar novo horário' : 'Confirmar horário') + '</button>'
+    + '<button class="btn" type="button" id="hrCancelar">Cancelar</button><span class="msg" id="hrMsg"></span></div></div>';
+}
+function ligarHorario(box, redesenhar){
+  box.querySelectorAll("[data-conf]").forEach(b => b.addEventListener("click", () => {
+    const id = Number(b.getAttribute("data-conf")); tela.confHorario = tela.confHorario === id ? null : id; redesenhar();
+  }));
+  if (!$("formHorario")) return;
+  const previa = () => { $("hrPrevia").textContent = textoConfirmacao($("hrServico").value, $("hrData").value, $("hrHora").value); };
+  ["hrData", "hrHora", "hrServico"].forEach(id => $(id).addEventListener("input", previa));
+  $("hrCancelar").addEventListener("click", () => { tela.confHorario = null; redesenhar(); });
+  $("hrSalvar").addEventListener("click", () => salvarHorario(tela.confHorario));
+}
+async function salvarHorario(pedidoId){
+  const msg = $("hrMsg"); const btn = $("hrSalvar");
+  const data = $("hrData").value, hora = $("hrHora").value, servico = $("hrServico").value.trim();
+  msg.className = "msg"; msg.textContent = "";
+  if (!data || !hora){ msg.className = "msg erro"; msg.textContent = "Escolha o dia e o horário."; return; }
+  if (servico.length < 2){ msg.className = "msg erro"; msg.textContent = "Escreva o serviço."; return; }
+  const textoBtn = btn.textContent;
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Salvando...';
+  // Dia e hora no fuso do negócio; o banco converte ("2026-11-06 14:00 America/Sao_Paulo").
+  const { data: r, error } = await supa.rpc("confirmar_horario", {
+    p_pedido_id: pedidoId, p_data_hora: data + " " + hora + " " + (dadosPainel.timezone || "America/Sao_Paulo"),
+    p_servico: servico, p_endereco: $("hrEndereco").value.trim() || null,
+  });
+  if (error || !r || !r.ok){
+    btn.disabled = false; btn.textContent = textoBtn;
+    msg.className = "msg erro";
+    msg.textContent = /data inv/.test((error && error.message) || "") ? "Escolha um dia e horário a partir de agora." : "Não foi possível salvar agora. Tente de novo em alguns instantes.";
+    return;
+  }
+  tela.confHorario = null;
+  carregarPainel();
+}
+function chipAviso(a){
+  if (a.status !== "confirmado") return "";
+  if (a.confirmacao_cliente === "confirmou") return '<span class="chip ok">Cliente confirmou ✅</span>';
+  if (a.confirmacao_cliente === "remarcar") return '<span class="chip alerta">Pediu para remarcar</span>';
+  const l = a.lembrete;
+  if (l && l.status === "pendente"){
+    const tz = dadosPainel.timezone || "America/Sao_Paulo";
+    return '<span class="chip">Lembrete ' + new Date(l.enviar_em).toLocaleDateString("pt-BR", { timeZone: tz, day: "2-digit", month: "2-digit" }) + '</span>';
+  }
+  if (l && l.status === "enviado") return '<span class="chip">Lembrete enviado</span>';
+  return "";
+}
+function linhaLembrete(a){
+  if (a.status !== "confirmado") return "";
+  if (a.confirmacao_cliente === "confirmou") return '<br><b>Lembrete:</b> o cliente confirmou o horário.';
+  if (a.confirmacao_cliente === "remarcar") return '<br><b>Lembrete:</b> o cliente pediu para remarcar. Fale com ele no WhatsApp.';
+  const l = a.lembrete;
+  if (!l) return "";
+  if (l.status === "pendente") return '<br><b>Lembrete:</b> sai ' + esc(quandoBR(l.enviar_em)) + ', pedindo para o cliente confirmar.';
+  if (l.status === "enviado") return '<br><b>Lembrete:</b> enviado. O cliente ainda não respondeu.';
+  if (l.status === "falhou") return '<br><b>Lembrete:</b> não foi possível enviar. Avise o cliente pelo WhatsApp.';
+  return "";
+}
+function blocoLembrete(d){
+  const atual = Number(d.lembrete_antecedencia_dias != null ? d.lembrete_antecedencia_dias : 7);
+  const ops = [[0, "Todos os horários"], [2, "Marcados com 2 dias ou mais de antecedência"], [3, "Marcados com 3 dias ou mais de antecedência"],
+    [7, "Marcados com 1 semana ou mais de antecedência"], [14, "Marcados com 2 semanas ou mais de antecedência"]];
+  if (!ops.some(o => o[0] === atual)) ops.push([atual, "Marcados com " + atual + " dias ou mais de antecedência"]);
+  return '<div class="lembrete-cfg"><label for="lembreteDias" class="subtitulo" style="display:block;">Lembrete na véspera' + (AVISOS_ATIVO ? '' : ' (em breve)') + ': para quais horários?</label>'
+    + '<select id="lembreteDias">' + ops.map(([v, n]) => '<option value="' + v + '"' + (v === atual ? ' selected' : '') + '>' + esc(n) + '</option>').join("") + '</select>'
+    + '<small>Um dia antes, às 10h, o cliente recebe um lembrete e responde "Confirmo" ou "Preciso remarcar". A resposta aparece aqui no agendamento.</small>'
+    + '<span class="msg" id="lembreteMsg"></span></div>';
+}
+async function salvarLembrete(valor){
+  const msg = $("lembreteMsg"); const sel = $("lembreteDias");
+  sel.disabled = true; msg.className = "msg"; msg.textContent = "Salvando...";
+  const { data, error } = await supa.rpc("salvar_lembrete", { p_dias: Number(valor) });
+  sel.disabled = false;
+  if (error || !data || !data.ok){ msg.className = "msg erro"; msg.textContent = "Não foi possível salvar. Tente de novo."; return; }
+  dadosPainel.lembrete_antecedencia_dias = Number(valor);
+  msg.textContent = "Salvo ✓";
 }
 
 // Conectar a agenda do Google: o dono compartilha a agenda com a conta da Auryx e informa aqui qual é a agenda dele.

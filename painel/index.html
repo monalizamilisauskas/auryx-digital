@@ -731,12 +731,12 @@ function blocoAgenda(d){
     + 'Assim a secretária vê os seus horários livres e marca os clientes direto na sua agenda. Leva 2 minutos:</div>'
     + '<ol class="passos">'
     + '<li>No computador, abra o <a href="https://calendar.google.com/calendar/u/0/r/settings" target="_blank" rel="noopener">Google Agenda → Configurações</a>.</li>'
-    + '<li>No menu da esquerda, role até <b>Configurações das minhas agendas</b> e clique na sua agenda (ela aparece com o seu nome).</li>'
-    + '<li>Clique em <b>Compartilhado com</b> → <b>Adicionar pessoas e grupos</b>. Coloque ' + conta + ', escolha a permissão <b>Fazer alterações nos eventos</b> e clique em <b>Enviar</b>.</li>'
-    + '<li>Ainda no menu da esquerda, clique em <b>Integrar agenda</b> e copie o <b>ID da agenda</b> (na sua agenda principal, é o seu Gmail). Cole aqui embaixo.</li>'
+    + '<li>No menu da esquerda, role até <b>Configurações das minhas agendas</b>, clique na sua agenda (ela aparece com o seu nome) e depois em <b>Compartilhado com</b>.</li>'
+    + '<li>Clique em <b>Adicionar pessoas e grupos</b>, coloque ' + conta + ', escolha <b>Fazer alterações nos eventos</b> e clique em <b>Enviar</b>. Depois, clique em <b>Conectar agenda</b> aqui embaixo.</li>'
     + '</ol>'
-    + '<div class="campo" style="margin:14px 0 0;"><label for="agendaId">ID da agenda</label>'
-    + '<input id="agendaId" placeholder="seuemail@gmail.com" value="' + esc(d.agenda_conectada || "") + '"></div>'
+    + '<div class="campo" style="margin:14px 0 0;"><label for="agendaId">E-mail da sua agenda do Google</label>'
+    + '<input id="agendaId" placeholder="seuemail@gmail.com" value="' + esc(d.agenda_conectada || emailLogado || "") + '">'
+    + '<small style="color:#BFDBFE;">Já preenchemos com o e-mail do seu login. Só troque se a sua agenda for de outro e-mail.</small></div>'
     + '<div class="acoes" style="margin-top:12px;"><button class="btn btn-primary" type="button" id="salvarAgenda">Conectar agenda</button>'
     + (d.agenda_conectada ? '<button class="btn" type="button" id="desconectarAgenda">Desconectar</button><button class="btn" type="button" id="cancelarAgenda">Cancelar</button>' : '')
     + '<span class="msg" id="agendaMsg"></span></div></div>';
@@ -756,7 +756,7 @@ async function salvarAgenda(valor){
   const agenda = String(valor || "").trim().toLowerCase();
   msg.className = "msg"; msg.textContent = "";
   if (agenda && !/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(agenda)){
-    msg.className = "msg erro"; msg.textContent = "Confira o ID da agenda: é um e-mail, como seuemail@gmail.com."; return;
+    msg.className = "msg erro"; msg.textContent = "Confira o e-mail da agenda, como seuemail@gmail.com."; return;
   }
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Salvando...';
   const { data, error } = await supa.rpc("conectar_agenda", { p_agenda: agenda });

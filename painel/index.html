@@ -450,7 +450,7 @@ function render(d){
     + '<span class="nome">' + esc(nome) + '</span>'
     + (n ? '<span class="contador alerta">' + n + '</span>' : '') + '</button>').join("");
   const titulos = {
-    inicio: [primeiroNome ? "Olá, " + primeiroNome + " 👋" : "Início", (d.nome ? d.nome + " · " : "") + "acompanhe a sua secretária, os clientes, " + (usaPedidos ? "a agenda e os pedidos" : "e a agenda")],
+    inicio: [primeiroNome ? "Olá, " + primeiroNome + " 👋" : "Início", (d.nome ? d.nome + " · " : "") + "acompanhe a sua secretária, " + (usaPedidos ? "os clientes, a agenda e os pedidos" : "os clientes e a agenda")],
     agenda: ["Agendamentos", "Horários que a secretária marcou com os seus clientes"],
     conversas: ["Clientes esperando", "Conversas que a secretária pausou para alguém da equipe responder"],
     pedidos: ["Pedidos", "Orçamentos e pedidos que a secretária coletou para a sua equipe"],

@@ -156,7 +156,34 @@
   .conv:first-child{ border-top:none; padding-top:0; }
   .conv .info{ font-size:14px; }
   .conv .info span{ display:block; color:var(--muted); font-size:13px; margin-top:4px; }
-  .conv .botoes{ display:flex; gap:10px; align-items:center; }
+  .conv .botoes{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .sec-head{ display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap; }
+  .sec-head h2{ margin:0; }
+  .sec-head .sub{ margin:6px 0 0; }
+  .contador{ display:inline-block; min-width:22px; padding:2px 8px; margin-left:8px; border-radius:999px; font-family:'IBM Plex Mono',monospace;
+    font-size:12px; text-align:center; vertical-align:middle; background:var(--panel-3); color:var(--muted); border:1px solid var(--line); }
+  .contador.alerta{ background:var(--gold); color:#000; border-color:var(--gold); font-weight:600; }
+  .sec-corpo{ margin-top:18px; }
+  .abas{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  .aba{ font-family:'Inter',sans-serif; font-size:13px; padding:7px 12px; border-radius:999px; cursor:pointer;
+    background:transparent; color:var(--muted); border:1px solid var(--line); }
+  .aba.ativa{ color:var(--parchment); border-color:var(--gold); background:rgba(201,162,39,0.08); }
+  .ped-linha{ width:100%; display:flex; justify-content:space-between; align-items:center; gap:12px; text-align:left; cursor:pointer;
+    background:transparent; border:none; color:var(--parchment); font-family:'Inter',sans-serif; font-size:14px; padding:0; }
+  .ped-linha .quem{ color:var(--muted); font-size:13px; }
+  .ped-linha .lado{ display:flex; align-items:center; gap:10px; color:var(--muted); font-size:12.5px; white-space:nowrap; }
+  .status{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.04em; text-transform:uppercase; padding:3px 8px; border-radius:6px; border:1px solid var(--line); }
+  .status.pendente{ color:var(--gold-bright); border-color:var(--line-strong); }
+  .status.respondido{ color:var(--parchment); }
+  .status.fechado{ color:var(--good); border-color:rgba(124,184,143,0.4); }
+  .status.nao_fechou{ color:var(--muted); }
+  .ped-detalhe{ margin-top:10px; }
+  .ped-acoes{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; align-items:center; }
+  .ped-acoes .btn{ font-size:12.5px; padding:7px 12px; }
+  .mais{ margin-top:14px; }
+  .ped-acoes .msg{ font-size:13px; color:var(--bad); }
+  a.btn{ text-decoration:none; display:inline-block; }
+  .pedido a.btn-primary, .conv .botoes a.btn-primary{ color:#1a1608; font-size:12.5px; }
   .conv .botoes a{ color:var(--gold-bright); font-size:13px; }
   .conv .btn{ padding:8px 16px; font-size:12.5px; }
 </style>
@@ -236,6 +263,10 @@ let emailLogado = "";
 const ROTULOS = { nome: "Nome", tipo: "Tipo", destino: "Destino", datas: "Datas", pessoas: "Pessoas", saida: "Saída de",
   orcamento: "Orçamento", servico: "Serviço", viagem: "Viagem", assunto: "Assunto", roteiro: "Roteiro", interesse: "Interesse" };
 let faqEdicao = [];
+// O que está aberto na tela continua aberto quando o painel atualiza.
+const tela = { convAberta: false, pedAberto: false, aba: "pendente", pedido: null, limite: 20 };
+let dadosPainel = null;
+const STATUS = { pendente: "Pendente", respondido: "Respondido", fechado: "Venda fechada", nao_fechou: "Não fechou" };
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
@@ -296,17 +327,20 @@ function render(d){
     + '</div>';
 
   const convs = d.conversas_equipe || [];
-  html += '<div class="panel"><h2>Conversas com a sua equipe</h2>'
-    + '<p class="sub">Nestas conversas a secretária está em silêncio, porque o cliente pediu uma pessoa ou alguém da equipe respondeu. Quando terminar o atendimento, devolva para a secretária. Se ninguém devolver, ela volta sozinha depois de 12 horas.</p>';
-  if (!convs.length){
-    html += '<p class="sub" style="margin:0;">Nenhuma conversa aguardando a equipe.</p>';
-  } else {
+  html += '<div class="panel"><div class="sec-head"><div><h2>Conversas com a sua equipe'
+    + '<span class="contador' + (convs.length ? ' alerta' : '') + '">' + convs.length + '</span></h2>'
+    + '<p class="sub">' + (convs.length ? 'Clientes esperando uma pessoa da equipe. A secretária está em silêncio nessas conversas.' : 'Nenhum cliente esperando a equipe agora.') + '</p></div>'
+    + (convs.length ? '<button class="btn" type="button" id="toggleConv">' + (tela.convAberta ? 'Fechar' : 'Ver conversas') + '</button>' : '')
+    + '</div>';
+  if (convs.length && tela.convAberta){
+    html += '<div class="sec-corpo"><p class="sub">Responda pelo WhatsApp. Quando terminar o atendimento, devolva para a secretária. Se ninguém devolver, ela volta sozinha depois de 12 horas.</p>';
     convs.forEach(c => {
       html += '<div class="conv"><div class="info">+' + esc(c.remetente) + ' · desde ' + dataHoraBR(c.desde)
         + (c.ultima_mensagem ? '<span>“' + esc(c.ultima_mensagem) + '”</span>' : '') + '</div>'
-        + '<div class="botoes"><a href="https://wa.me/' + esc(c.remetente) + '" target="_blank" rel="noopener">Responder no WhatsApp</a>'
+        + '<div class="botoes"><a class="btn btn-primary" href="https://wa.me/' + esc(c.remetente) + '" target="_blank" rel="noopener">Responder no WhatsApp</a>'
         + '<button class="btn" type="button" data-devolver="' + esc(c.remetente) + '">Devolver para a secretária</button></div></div>';
     });
+    html += '</div>';
   }
   html += '</div>';
 
@@ -317,21 +351,7 @@ function render(d){
     + '<div class="metric-card"><div class="label">Passadas p/ equipe</div><div class="value neutral">' + (s.transferidas || 0) + '</div></div>'
     + '</div><p class="period-note">Últimos 7 dias.</p>';
 
-  const pedidos = d.pedidos_recentes || [];
-  html += '<div class="panel" style="margin-top:20px;"><h2>Pedidos recentes</h2>'
-    + '<p class="sub">Pedidos que a secretária coletou e passou para a sua equipe.</p>';
-  if (!pedidos.length){
-    html += '<p class="sub" style="margin:0;">Nenhum pedido ainda.</p>';
-  } else {
-    pedidos.forEach(p => {
-      const titulo = (d.itens && d.itens[p.item]) || p.item;
-      const campos = Object.entries(p.dados || {}).map(([k, v]) => '<b>' + esc(ROTULOS[k] || (k.charAt(0).toUpperCase() + k.slice(1))) + ':</b> ' + esc(v)).join(' · ');
-      html += '<div class="pedido"><div class="t">' + esc(titulo) + '<span>' + dataHoraBR(p.created_at) + '</span></div>'
-        + '<div class="d">' + campos + '</div>'
-        + '<a href="https://wa.me/' + esc(p.remetente) + '" target="_blank" rel="noopener">Responder no WhatsApp</a></div>';
-    });
-  }
-  html += '</div>';
+  html += '<div class="panel" style="margin-top:20px;" id="pedidosPainel"></div>';
 
   if (emTeste && (d.planos || []).length){
     html += '<div class="panel"><h2>Escolha seu plano</h2><p class="sub">Continue com a sua secretária depois do teste grátis. Depois de contratar, você personaliza as respostas e os serviços aqui no painel.</p><div class="planos">';
@@ -346,8 +366,85 @@ function render(d){
 
   html += '<div class="panel" id="personalizar"></div>';
   $("dashContent").innerHTML = html;
+  dadosPainel = d;
+  renderPedidos();
   renderPersonalizar(d);
+  if ($("toggleConv")) $("toggleConv").addEventListener("click", () => { tela.convAberta = !tela.convAberta; render(dadosPainel); });
   document.querySelectorAll("[data-devolver]").forEach(b => b.addEventListener("click", () => devolverConversa(b)));
+}
+
+/* ---------- Pedidos: abre a lista, separa por status e o dono muda o status ---------- */
+function renderPedidos(){
+  const d = dadosPainel;
+  const box = $("pedidosPainel");
+  const todos = d.pedidos || [];
+  const pend = Number(d.pedidos_pendentes || 0);
+  let html = '<div class="sec-head"><div><h2>Pedidos<span class="contador' + (pend ? ' alerta' : '') + '">' + pend + '</span></h2>'
+    + '<p class="sub">' + (pend ? (pend === 1 ? '1 pedido esperando resposta.' : pend + ' pedidos esperando resposta.') : (todos.length ? 'Nenhum pedido pendente.' : 'Nenhum pedido ainda.')) + '</p></div>'
+    + (todos.length ? '<button class="btn" type="button" id="togglePed">' + (tela.pedAberto ? 'Fechar' : 'Ver pedidos') + '</button>' : '')
+    + '</div>';
+  if (todos.length && tela.pedAberto){
+    const conta = (s) => todos.filter(p => s === "todos" || p.status === s).length;
+    html += '<div class="sec-corpo"><div class="abas">';
+    [["pendente", "Pendentes"], ["respondido", "Respondidos"], ["fechado", "Vendas fechadas"], ["nao_fechou", "Não fecharam"], ["todos", "Todos"]].forEach(([s, n]) => {
+      html += '<button type="button" class="aba' + (tela.aba === s ? ' ativa' : '') + '" data-aba="' + s + '">' + n + ' (' + (s === "pendente" ? pend : conta(s)) + ')</button>';
+    });
+    html += '</div>';
+    const lista = todos.filter(p => tela.aba === "todos" || p.status === tela.aba);
+    if (!lista.length){
+      html += '<p class="sub" style="margin:0;">Nenhum pedido aqui.</p>';
+    }
+    lista.slice(0, tela.limite).forEach(p => {
+      const titulo = (d.itens && d.itens[p.item]) || p.item;
+      const nome = (p.dados && p.dados.nome) || ('+' + p.remetente);
+      const aberto = tela.pedido === p.id;
+      html += '<div class="pedido"><button type="button" class="ped-linha" data-pedido="' + p.id + '">'
+        + '<span>' + esc(titulo) + ' <span class="quem">· ' + esc(nome) + '</span></span>'
+        + '<span class="lado">' + dataHoraBR(p.created_at) + '<span class="status ' + esc(p.status) + '">' + esc(STATUS[p.status] || p.status) + '</span>' + (aberto ? '▴' : '▾') + '</span></button>';
+      if (aberto){
+        const campos = Object.entries(p.dados || {}).map(([k, v]) => '<b>' + esc(ROTULOS[k] || (k.charAt(0).toUpperCase() + k.slice(1))) + ':</b> ' + esc(v)).join(' · ');
+        html += '<div class="ped-detalhe"><div class="d">' + campos + '<br><b>Contato:</b> +' + esc(p.remetente) + '</div><div class="ped-acoes">'
+          + '<a class="btn btn-primary" href="https://wa.me/' + esc(p.remetente) + '" target="_blank" rel="noopener">Responder no WhatsApp</a>';
+        Object.keys(STATUS).filter(s => s !== p.status).forEach(s => {
+          const rotulo = s === "pendente" ? "Voltar para pendente" : s === "respondido" ? "Marcar como respondido" : STATUS[s];
+          html += '<button class="btn" type="button" data-status="' + s + '" data-id="' + p.id + '">' + rotulo + '</button>';
+        });
+        html += '<span class="msg" id="pedMsg' + p.id + '"></span></div></div>';
+      }
+      html += '</div>';
+    });
+    if (lista.length > tela.limite) html += '<div class="mais"><button class="btn" type="button" id="maisPed">Mostrar mais (' + (lista.length - tela.limite) + ')</button></div>';
+    html += '</div>';
+  }
+  box.innerHTML = html;
+  if ($("togglePed")) $("togglePed").addEventListener("click", () => { tela.pedAberto = !tela.pedAberto; renderPedidos(); });
+  if ($("maisPed")) $("maisPed").addEventListener("click", () => { tela.limite += 20; renderPedidos(); });
+  box.querySelectorAll("[data-aba]").forEach(b => b.addEventListener("click", () => { tela.aba = b.getAttribute("data-aba"); tela.pedido = null; tela.limite = 20; renderPedidos(); }));
+  box.querySelectorAll("[data-pedido]").forEach(b => b.addEventListener("click", () => {
+    const id = Number(b.getAttribute("data-pedido")); tela.pedido = tela.pedido === id ? null : id; renderPedidos();
+  }));
+  box.querySelectorAll("[data-status]").forEach(b => b.addEventListener("click", () => mudarStatus(b)));
+}
+
+async function mudarStatus(btn){
+  const id = Number(btn.getAttribute("data-id"));
+  const status = btn.getAttribute("data-status");
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Salvando...';
+  const { data, error } = await supa.rpc("atualizar_pedido", { p_id: id, p_status: status });
+  if (error || !data || !data.ok){
+    btn.disabled = false; btn.textContent = "Tentar de novo";
+    const m = $("pedMsg" + id); if (m) m.textContent = "Não foi possível salvar. Tente de novo.";
+    return;
+  }
+  // Atualiza na tela sem recarregar tudo; o pedido sai da aba atual e fica fechado.
+  const antes = dadosPainel.pedidos.find(p => p.id === id);
+  if (antes){
+    if (antes.status === "pendente" && status !== "pendente") dadosPainel.pedidos_pendentes = Math.max(0, Number(dadosPainel.pedidos_pendentes || 0) - 1);
+    if (antes.status !== "pendente" && status === "pendente") dadosPainel.pedidos_pendentes = Number(dadosPainel.pedidos_pendentes || 0) + 1;
+    antes.status = status; antes.status_em = new Date().toISOString();
+  }
+  tela.pedido = null;
+  renderPedidos();
 }
 
 // O Stripe guarda de qual negócio e e-mail veio a assinatura (para ativar o plano certo).

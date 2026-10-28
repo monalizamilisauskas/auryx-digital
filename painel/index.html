@@ -669,7 +669,7 @@ function renderPedidos(){
         html += '<div class="ped-detalhe"><div class="d">' + campos + '<br><b>Contato:</b> +' + esc(p.remetente)
           + (agP ? '<br><b>Horário confirmado:</b> ' + esc(quandoBR(agP.data_hora)) : '') + '</div><div class="ped-acoes">'
           + '<a class="btn btn-primary" href="https://wa.me/' + esc(p.remetente) + '" target="_blank" rel="noopener">Responder no WhatsApp</a>';
-        if (d.usa_agenda) html += '<button class="btn" type="button" data-conf="' + p.id + '">' + (agP ? 'Remarcar horário' : 'Confirmar horário') + '</button>';
+        html += '<button class="btn" type="button" data-conf="' + p.id + '">' + (agP ? 'Remarcar horário' : 'Confirmar horário') + '</button>';
         html += '<button class="btn" type="button" data-fu-ped="' + p.id + '">Agendar follow-up</button>';
         Object.keys(STATUS).filter(s => s !== p.status).forEach(s => {
           const rotulo = s === "pendente" ? "Voltar para pendente" : s === "respondido" ? "Marcar como respondido" : STATUS[s];

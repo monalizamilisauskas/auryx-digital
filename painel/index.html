@@ -412,7 +412,7 @@
   </div>
 </main>
 
-<script src="respostas.js?v=4"></script>
+<script src="respostas.js?v=5"></script>
 <script>
 const SUPABASE_URL = "https://ypqmrjvuotctiyydfpgb.supabase.co";
 const SUPABASE_KEY = "sb_publishable_V87H9FaZ0gHFm1krAnpZRg_an0puUit"; // chave pública; os dados são protegidos pelo login
@@ -1000,10 +1000,20 @@ function renderAgenda(){
 // Editar, esconder e criar respostas: Premium, Completo e teste (sem a informação, ainda não rodou o SQL: libera).
 function podeEditarRespostas(){ return respostasRapidas.pode_editar !== false; }
 function semAcento(s){ return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
+// Biblioteca do tipo de negócio (código do cadastro, ex.: "salao"; negócios antigos podem ter o nome escrito).
+function tipoBiblioteca(){
+  const B = window.RESPOSTAS_RAPIDAS || {};
+  const t = semAcento(dadosPainel.tipo_negocio || "").trim();
+  if (B[t]) return t;
+  const regras = [[/viage|turis/, "agencia_viagens"], [/odont|dentist/, "clinica_odontologica"], [/clinic|consult|medic|psic|fisio|saude|nutri/, "clinica"],
+    [/salao|beleza|barb|estetic|unha|cabel|manicure/, "salao"], [/academ|fitness|crossfit|pilates|muscula/, "academia"], [/eletric/, "eletricista"],
+    [/encan|hidraul|desentup/, "encanador"], [/mecan|oficina|auto ?center|funilar/, "mecanico"], [/restaur|lanch|pizz|hamburg|comida|delivery|bar\b|cafeteria/, "restaurante"]];
+  const r = regras.find(([re]) => re.test(t));
+  return r && B[r[1]] ? r[1] : "geral";
+}
 function bibliotecaPadrao(){
   const B = window.RESPOSTAS_RAPIDAS || {};
-  const vazia = { categorias: [], itens: [] };
-  return /viage|turis/i.test(String(dadosPainel.tipo_negocio || "")) ? (B.viagem || vazia) : (B.geral || vazia);
+  return B[tipoBiblioteca()] || B.geral || { categorias: [], itens: [], sugestoes: {} };
 }
 // Padrão (com as versões editadas pela dona) + as criadas por ela. Escondidas só quando pedido.
 function bibliotecaConta(incluirEscondidas){
@@ -1033,12 +1043,7 @@ function sugerirRespostas(lista, ctx){
     nota.sort((a, b) => b.n - a.n);
     if (nota.length) return nota.slice(0, 3).map(x => x.m);
   }
-  const viagem = bibliotecaPadrao() === (window.RESPOSTAS_RAPIDAS || {}).viagem;
-  const mapa = viagem
-    ? { pendente: ["a10", "a06", "a08"], respondido: ["a37", "a25", "a11"], fechado: ["a24", "a26", "a39"],
-        nao_fechou: ["a38", "a11"], agendamento: ["a39", "a32", "a13"], conversa: ["a01", "a22", "a09"] }
-    : { pendente: ["g_orcamento", "g_detalhes", "g_horarios"], respondido: ["g_acompanhar", "g_formas", "g_pix"], fechado: ["g_recebido", "g_horarios", "g_avaliacao"],
-        nao_fechou: ["g_sumiu", "g_avaliacao"], agendamento: ["g_confirmado", "g_endereco", "g_remarcar"], conversa: ["g_continuar", "g_momento"] };
+  const mapa = bibliotecaPadrao().sugestoes || {};
   return porId(mapa[ctx.etapa] || []);
 }
 function assuntoPedido(p){
@@ -1052,7 +1057,11 @@ function ctxResposta(chave){
   if (tipo === "p"){ const p = (d.pedidos || []).find(x => x.id === Number(ref)) || {};
     return { remetente: p.remetente, nome: (p.dados || {}).nome, assunto: assuntoPedido(p), dados: p.dados || {}, etapa: p.status }; }
   if (tipo === "a"){ const a = (d.agendamentos || []).find(x => x.id === Number(ref)) || {};
-    return { remetente: a.remetente, nome: a.nome, assunto: a.servico ? "o seu " + a.servico.charAt(0).toLowerCase() + a.servico.slice(1) : "", dados: {}, etapa: "agendamento" }; }
+    const tz = d.timezone || "America/Sao_Paulo";
+    const quando = a.data_hora ? new Date(a.data_hora).toLocaleDateString("pt-BR", { timeZone: tz, weekday: "long", day: "2-digit", month: "2-digit" })
+      + " às " + new Date(a.data_hora).toLocaleTimeString("pt-BR", { timeZone: tz, hour: "2-digit", minute: "2-digit" }) : "";
+    return { remetente: a.remetente, nome: a.nome, assunto: a.servico ? "o seu " + a.servico.charAt(0).toLowerCase() + a.servico.slice(1) : "",
+      dados: { servico: a.servico || "", quando, endereco: a.endereco || "" }, etapa: "agendamento" }; }
   const c = (d.conversas_equipe || []).find(x => x.remetente === ref) || {};
   return { remetente: ref, nome: "", assunto: "", dados: {}, etapa: "conversa", ultima: c.ultima_mensagem || "" };
 }
@@ -1063,6 +1072,10 @@ function preencherModelo(texto, ctx){
   if (n) t = t.replace(/\{nome\}/g, n);
   else t = t.replace(/^\{nome\},\s*(\S)/, (_, c) => c.toUpperCase()).replace(/,\s*\{nome\}/g, "").replace(/\{nome\}/g, "");
   return t.replace(/\{negocio\}/g, dadosPainel.nome || "")
+    .replace(/\{servico\}/g, dd.servico ? String(dd.servico).charAt(0).toLowerCase() + String(dd.servico).slice(1) : "[serviço]")
+    .replace(/\{quando\}/g, dd.quando || dd.horario || "[dia e horário]")
+    .replace(/\{endereco\}/g, dd.endereco || "[endereço]")
+    .replace(/\{carro\}/g, dd.carro || "carro")
     .replace(/\{assunto\}/g, ctx.assunto || "o seu pedido")
     .replace(/\{destino\}/g, dd.destino || "[destino]")
     .replace(/\{datas\}/g, dd.datas || "[datas]")
@@ -1268,7 +1281,7 @@ function formEditarResposta(){
     + '<div class="dois-campos" style="margin-bottom:14px;"><div class="campo"><label for="rrTitulo">Nome</label><input id="rrTitulo" maxlength="60" value="' + esc(e.titulo || "") + '" placeholder="Ex.: Chave Pix"></div>'
     + '<div class="campo"><label for="rrCatSel">Categoria</label><select id="rrCatSel" class="rr-select">' + cats.map(c => '<option' + (c === (e.cat || "Minhas respostas") ? ' selected' : '') + '>' + esc(c) + '</option>').join("") + '</select></div></div>'
     + '<div class="campo"><label for="rrTextoEd">Texto</label><textarea id="rrTextoEd" class="resp-texto" maxlength="1500">' + esc(e.texto || "") + '</textarea>'
-    + '<small>Use {nome}, {negocio}, {destino}, {datas}, {reserva} e {assunto} para o painel preencher com os dados do cliente. Use [colchetes] para o que a equipe completa na hora: o painel não deixa enviar sem completar.</small></div>'
+    + '<small>Use {nome}, {negocio}, {servico}, {quando}, {destino}, {datas} e {assunto} para o painel preencher com os dados do cliente. Use [colchetes] para o que a equipe completa na hora: o painel não deixa enviar sem completar.</small></div>'
     + '<div class="acoes" style="margin-top:12px;"><button class="btn btn-primary" type="button" id="rrSalvar">Salvar</button>'
     + '<button class="btn" type="button" id="rrCancelar">Cancelar</button><span class="msg" id="rrFormMsg"></span></div></div>';
 }

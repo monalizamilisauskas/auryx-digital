@@ -81,8 +81,33 @@
   @keyframes spin{ to{ transform:rotate(360deg); } }
 
   /* ---------- Dashboard screen ---------- */
-  .dash{ width:100%; max-width:900px; display:none; }
-  .dash.show{ display:block; }
+  .dash{ width:100%; max-width:1180px; display:none; }
+  .dash.show{ display:grid; grid-template-columns:220px minmax(0,1fr); gap:40px; align-items:start; }
+  main.no-painel{ align-items:flex-start; }
+  .side{ position:sticky; top:24px; }
+  .menu{ display:flex; flex-direction:column; gap:4px; }
+  .menu button{ display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; text-align:left; cursor:pointer;
+    background:transparent; border:1px solid transparent; color:var(--muted); font-family:'Inter',sans-serif; font-size:14px;
+    padding:11px 14px; border-radius:10px; transition:.15s background, .15s color; }
+  .menu button:hover{ color:var(--parchment); background:var(--panel); }
+  .menu button.ativo{ color:var(--parchment); background:var(--panel-2); border-color:var(--line-strong); }
+  .menu button .contador{ margin-left:0; }
+  .atalhos{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-bottom:20px; }
+  .atalho{ text-align:left; cursor:pointer; border:1px solid var(--line); border-radius:12px; background:var(--panel); padding:18px; color:var(--parchment); font-family:'Inter',sans-serif; }
+  .atalho:hover{ border-color:var(--line-strong); }
+  .atalho .n{ font-family:'Fraunces',serif; font-size:30px; }
+  .atalho .n.alerta{ color:var(--gold-bright); }
+  .atalho .l{ color:var(--muted); font-size:13px; margin-top:4px; }
+  .atalho .ir{ color:var(--gold-bright); font-size:12.5px; margin-top:10px; }
+  @media (max-width:860px){
+    .dash.show{ grid-template-columns:minmax(0,1fr); gap:20px; }
+    .side{ position:sticky; top:0; z-index:5; background:var(--ink); padding:8px 0; margin:0 -4px; }
+    .menu{ flex-direction:row; overflow-x:auto; gap:6px; scrollbar-width:none; padding:0 4px; }
+    .menu::-webkit-scrollbar{ display:none; }
+    .menu button{ width:auto; white-space:nowrap; padding:9px 13px; font-size:13px; border-color:var(--line); }
+    .dash-head{ margin-bottom:22px; }
+  }
+  @media (max-width:480px){ .atalhos{ grid-template-columns:minmax(0,1fr); } }
   .dash-head{ margin-bottom:36px; }
   .dash-head .eyebrow{
     font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:0.14em; color:var(--gold);
@@ -248,13 +273,16 @@
 
   <!-- PAINEL -->
   <div class="dash" id="dash">
-    <div class="dash-head">
-      <p class="eyebrow" id="saudacao">Painel do cliente</p>
-      <h1><span id="bizName">Seu negócio</span><span class="badge" id="planBadge"></span></h1>
-      <p class="sub" id="trialInfo"></p>
+    <aside class="side"><nav class="menu" id="menuLateral" aria-label="Menu do painel"></nav></aside>
+    <div class="conteudo">
+      <div class="dash-head">
+        <p class="eyebrow" id="saudacao">Painel do cliente</p>
+        <h1><span id="bizName">Seu negócio</span><span class="badge" id="planBadge"></span></h1>
+        <p class="sub" id="trialInfo"></p>
+      </div>
+      <div id="dashContent"></div>
+      <div class="refresh-row"><button class="btn" id="refreshBtn">Atualizar</button></div>
     </div>
-    <div id="dashContent"></div>
-    <div class="refresh-row"><button class="btn" id="refreshBtn">Atualizar</button></div>
   </div>
 </main>
 
@@ -274,7 +302,7 @@ const ROTULOS = { nome: "Nome", tipo: "Tipo", destino: "Destino", datas: "Datas"
   orcamento: "Orçamento", servico: "Serviço", viagem: "Viagem", assunto: "Assunto", roteiro: "Roteiro", interesse: "Interesse" };
 let faqEdicao = [];
 // O que está aberto na tela continua aberto quando o painel atualiza.
-const tela = { convAberta: false, pedAberto: false, persAberta: false, dadosAbertos: false, aba: "pendente", pedido: null, limite: 20 };
+const tela = { view: (() => { try { return localStorage.getItem("painelView") || "inicio"; } catch (e) { return "inicio"; } })(), aba: "pendente", pedido: null, limite: 20 };
 let dadosPainel = null;
 const STATUS = { pendente: "Pendente", respondido: "Respondido", fechado: "Venda fechada", nao_fechou: "Não fechou" };
 
@@ -288,6 +316,7 @@ function mostrar(tela){
   $("loginCard").style.display = tela === "login" ? "block" : "none";
   $("passwordCard").style.display = tela === "senha" ? "block" : "none";
   $("dash").classList.toggle("show", tela === "painel");
+  document.querySelector("main").classList.toggle("no-painel", tela === "painel");
   $("logoutBtn").style.display = tela === "painel" ? "inline-block" : "none";
 }
 function aviso(id, msg){ const el = $(id); el.textContent = msg; el.classList.toggle("show", !!msg); }
@@ -311,6 +340,7 @@ async function carregarPainel(){
 }
 
 function render(d){
+  dadosPainel = d;
   $("bizName").textContent = d.nome || "Seu negócio";
   const primeiroNome = String(d.contato_nome || "").trim().split(/\s+/)[0];
   $("saudacao").textContent = primeiroNome ? "Olá, " + primeiroNome + "! 👋" : "Painel do cliente";
@@ -325,74 +355,115 @@ function render(d){
   }
   $("trialInfo").textContent = trialTxt;
 
-  const usadas = Number(d.mensagens_usadas || 0);
-  const limite = d.limite_mensagens ? Number(d.limite_mensagens) : null;
-  const pct = limite ? Math.min(100, Math.round(usadas / limite * 100)) : 0;
-  const s = d.semana || {};
-  let html = '';
-
-  html += '<div class="panel"><h2>Uso de mensagens</h2>'
-    + '<p class="sub">' + (emTeste ? "Mensagens respondidas pela secretária durante o teste." : "Mensagens respondidas pela secretária neste mês.") + '</p>'
-    + '<div class="usage-row"><span><strong>' + usadas + '</strong> ' + (limite ? 'de ' + limite + ' mensagens' : 'mensagens') + '</span>'
-    + (limite ? '<span>' + Math.max(0, limite - usadas) + ' restantes</span>' : '') + '</div>'
-    + (limite ? '<div class="usage-bar"><div class="usage-fill' + (pct >= 90 ? ' alto' : '') + '" style="width:' + pct + '%"></div></div>' : '')
-    + '</div>';
-
+  // Menu lateral (no celular vira uma barra de botões no topo). Cada item abre uma tela própria.
   const convs = d.conversas_equipe || [];
-  html += '<div class="panel"><div class="sec-head"><div><h2>Clientes esperando atendimento'
-    + '<span class="contador' + (convs.length ? ' alerta' : '') + '">' + convs.length + '</span></h2>'
-    + '<p class="sub">' + (convs.length ? (convs.length === 1 ? '1 cliente esperando' : convs.length + ' clientes esperando') + ' alguém da sua equipe. A secretária pausou essas conversas.' : 'Nenhum cliente esperando agora.') + '</p>'
-    + '<details class="ajuda"><summary>Como funciona?</summary>'
-    + '<p>A secretária pausa a conversa e o cliente aparece aqui quando:</p><ul>'
-    + '<li>ele pede para falar com uma pessoa;</li>'
-    + '<li>manda um caso urgente ou delicado (voo cancelado, reembolso, nome errado na passagem, cobrança indevida);</li>'
-    + '<li>alguém da sua equipe responde o cliente pelo celular.</li></ul>'
-    + '<p>Você recebe um aviso no WhatsApp. Clique em <b>Ver conversas</b> → <b>Responder no WhatsApp</b> e atenda. '
-    + 'Ao terminar, clique em <b>Devolver para a secretária</b> para ela voltar a atender esse cliente. Se ninguém devolver, ela volta sozinha depois de 12 horas.</p>'
-    + '</details></div>'
-    + (convs.length ? '<button class="btn" type="button" id="toggleConv">' + (tela.convAberta ? 'Fechar' : 'Ver conversas') + '</button>' : '')
-    + '</div>';
-  if (convs.length && tela.convAberta){
-    html += '<div class="sec-corpo"><p class="sub">Responda pelo WhatsApp. Quando terminar o atendimento, devolva para a secretária. Se ninguém devolver, ela volta sozinha depois de 12 horas.</p>';
-    convs.forEach(c => {
-      html += '<div class="conv"><div class="info">+' + esc(c.remetente) + ' · desde ' + dataHoraBR(c.desde)
-        + (c.ultima_mensagem ? '<span>“' + esc(c.ultima_mensagem) + '”</span>' : '') + '</div>'
-        + '<div class="botoes"><a class="btn btn-primary" href="https://wa.me/' + esc(c.remetente) + '" target="_blank" rel="noopener">Responder no WhatsApp</a>'
-        + '<button class="btn" type="button" data-devolver="' + esc(c.remetente) + '">Devolver para a secretária</button></div></div>';
-    });
+  const pend = Number(d.pedidos_pendentes || 0);
+  const menu = [
+    ["inicio", "Início", 0],
+    ["conversas", "Clientes esperando", convs.length],
+    ["pedidos", "Pedidos", pend],
+    ["personalizar", "Personalizar" + (d.pode_personalizar ? "" : " 🔒"), 0],
+    ["dados", "Seus dados", 0],
+    ["plano", emTeste ? "Escolher plano" : "Plano", 0],
+  ];
+  if (!menu.some(m => m[0] === tela.view)) tela.view = "inicio";
+  $("menuLateral").innerHTML = menu.map(([id, nome, n]) =>
+    '<button type="button" data-view="' + id + '"' + (tela.view === id ? ' class="ativo" aria-current="page"' : '') + '><span>' + esc(nome) + '</span>'
+    + (n ? '<span class="contador alerta">' + n + '</span>' : '') + '</button>').join("");
+  $("menuLateral").querySelectorAll("[data-view]").forEach(b => b.addEventListener("click", () => irPara(b.getAttribute("data-view"))));
+
+  let html = '';
+  if (tela.view === "inicio"){
+    const usadas = Number(d.mensagens_usadas || 0);
+    const limite = d.limite_mensagens ? Number(d.limite_mensagens) : null;
+    const pct = limite ? Math.min(100, Math.round(usadas / limite * 100)) : 0;
+    const s = d.semana || {};
+    html += '<div class="atalhos">'
+      + '<button type="button" class="atalho" data-ir="conversas"><div class="n' + (convs.length ? ' alerta' : '') + '">' + convs.length + '</div>'
+      + '<div class="l">' + (convs.length === 1 ? 'cliente esperando atendimento' : 'clientes esperando atendimento') + '</div><div class="ir">Ver clientes →</div></button>'
+      + '<button type="button" class="atalho" data-ir="pedidos"><div class="n' + (pend ? ' alerta' : '') + '">' + pend + '</div>'
+      + '<div class="l">' + (pend === 1 ? 'pedido pendente' : 'pedidos pendentes') + '</div><div class="ir">Ver pedidos →</div></button>'
+      + '</div>';
+    html += '<div class="panel"><h2>Uso de mensagens</h2>'
+      + '<p class="sub">' + (emTeste ? "Mensagens respondidas pela secretária durante o teste." : "Mensagens respondidas pela secretária neste mês.") + '</p>'
+      + '<div class="usage-row"><span><strong>' + usadas + '</strong> ' + (limite ? 'de ' + limite + ' mensagens' : 'mensagens') + '</span>'
+      + (limite ? '<span>' + Math.max(0, limite - usadas) + ' restantes</span>' : '') + '</div>'
+      + (limite ? '<div class="usage-bar"><div class="usage-fill' + (pct >= 90 ? ' alto' : '') + '" style="width:' + pct + '%"></div></div>' : '')
+      + '</div>';
+    html += '<div class="metric-grid">'
+      + '<div class="metric-card"><div class="label">Mensagens recebidas</div><div class="value neutral">' + (s.mensagens || 0) + '</div></div>'
+      + '<div class="metric-card"><div class="label">Conversas</div><div class="value neutral">' + (s.conversas || 0) + '</div></div>'
+      + '<div class="metric-card"><div class="label">Pedidos recebidos</div><div class="value">' + (s.pedidos || 0) + '</div></div>'
+      + '<div class="metric-card"><div class="label">Passadas p/ equipe</div><div class="value neutral">' + (s.transferidas || 0) + '</div></div>'
+      + '</div><p class="period-note">Últimos 7 dias.</p>';
+    if (emTeste){
+      html += '<div class="panel" style="margin-top:20px;"><h2>Gostou da sua secretária?</h2><p class="sub">Escolha um plano para continuar depois do teste grátis e personalizar as respostas e os serviços.</p>'
+        + '<button class="btn btn-primary" type="button" data-ir="plano">Ver planos</button></div>';
+    }
+  }
+
+  if (tela.view === "conversas"){
+    html += '<div class="panel"><h2>Clientes esperando atendimento</h2>'
+      + '<p class="sub">' + (convs.length ? (convs.length === 1 ? '1 cliente esperando' : convs.length + ' clientes esperando') + ' alguém da sua equipe. A secretária pausou essas conversas.' : 'Nenhum cliente esperando agora.') + '</p>'
+      + '<details class="ajuda"><summary>Como funciona?</summary>'
+      + '<p>A secretária pausa a conversa e o cliente aparece aqui quando:</p><ul>'
+      + '<li>ele pede para falar com uma pessoa;</li>'
+      + '<li>manda um caso urgente ou delicado (voo cancelado, reembolso, nome errado na passagem, cobrança indevida);</li>'
+      + '<li>alguém da sua equipe responde o cliente pelo celular.</li></ul>'
+      + '<p>Você recebe um aviso no WhatsApp. Clique em <b>Responder no WhatsApp</b> e atenda. '
+      + 'Ao terminar, clique em <b>Devolver para a secretária</b> para ela voltar a atender esse cliente. Se ninguém devolver, ela volta sozinha depois de 12 horas.</p>'
+      + '</details>';
+    if (convs.length){
+      html += '<div class="sec-corpo">';
+      convs.forEach(c => {
+        html += '<div class="conv"><div class="info">+' + esc(c.remetente) + ' · desde ' + dataHoraBR(c.desde)
+          + (c.ultima_mensagem ? '<span>“' + esc(c.ultima_mensagem) + '”</span>' : '') + '</div>'
+          + '<div class="botoes"><a class="btn btn-primary" href="https://wa.me/' + esc(c.remetente) + '" target="_blank" rel="noopener">Responder no WhatsApp</a>'
+          + '<button class="btn" type="button" data-devolver="' + esc(c.remetente) + '">Devolver para a secretária</button></div></div>';
+      });
+      html += '</div>';
+    }
     html += '</div>';
   }
-  html += '</div>';
 
-  html += '<div class="metric-grid">'
-    + '<div class="metric-card"><div class="label">Mensagens recebidas</div><div class="value neutral">' + (s.mensagens || 0) + '</div></div>'
-    + '<div class="metric-card"><div class="label">Conversas</div><div class="value neutral">' + (s.conversas || 0) + '</div></div>'
-    + '<div class="metric-card"><div class="label">Pedidos recebidos</div><div class="value">' + (s.pedidos || 0) + '</div></div>'
-    + '<div class="metric-card"><div class="label">Passadas p/ equipe</div><div class="value neutral">' + (s.transferidas || 0) + '</div></div>'
-    + '</div><p class="period-note">Últimos 7 dias.</p>';
+  if (tela.view === "pedidos") html += '<div class="panel" id="pedidosPainel"></div>';
+  if (tela.view === "personalizar") html += '<div class="panel" id="personalizar"></div>';
+  if (tela.view === "dados") html += '<div class="panel" id="seusDados"></div>';
 
-  html += '<div class="panel" style="margin-top:20px;" id="pedidosPainel"></div>';
-
-  if (emTeste && (d.planos || []).length){
-    html += '<div class="panel"><h2>Escolha seu plano</h2><p class="sub">Continue com a sua secretária depois do teste grátis. Depois de contratar, você personaliza as respostas e os serviços aqui no painel.</p><div class="planos">';
-    d.planos.forEach(p => {
-      html += '<div class="plano"><div class="n">' + esc(p.nome) + '</div><div class="p">' + moeda(p.preco_brl) + '/mês</div>'
-        + '<div class="l">Até ' + Number(p.limite || 0).toLocaleString("pt-BR") + ' mensagens/mês</div>'
-        + (p.link ? '<a class="btn btn-primary" href="' + esc(linkPagamento(p.link, d.id)) + '" target="_blank" rel="noopener">Assinar</a>' : '')
-        + '</div>';
-    });
-    html += '</div></div>';
+  if (tela.view === "plano"){
+    html += '<div class="panel"><h2>' + (emTeste ? 'Escolha seu plano' : 'Seu plano: ' + esc(d.plano_nome || '')) + '</h2>';
+    if (emTeste){
+      html += '<p class="sub">Continue com a sua secretária depois do teste grátis. Depois de contratar, você personaliza as respostas e os serviços aqui no painel.</p><div class="planos">';
+      (d.planos || []).forEach(p => {
+        html += '<div class="plano"><div class="n">' + esc(p.nome) + '</div><div class="p">' + moeda(p.preco_brl) + '/mês</div>'
+          + '<div class="l">Até ' + Number(p.limite || 0).toLocaleString("pt-BR") + ' mensagens/mês</div>'
+          + (p.link ? '<a class="btn btn-primary" href="' + esc(linkPagamento(p.link, d.id)) + '" target="_blank" rel="noopener">Assinar</a>' : '')
+          + '</div>';
+      });
+      html += '</div>';
+    } else {
+      html += '<p class="sub">' + (d.limite_mensagens ? 'Até ' + Number(d.limite_mensagens).toLocaleString("pt-BR") + ' mensagens por mês. ' : '')
+        + 'Para mudar de plano ou cancelar, fale com a gente em hello@auryx.digital.</p>';
+    }
+    html += '</div>';
   }
 
-  html += '<div class="panel" id="personalizar"></div>';
-  html += '<div class="panel" id="seusDados"></div>';
   $("dashContent").innerHTML = html;
-  dadosPainel = d;
-  renderPedidos();
-  renderPersonalizar(d);
-  renderDados(d);
-  if ($("toggleConv")) $("toggleConv").addEventListener("click", () => { tela.convAberta = !tela.convAberta; render(dadosPainel); });
+  if ($("pedidosPainel")) renderPedidos();
+  if ($("personalizar")) renderPersonalizar(d);
+  if ($("seusDados")) renderDados(d);
+  document.querySelectorAll("#dashContent [data-ir]").forEach(b => b.addEventListener("click", () => irPara(b.getAttribute("data-ir"))));
   document.querySelectorAll("[data-devolver]").forEach(b => b.addEventListener("click", () => devolverConversa(b)));
+}
+
+function irPara(view){
+  tela.view = view;
+  tela.pedido = null;
+  try { localStorage.setItem("painelView", view); } catch (e) {}
+  render(dadosPainel);
+  window.scrollTo({ top: 0 });
+  const ativo = document.querySelector("#menuLateral .ativo");
+  if (ativo && ativo.scrollIntoView) ativo.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
 
 /* ---------- Pedidos: abre a lista, separa por status e o dono muda o status ---------- */
@@ -401,17 +472,15 @@ function renderPedidos(){
   const box = $("pedidosPainel");
   const todos = d.pedidos || [];
   const pend = Number(d.pedidos_pendentes || 0);
-  let html = '<div class="sec-head"><div><h2>Pedidos<span class="contador' + (pend ? ' alerta' : '') + '">' + pend + '</span></h2>'
+  let html = '<div class="sec-head"><div><h2>Pedidos</h2>'
     + '<p class="sub">' + (pend ? (pend === 1 ? '1 pedido esperando resposta.' : pend + ' pedidos esperando resposta.') : (todos.length ? 'Nenhum pedido pendente.' : 'Nenhum pedido ainda.')) + '</p>'
     + '<details class="ajuda"><summary>Como funciona?</summary>'
     + '<p>Quando um cliente pede uma cotação, a secretária faz as perguntas (destino, datas, pessoas...) e o pedido chega aqui como <b>Pendente</b>, '
     + 'e você recebe um aviso no WhatsApp.</p>'
     + '<p>Toque no pedido para ver os detalhes e clique em <b>Responder no WhatsApp</b> para mandar a proposta. Depois mude o status: '
     + '<b>Respondido</b> quando enviar a proposta, <b>Venda fechada</b> ou <b>Não fechou</b> no final. Assim a aba Pendentes mostra só o que falta responder.</p>'
-    + '</details></div>'
-    + (todos.length ? '<button class="btn" type="button" id="togglePed">' + (tela.pedAberto ? 'Fechar' : 'Ver pedidos') + '</button>' : '')
-    + '</div>';
-  if (todos.length && tela.pedAberto){
+    + '</details></div></div>';
+  if (todos.length){
     const conta = (s) => todos.filter(p => s === "todos" || p.status === s).length;
     html += '<div class="sec-corpo"><div class="abas">';
     [["pendente", "Pendentes"], ["respondido", "Respondidos"], ["fechado", "Vendas fechadas"], ["nao_fechou", "Não fecharam"], ["todos", "Todos"]].forEach(([s, n]) => {
@@ -445,7 +514,6 @@ function renderPedidos(){
     html += '</div>';
   }
   box.innerHTML = html;
-  if ($("togglePed")) $("togglePed").addEventListener("click", () => { tela.pedAberto = !tela.pedAberto; renderPedidos(); });
   if ($("maisPed")) $("maisPed").addEventListener("click", () => { tela.limite += 20; renderPedidos(); });
   box.querySelectorAll("[data-aba]").forEach(b => b.addEventListener("click", () => { tela.aba = b.getAttribute("data-aba"); tela.pedido = null; tela.limite = 20; renderPedidos(); }));
   box.querySelectorAll("[data-pedido]").forEach(b => b.addEventListener("click", () => {
@@ -472,7 +540,7 @@ async function mudarStatus(btn){
     antes.status = status; antes.status_em = new Date().toISOString();
   }
   tela.pedido = null;
-  renderPedidos();
+  render(dadosPainel);
 }
 
 // O Stripe guarda de qual negócio e e-mail veio a assinatura (para ativar o plano certo).
@@ -506,9 +574,8 @@ function renderPersonalizar(d){
   const resumo = faqEdicao.length + (faqEdicao.length === 1 ? ' pergunta cadastrada' : ' perguntas cadastradas')
     + (servicos.length ? ' · ' + ativos + ' de ' + servicos.length + ' serviços ativos' : '');
   // Abre e fecha só escondendo: o que foi digitado e ainda não salvo continua lá.
-  box.innerHTML = '<div class="sec-head"><div><h2>Personalizar sua secretária</h2><p class="sub">' + esc(resumo) + '</p></div>'
-    + '<button class="btn" type="button" id="togglePers">' + (tela.persAberta ? 'Fechar' : 'Abrir') + '</button></div>'
-    + '<div class="sec-corpo" id="persCorpo"' + (tela.persAberta ? '' : ' style="display:none;"') + '>'
+  box.innerHTML = '<h2>Personalizar sua secretária</h2><p class="sub">' + esc(resumo) + '</p>'
+    + '<div>'
     + '<p class="sub">A secretária responde exatamente com o que estiver aqui. Se faltar uma informação, ela diz que a equipe vai confirmar, e nunca inventa.</p>'
     + '<div class="subtitulo">Perguntas e respostas</div><div id="faqLista"></div>'
     + '<button class="btn" type="button" id="faqAdd">+ Adicionar pergunta</button>'
@@ -517,11 +584,6 @@ function renderPersonalizar(d){
       + '<div class="servicos">' + servicos.map(s => '<label class="servico"><input type="checkbox" data-servico="' + esc(s.id) + '"' + (s.ativo ? ' checked' : '') + '> ' + esc(s.titulo) + '</label>').join('') + '</div>' : '')
     + '<div class="acoes"><button class="btn btn-primary" type="button" id="salvarPers">Salvar alterações</button><span class="msg" id="persMsg"></span></div></div>';
   renderFaqLista();
-  $("togglePers").addEventListener("click", () => {
-    tela.persAberta = !tela.persAberta;
-    $("persCorpo").style.display = tela.persAberta ? "" : "none";
-    $("togglePers").textContent = tela.persAberta ? "Fechar" : "Abrir";
-  });
   $("faqAdd").addEventListener("click", () => { faqEdicao.push({ pergunta: "", resposta: "" }); renderFaqLista(); });
   $("salvarPers").addEventListener("click", salvarPersonalizacao);
 }
@@ -560,9 +622,8 @@ function renderDados(d){
   const resumo = (d.nome || "") + (d.contato_nome ? " · " + d.contato_nome : "");
   const agencia = /viage/i.test(String(d.tipo_negocio || ""));
   const rotuloNome = agencia ? "Nome da sua agência" : "Nome do seu negócio";
-  box.innerHTML = '<div class="sec-head"><div><h2>Seus dados</h2><p class="sub">' + esc(resumo) + '</p></div>'
-    + '<button class="btn" type="button" id="toggleDados">' + (tela.dadosAbertos ? 'Fechar' : 'Editar') + '</button></div>'
-    + '<div class="sec-corpo" id="dadosCorpo"' + (tela.dadosAbertos ? '' : ' style="display:none;"') + '>'
+  box.innerHTML = '<h2>Seus dados</h2><p class="sub">Essas informações aparecem para os seus clientes e definem para onde vão os avisos.</p>'
+    + '<div>'
     + '<div class="campo"><label for="dNome">' + rotuloNome + '</label><input id="dNome" maxlength="80" value="' + esc(d.nome || "") + '">'
     + '<small>É o nome que a secretária usa com os clientes: “Sou a assistente virtual da ' + esc(d.nome || (agencia ? "sua agência" : "sua empresa")) + '”.</small></div>'
     + '<div class="campo"><label for="dContato">Seu nome</label><input id="dContato" maxlength="80" value="' + esc(d.contato_nome || "") + '">'
@@ -571,11 +632,6 @@ function renderDados(d){
     + '<small>Com código do país e DDD, só números. Ex.: 5511999998888. É para onde vão os avisos de pedidos e de clientes esperando.</small></div>'
     + '<div class="acoes"><button class="btn btn-primary" type="button" id="salvarDados">Salvar</button><span class="msg" id="dadosMsg"></span></div>'
     + '</div>';
-  $("toggleDados").addEventListener("click", () => {
-    tela.dadosAbertos = !tela.dadosAbertos;
-    $("dadosCorpo").style.display = tela.dadosAbertos ? "" : "none";
-    $("toggleDados").textContent = tela.dadosAbertos ? "Fechar" : "Editar";
-  });
   $("salvarDados").addEventListener("click", salvarDados);
 }
 
@@ -591,7 +647,6 @@ async function salvarDados(){
   const { error } = await supa.rpc("salvar_dados", { p_nome: nome, p_contato_nome: contato, p_whatsapp: whats });
   btn.disabled = false; btn.textContent = "Salvar";
   if (error){ msg.className = "msg erro"; msg.textContent = "Não foi possível salvar agora. Tente de novo em alguns instantes."; return; }
-  tela.dadosAbertos = false;
   await carregarPainel();
 }
 

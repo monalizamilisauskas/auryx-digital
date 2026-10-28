@@ -312,7 +312,7 @@
 
   /* ===== Seção do painel do cliente (28/10/2026): lista do que o painel tem + miniatura do painel real ===== */
   .painel-lista{ list-style:none; padding:0; margin:26px 0 0; display:grid; gap:14px; }
-  .painel-lista li{ display:flex; gap:12px; align-items:center; font-size:16px; line-height:1.4; color:var(--muted); }
+  .painel-lista li{ display:flex; gap:12px; align-items:flex-start; font-size:15px; line-height:1.55; color:var(--muted); }
   .painel-lista li b{ color:var(--parchment); font-weight:600; }
   .painel-lista .ic{ flex:none; width:30px; height:30px; border-radius:8px; background:rgba(37,99,235,0.16); color:var(--gold-bright); display:flex; align-items:center; justify-content:center; margin-top:1px; }
   .pmock{ border:1px solid var(--line-strong); border-radius:14px; overflow:hidden; background:#0B1222; box-shadow:0 30px 70px -30px rgba(37,99,235,0.45); font-size:12.5px; }
@@ -647,9 +647,9 @@
     <div class="intro-split">
       <div>
         <p class="eyebrow">Client dashboard</p>
-        <h2 style="font-size:clamp(26px,3.2vw,36px); font-weight:500; margin-bottom:20px;">No customer forgotten.<br>No sale lost.</h2>
-        <p class="lead">See at a glance who's waiting for you and which quotes turned into sales.</p>
-        <ul class="painel-lista"><li><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg></span><b>Help whoever needs you, right away.</b></li><li><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg></span><b>Follow every quote until it closes.</b></li><li><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/></svg></span><b>Tweak the answers whenever you want.</b></li></ul>
+        <h2 style="font-size:clamp(26px,3.2vw,36px); font-weight:500; margin-bottom:20px;">Stay in control<br>without living on your phone.</h2>
+        <p class="lead">While you work, she answers. When you check in, everything is ready: who needs you, which quotes are open and what already turned into a sale. And every week a summary lands on your WhatsApp.</p>
+        <ul class="painel-lista"><li><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg></span><span><b>No one is left waiting.</b> Anyone who asks for you is highlighted, with a button to reply right away.</span></li><li><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg></span><span><b>No quote goes cold.</b> Every request arrives ready, with everything the customer said, and stays tracked until it becomes a sale.</span></li><li><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/></svg></span><span><b>Changed something? She already knows.</b> Update hours, answers and services in seconds, and the secretary replies correctly right away.</span></li></ul>
       </div>
       <div class="pmock" aria-label="Client dashboard example">
         <div class="pmock-top"><div><div class="t">Hi, Ana 👋</div><div class="s">Silva Electric</div></div><div class="av">AS</div></div>

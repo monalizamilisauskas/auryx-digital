@@ -385,7 +385,10 @@ const erroNoLink = hashInicial.get("error_description");
 const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let emailLogado = "";
 const ROTULOS = { nome: "Nome", tipo: "Tipo", destino: "Destino", datas: "Datas", pessoas: "Pessoas", saida: "Saída de",
-  orcamento: "Orçamento", servico: "Serviço", viagem: "Viagem", assunto: "Assunto", roteiro: "Roteiro", interesse: "Interesse" };
+  orcamento: "Orçamento", servico: "Serviço", viagem: "Viagem", assunto: "Assunto", roteiro: "Roteiro", interesse: "Interesse",
+  descricao: "O que precisa", endereco: "Endereço", quando: "Quando", horario: "Horário", profissional: "Profissional",
+  primeira_vez: "Primeira vez", convenio: "Convênio", atual: "Marcado para", pedido: "Pedido", carro: "Carro", problema: "Problema",
+  modalidade: "Modalidade", objetivo: "Objetivo", itens: "Pedido", ocasiao: "Ocasião" };
 let faqEdicao = [];
 // O que está aberto na tela continua aberto quando o painel atualiza.
 // Conta Google da Auryx (a mesma da credencial do Google Agenda no n8n): o dono compartilha a agenda dele com ela.

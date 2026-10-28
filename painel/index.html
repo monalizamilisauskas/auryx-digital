@@ -1053,7 +1053,7 @@ function renderPersonalizar(d){
   box.innerHTML = '<h2>Personalizar sua secretária</h2><p class="sub">' + esc(resumo) + '</p>'
     + '<div>'
     + '<p class="sub">A secretária responde exatamente com o que estiver aqui. Se faltar uma informação, ela diz que a equipe vai confirmar, e nunca inventa.</p>'
-    + '<div class="subtitulo">Perguntas e respostas</div><div id="faqLista"></div>'
+    + '<div class="subtitulo">Perguntas e respostas <span id="faqConta" style="color:var(--muted);font-weight:400;"></span></div><div id="faqLista"></div>'
     + '<button class="btn" type="button" id="faqAdd">+ Adicionar pergunta</button>'
     + (servicos.length ? '<div class="subtitulo">Serviços que você oferece</div>'
       + '<p class="sub" style="margin-bottom:8px;">Desmarque o que você não faz: a secretária deixa de oferecer e tira do menu.</p>'
@@ -1077,7 +1077,12 @@ function renderFaqLista(){
     del.addEventListener("click", () => { faqEdicao.splice(i, 1); renderFaqLista(); });
     row.appendChild(del); row.appendChild(q); row.appendChild(a); lista.appendChild(row);
   });
-  $("faqAdd").style.display = faqEdicao.length >= 30 ? "none" : "inline-block";
+  // Limite do plano: Básico 10, Premium e Completo 30.
+  const limite = Number((dadosPainel && dadosPainel.faq_limite) || 30);
+  $("faqAdd").style.display = faqEdicao.length >= limite ? "none" : "inline-block";
+  $("faqConta").textContent = "(" + faqEdicao.length + " de " + limite + ")"
+    + (faqEdicao.length > limite ? " · o seu plano guarda só as " + limite + " primeiras" : "")
+    + (faqEdicao.length >= limite && limite < 30 ? " · no Premium, até 30" : "");
 }
 
 async function salvarPersonalizacao(){

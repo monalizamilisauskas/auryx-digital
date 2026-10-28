@@ -275,6 +275,15 @@
   .dia:first-child{ margin-top:0; }
   .ag-linha .hora{ font-weight:700; font-size:15px; min-width:52px; color:var(--parchment); }
   .ag-linha .quem{ color:var(--muted); font-size:13px; }
+  .agenda-ok{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:16px; padding:12px 14px; border:1px solid rgba(52,211,153,0.35);
+    background:rgba(52,211,153,0.07); border-radius:10px; font-size:13.5px; color:var(--muted); }
+  .agenda-ok svg{ color:var(--good); flex:none; }
+  .agenda-ok span{ flex:1; min-width:200px; }
+  .agenda-ok b{ color:var(--parchment); font-weight:500; }
+  .agenda-ok .btn{ padding:7px 14px; font-size:12.5px; }
+  .passos{ margin:10px 0 0; padding-left:20px; font-size:13.5px; line-height:1.6; color:#BFDBFE; }
+  .passos a{ color:#fff; }
+  .passos b{ color:#fff; font-weight:600; }
   .subtitulo{ text-transform:none; font-size:13px; font-weight:600; color:var(--parchment); }
   .login-card .eyebrow{ font-family:'Inter',sans-serif; letter-spacing:.04em; color:var(--gold-bright); }
   .side{ width:260px; } .conteudo{ margin-left:260px; }
@@ -371,6 +380,8 @@ const ROTULOS = { nome: "Nome", tipo: "Tipo", destino: "Destino", datas: "Datas"
   orcamento: "Orçamento", servico: "Serviço", viagem: "Viagem", assunto: "Assunto", roteiro: "Roteiro", interesse: "Interesse" };
 let faqEdicao = [];
 // O que está aberto na tela continua aberto quando o painel atualiza.
+// Conta Google da Auryx (a mesma da credencial do Google Agenda no n8n): o dono compartilha a agenda dele com ela.
+const AGENDA_AURYX = "";
 const STATUS_AG = { confirmado: "Confirmado", realizado: "Realizado", cancelado: "Cancelado", nao_compareceu: "Não compareceu" };
 const tela = { abaAg: "proximos", agendamento: null, view: (() => { try { return localStorage.getItem("painelView") || "inicio"; } catch (e) { return "inicio"; } })(), aba: "pendente", pedido: null, limite: 20 };
 let dadosPainel = null;
@@ -695,19 +706,66 @@ function renderAgenda(){
       html += '</div>';
     });
     html += '</div>';
-  } else if (d.usa_agenda){
+  } else if (d.agenda_conectada){
     html += '<p class="sub" style="margin-top:14px;">Ainda não há agendamentos. Quando a secretária marcar o primeiro horário com um cliente, ele aparece aqui.</p>';
-  } else {
-    html += '<div class="aviso info" style="margin-top:16px;">' + icone("info") + '<div class="txt"><b>Sua agenda ainda não está conectada</b>'
-      + 'Para a secretária marcar horários com os seus clientes, ela precisa da sua agenda do Google. Fale com a gente que fazemos a conexão.</div>'
-      + '<a class="btn" href="mailto:hello@auryx.digital?subject=Conectar%20minha%20agenda" style="text-decoration:none;">Conectar agenda</a></div>';
   }
+  html += blocoAgenda(d);
   box.innerHTML = html;
+  ligarAgenda();
   box.querySelectorAll("[data-abaag]").forEach(b => b.addEventListener("click", () => { tela.abaAg = b.getAttribute("data-abaag"); tela.agendamento = null; renderAgenda(); }));
   box.querySelectorAll("[data-ag]").forEach(b => b.addEventListener("click", () => {
     const id = Number(b.getAttribute("data-ag")); tela.agendamento = tela.agendamento === id ? null : id; renderAgenda();
   }));
   box.querySelectorAll("[data-statusag]").forEach(b => b.addEventListener("click", () => mudarAgendamento(b)));
+}
+
+// Conectar a agenda do Google: o dono compartilha a agenda com a conta da Auryx e informa aqui qual é a agenda dele.
+function blocoAgenda(d){
+  if (d.agenda_conectada && !tela.editarAgenda){
+    return '<div class="agenda-ok">' + icone("agenda") + '<span>Agenda conectada: <b>' + esc(d.agenda_conectada) + '</b>. A secretária consulta os horários livres e marca os agendamentos nela.</span>'
+      + '<button class="btn" type="button" id="trocarAgenda">Trocar</button></div>';
+  }
+  const conta = AGENDA_AURYX ? '<b>' + esc(AGENDA_AURYX) + '</b>' : 'o e-mail da Auryx que enviamos para você';
+  return '<div class="aviso info" style="margin-top:16px;display:block;">'
+    + '<div class="txt"><b>' + (d.agenda_conectada ? 'Trocar a agenda' : 'Conecte a sua agenda do Google') + '</b>'
+    + 'Assim a secretária vê os seus horários livres e marca os clientes direto na sua agenda. Leva 2 minutos:</div>'
+    + '<ol class="passos">'
+    + '<li>No computador, abra o <a href="https://calendar.google.com/calendar/u/0/r/settings" target="_blank" rel="noopener">Google Agenda → Configurações</a>.</li>'
+    + '<li>À esquerda, em <b>Configurações das minhas agendas</b>, clique na agenda que quer usar.</li>'
+    + '<li>Em <b>Compartilhar com pessoas específicas</b>, clique em <b>Adicionar pessoas</b>, coloque ' + conta + ' e escolha <b>Fazer alterações nos eventos</b>.</li>'
+    + '<li>Na mesma página, em <b>Integrar agenda</b>, copie o <b>ID da agenda</b> (na agenda principal, é o seu Gmail) e cole abaixo.</li>'
+    + '</ol>'
+    + '<div class="campo" style="margin:14px 0 0;"><label for="agendaId">ID da agenda</label>'
+    + '<input id="agendaId" placeholder="seuemail@gmail.com" value="' + esc(d.agenda_conectada || "") + '"></div>'
+    + '<div class="acoes" style="margin-top:12px;"><button class="btn btn-primary" type="button" id="salvarAgenda">Conectar agenda</button>'
+    + (d.agenda_conectada ? '<button class="btn" type="button" id="desconectarAgenda">Desconectar</button><button class="btn" type="button" id="cancelarAgenda">Cancelar</button>' : '')
+    + '<span class="msg" id="agendaMsg"></span></div></div>';
+}
+
+function ligarAgenda(){
+  if ($("trocarAgenda")) $("trocarAgenda").addEventListener("click", () => { tela.editarAgenda = true; renderAgenda(); });
+  if ($("cancelarAgenda")) $("cancelarAgenda").addEventListener("click", () => { tela.editarAgenda = false; renderAgenda(); });
+  if ($("salvarAgenda")) $("salvarAgenda").addEventListener("click", () => salvarAgenda($("agendaId").value));
+  if ($("desconectarAgenda")) $("desconectarAgenda").addEventListener("click", () => {
+    if (confirm("Desconectar a agenda? A secretária deixa de marcar horários até você conectar de novo.")) salvarAgenda("");
+  });
+}
+
+async function salvarAgenda(valor){
+  const msg = $("agendaMsg"); const btn = $("salvarAgenda");
+  const agenda = String(valor || "").trim().toLowerCase();
+  msg.className = "msg"; msg.textContent = "";
+  if (agenda && !/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(agenda)){
+    msg.className = "msg erro"; msg.textContent = "Confira o ID da agenda: é um e-mail, como seuemail@gmail.com."; return;
+  }
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Salvando...';
+  const { data, error } = await supa.rpc("conectar_agenda", { p_agenda: agenda });
+  btn.disabled = false; btn.textContent = "Conectar agenda";
+  if (error || !data || !data.ok){ msg.className = "msg erro"; msg.textContent = "Não foi possível salvar agora. Tente de novo em alguns instantes."; return; }
+  dadosPainel.agenda_conectada = agenda || null;
+  dadosPainel.usa_agenda = !!agenda || (dadosPainel.agendamentos || []).length > 0;
+  tela.editarAgenda = false;
+  renderAgenda();
 }
 
 async function mudarAgendamento(btn){

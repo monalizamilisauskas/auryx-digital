@@ -10,18 +10,16 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
   :root{
-    --ink:#000000; --panel:#0A0A0A; --panel-2:#141414; --panel-3:#1B1811;
-    --line: rgba(201,162,39,0.16); --line-strong: rgba(201,162,39,0.34);
-    --gold:#C9A227; --gold-bright:#E8C767; --parchment:#F4EFE0; --muted:#948C77;
-    --good:#7CB88F; --bad:#B9705E;
+    /* Azul-marinho com destaque azul. Os nomes antigos (gold, parchment) ficaram para não mexer no resto do CSS. */
+    --ink:#0B1220; --panel:#0F172A; --panel-2:#131D33; --panel-3:#18233B;
+    --line: rgba(148,163,184,0.14); --line-strong: rgba(96,165,250,0.40);
+    --gold:#2563EB; --gold-bright:#60A5FA; --parchment:#E2E8F0; --muted:#94A3B8;
+    --good:#34D399; --bad:#F87171; --amber:#F59E0B;
   }
   *{box-sizing:border-box;}
   body{
     margin:0; min-height:100vh;
-    background:
-      radial-gradient(1200px 700px at 12% -8%, rgba(201,162,39,0.11), transparent 60%),
-      radial-gradient(900px 600px at 105% 15%, rgba(201,162,39,0.06), transparent 55%),
-      var(--ink);
+    background:var(--ink);
     color:var(--parchment); font-family:'Inter', sans-serif; -webkit-font-smoothing:antialiased;
     display:flex; flex-direction:column;
   }
@@ -40,11 +38,8 @@
     background:transparent; color:var(--parchment); transition:.2s border-color, .2s background;
   }
   .btn:hover{ border-color:var(--gold); }
-  .btn-primary{
-    background:linear-gradient(180deg, var(--gold-bright), var(--gold)); color:#1a1608; border:none;
-    box-shadow:0 8px 20px -8px rgba(201,162,39,0.5);
-  }
-  .btn-primary:hover{ box-shadow:0 10px 24px -6px rgba(201,162,39,0.65); }
+  .btn-primary{ background:var(--gold); color:#fff; border:1px solid var(--gold); box-shadow:0 6px 18px -8px rgba(37,99,235,0.7); }
+  .btn-primary:hover{ background:#1D4ED8; border-color:#1D4ED8; }
   .btn:disabled{ opacity:.5; cursor:not-allowed; }
 
   main{ flex:1; display:flex; align-items:center; justify-content:center; padding:40px 20px; }
@@ -81,33 +76,70 @@
   @keyframes spin{ to{ transform:rotate(360deg); } }
 
   /* ---------- Dashboard screen ---------- */
-  .dash{ width:100%; max-width:1180px; display:none; }
-  .dash.show{ display:grid; grid-template-columns:220px minmax(0,1fr); gap:40px; align-items:start; }
-  main.no-painel{ align-items:flex-start; }
-  .side{ position:sticky; top:24px; }
-  .menu{ display:flex; flex-direction:column; gap:4px; }
-  .menu button{ display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; text-align:left; cursor:pointer;
-    background:transparent; border:1px solid transparent; color:var(--muted); font-family:'Inter',sans-serif; font-size:14px;
-    padding:11px 14px; border-radius:10px; transition:.15s background, .15s color; }
-  .menu button:hover{ color:var(--parchment); background:var(--panel); }
-  .menu button.ativo{ color:var(--parchment); background:var(--panel-2); border-color:var(--line-strong); }
-  .menu button .contador{ margin-left:0; }
-  .atalhos{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-bottom:20px; }
-  .atalho{ text-align:left; cursor:pointer; border:1px solid var(--line); border-radius:12px; background:var(--panel); padding:18px; color:var(--parchment); font-family:'Inter',sans-serif; }
-  .atalho:hover{ border-color:var(--line-strong); }
-  .atalho .n{ font-family:'Fraunces',serif; font-size:30px; }
-  .atalho .n.alerta{ color:var(--gold-bright); }
-  .atalho .l{ color:var(--muted); font-size:13px; margin-top:4px; }
-  .atalho .ir{ color:var(--gold-bright); font-size:12.5px; margin-top:10px; }
-  @media (max-width:860px){
-    .dash.show{ grid-template-columns:minmax(0,1fr); gap:20px; }
-    .side{ position:sticky; top:0; z-index:5; background:var(--ink); padding:8px 0; margin:0 -4px; }
-    .menu{ flex-direction:row; overflow-x:auto; gap:6px; scrollbar-width:none; padding:0 4px; }
-    .menu::-webkit-scrollbar{ display:none; }
-    .menu button{ width:auto; white-space:nowrap; padding:9px 13px; font-size:13px; border-color:var(--line); }
-    .dash-head{ margin-bottom:22px; }
+  .dash{ display:none; }
+  body.modo-painel nav.topbar{ display:none; }
+  body.modo-painel main{ display:block; padding:0; }
+  .dash.show{ display:block; min-height:100vh; }
+  .side{ position:fixed; inset:0 auto 0 0; width:250px; background:var(--panel); border-right:1px solid var(--line); display:flex; flex-direction:column; z-index:20; transition:transform .2s; }
+  .side-topo{ display:flex; align-items:center; gap:10px; padding:20px 20px 18px; border-bottom:1px solid var(--line); font-weight:600; font-size:14px; }
+  .side-logo{ height:30px; width:auto; }
+  .menu{ display:flex; flex-direction:column; gap:2px; padding:14px 10px; flex:1; overflow-y:auto; }
+  .menu button{ display:flex; align-items:center; gap:12px; width:100%; text-align:left; cursor:pointer; background:transparent; border:none;
+    color:var(--muted); font-family:'Inter',sans-serif; font-size:14.5px; font-weight:500; padding:11px 12px; border-radius:8px; transition:.15s background, .15s color; }
+  .menu button svg{ flex:none; }
+  .menu button .nome{ flex:1; }
+  .menu button:hover{ color:var(--parchment); background:var(--panel-2); }
+  .menu button.ativo{ color:#fff; background:rgba(37,99,235,0.18); }
+  .menu button.ativo svg{ color:var(--gold-bright); }
+  .side-pe{ border-top:1px solid var(--line); padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .side-negocio{ font-size:13px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .btn-sair{ padding:7px 14px; font-size:12.5px; }
+  .side-fundo{ display:none; }
+  .conteudo{ margin-left:250px; min-height:100vh; }
+  .cab{ position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:16px; padding:14px 28px; background:rgba(11,18,32,0.92);
+    backdrop-filter:blur(8px); border-bottom:1px solid var(--line); }
+  .cab-menu{ display:none; background:none; border:1px solid var(--line); color:var(--parchment); border-radius:8px; padding:7px; cursor:pointer; }
+  .cab-titulo{ flex:1; min-width:0; }
+  .cab-titulo .t{ font-size:18px; font-weight:600; }
+  .cab-titulo .s{ font-size:13.5px; color:var(--muted); margin-top:2px; }
+  .cab-dir{ display:flex; align-items:center; gap:10px; }
+  .avatar{ width:36px; height:36px; border-radius:50%; background:rgba(37,99,235,0.22); color:var(--gold-bright); display:flex; align-items:center; justify-content:center; font-weight:600; font-size:13px; }
+  .avatar:empty{ display:none; }
+  .quem{ font-size:14px; font-weight:500; max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .area{ padding:24px 28px 40px; max-width:1240px; }
+  .aviso{ display:flex; align-items:flex-start; gap:12px; border-radius:12px; padding:16px 18px; margin-bottom:16px; border:1px solid; }
+  .aviso svg{ flex:none; margin-top:2px; }
+  .aviso .txt{ flex:1; font-size:14px; line-height:1.5; }
+  .aviso .txt b{ display:block; font-weight:600; margin-bottom:2px; }
+  .aviso.info{ background:rgba(37,99,235,0.10); border-color:rgba(37,99,235,0.35); color:#BFDBFE; }
+  .aviso.atencao{ background:rgba(245,158,11,0.08); border-color:rgba(245,158,11,0.45); color:#FCD34D; }
+  .aviso .btn{ flex:none; padding:9px 16px; font-size:13px; }
+  .cartoes{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin-bottom:20px; }
+  .cartao{ text-align:left; border:1px solid var(--line); border-radius:12px; background:var(--panel); padding:18px 20px; color:var(--parchment); font-family:'Inter',sans-serif; }
+  button.cartao{ cursor:pointer; }
+  button.cartao:hover{ border-color:var(--line-strong); }
+  .cartao .l{ color:var(--muted); font-size:14px; }
+  .cartao .n{ font-size:30px; font-weight:700; margin-top:8px; }
+  .cartao .n small{ font-size:14px; font-weight:500; color:var(--muted); margin-left:4px; }
+  .cartao .x{ font-size:12.5px; color:var(--muted); margin-top:8px; }
+  .cartao.destaque{ background:var(--gold); border-color:var(--gold); }
+  .cartao.destaque .l, .cartao.destaque .x, .cartao.destaque .n small{ color:rgba(255,255,255,0.85); }
+  .cartao .barra{ height:6px; border-radius:4px; background:rgba(255,255,255,0.25); margin-top:12px; overflow:hidden; }
+  .cartao .barra div{ height:100%; background:#fff; }
+  .cartao .n.alerta{ color:var(--gold-bright); }
+  @media (max-width:1000px){ .cartoes{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  @media (max-width:900px){
+    .side{ transform:translateX(-100%); }
+    .side.aberta{ transform:none; box-shadow:0 0 40px rgba(0,0,0,0.6); }
+    .side-fundo.aberta{ display:block; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:15; }
+    .conteudo{ margin-left:0; }
+    .cab{ padding:12px 16px; }
+    .cab-menu{ display:inline-flex; }
+    .quem, .cab-dir .badge{ display:none; }
+    .area{ padding:18px 16px 32px; }
+    .aviso{ flex-wrap:wrap; }
   }
-  @media (max-width:480px){ .atalhos{ grid-template-columns:minmax(0,1fr); } }
+  @media (max-width:480px){ .cartoes{ grid-template-columns:minmax(0,1fr); } }
   .dash-head{ margin-bottom:36px; }
   .dash-head .eyebrow{
     font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:0.14em; color:var(--gold);
@@ -187,7 +219,7 @@
   .sec-head .sub{ margin:6px 0 0; }
   .contador{ display:inline-block; min-width:22px; padding:2px 8px; margin-left:8px; border-radius:999px; font-family:'IBM Plex Mono',monospace;
     font-size:12px; text-align:center; vertical-align:middle; background:var(--panel-3); color:var(--muted); border:1px solid var(--line); }
-  .contador.alerta{ background:var(--gold); color:#000; border-color:var(--gold); font-weight:600; }
+  .contador.alerta{ background:var(--gold); color:#fff; border-color:var(--gold); font-weight:600; }
   .sec-corpo{ margin-top:18px; }
   .ajuda{ margin-top:8px; font-size:13px; color:var(--muted); line-height:1.55; max-width:640px; }
   .ajuda summary{ cursor:pointer; color:var(--gold-bright); font-size:13px; width:max-content; }
@@ -202,7 +234,7 @@
   .abas{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
   .aba{ font-family:'Inter',sans-serif; font-size:13px; padding:7px 12px; border-radius:999px; cursor:pointer;
     background:transparent; color:var(--muted); border:1px solid var(--line); }
-  .aba.ativa{ color:var(--parchment); border-color:var(--gold); background:rgba(201,162,39,0.08); }
+  .aba.ativa{ color:#fff; border-color:var(--gold); background:rgba(37,99,235,0.18); }
   .ped-linha{ width:100%; display:flex; justify-content:space-between; align-items:center; gap:12px; text-align:left; cursor:pointer;
     background:transparent; border:none; color:var(--parchment); font-family:'Inter',sans-serif; font-size:14px; padding:0; }
   .ped-linha .quem{ color:var(--muted); font-size:13px; }
@@ -218,9 +250,26 @@
   .mais{ margin-top:14px; }
   .ped-acoes .msg{ font-size:13px; color:var(--bad); }
   a.btn{ text-decoration:none; display:inline-block; }
-  .pedido a.btn-primary, .conv .botoes a.btn-primary{ color:#1a1608; font-size:12.5px; }
+  .pedido a.btn-primary, .conv .botoes a.btn-primary{ color:#fff; font-size:12.5px; }
   .conv .botoes a{ color:var(--gold-bright); font-size:13px; }
   .conv .btn{ padding:8px 16px; font-size:12.5px; }
+  /* Visual novo: tudo em Inter, cantos menos arredondados nos botões. */
+  .btn{ border-radius:8px; }
+  .spinner{ border-color:rgba(255,255,255,0.3); border-top-color:#fff; }
+  .panel h2, .login-card h1, .plano .n{ font-family:'Inter',sans-serif; font-weight:600; letter-spacing:-0.01em; }
+  .panel h2{ font-size:17px; }
+  .metric-card .value{ font-family:'Inter',sans-serif; font-weight:700; font-size:30px; }
+  .plano .n, .atalho .n{ font-family:'Inter',sans-serif; font-weight:600; }
+  .metric-card .label, .subtitulo, .badge, .contador, .status{ font-family:'Inter',sans-serif; letter-spacing:0; }
+  .metric-card .label{ text-transform:none; font-size:13.5px; }
+  .badge{ text-transform:none; font-size:12px; color:var(--gold-bright); }
+  .status{ text-transform:none; font-size:12px; }
+  .status.pendente{ color:#FCD34D; border-color:rgba(245,158,11,0.45); }
+  .subtitulo{ text-transform:none; font-size:13px; font-weight:600; color:var(--parchment); }
+  .login-card .eyebrow{ font-family:'Inter',sans-serif; letter-spacing:.04em; color:var(--gold-bright); }
+  .side{ width:260px; } .conteudo{ margin-left:260px; }
+  @media (max-width:900px){ .conteudo{ margin-left:0; } }
+  .menu button{ font-size:14px; white-space:nowrap; }
 </style>
 </head>
 <body>
@@ -273,15 +322,25 @@
 
   <!-- PAINEL -->
   <div class="dash" id="dash">
-    <aside class="side"><nav class="menu" id="menuLateral" aria-label="Menu do painel"></nav></aside>
+    <aside class="side" id="side">
+      <div class="side-topo"><img class="side-logo" id="sideLogo" alt="Auryx"><span>AI Secretária</span></div>
+      <nav class="menu" id="menuLateral" aria-label="Menu do painel"></nav>
+      <div class="side-pe"><div class="side-negocio" id="sideNegocio"></div><button class="btn btn-sair" type="button" id="sairBtn">Sair</button></div>
+    </aside>
+    <div class="side-fundo" id="sideFundo"></div>
     <div class="conteudo">
-      <div class="dash-head">
-        <p class="eyebrow" id="saudacao">Painel do cliente</p>
-        <h1><span id="bizName">Seu negócio</span><span class="badge" id="planBadge"></span></h1>
-        <p class="sub" id="trialInfo"></p>
+      <header class="cab">
+        <button class="cab-menu" type="button" id="abrirMenu" aria-label="Abrir menu">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg>
+        </button>
+        <div class="cab-titulo"><div class="t" id="viewTitulo">Início</div><div class="s" id="viewSub"></div></div>
+        <div class="cab-dir"><span class="badge" id="planBadge"></span><span class="avatar" id="avatar"></span><span class="quem" id="quemNome"></span></div>
+      </header>
+      <div class="area">
+        <div id="avisos"></div>
+        <div id="dashContent"></div>
+        <div class="refresh-row"><button class="btn" id="refreshBtn">Atualizar</button></div>
       </div>
-      <div id="dashContent"></div>
-      <div class="refresh-row"><button class="btn" id="refreshBtn">Atualizar</button></div>
     </div>
   </div>
 </main>
@@ -316,7 +375,7 @@ function mostrar(tela){
   $("loginCard").style.display = tela === "login" ? "block" : "none";
   $("passwordCard").style.display = tela === "senha" ? "block" : "none";
   $("dash").classList.toggle("show", tela === "painel");
-  document.querySelector("main").classList.toggle("no-painel", tela === "painel");
+  document.body.classList.toggle("modo-painel", tela === "painel");
   $("logoutBtn").style.display = tela === "painel" ? "inline-block" : "none";
 }
 function aviso(id, msg){ const el = $(id); el.textContent = msg; el.classList.toggle("show", !!msg); }
@@ -330,7 +389,7 @@ async function carregarPainel(){
     return;
   }
   if (!data){
-    $("bizName").textContent = "Painel";
+    $("viewTitulo").textContent = "Painel";
     content.innerHTML = '<div class="empty-state"><p>Não encontramos um negócio ligado a este e-mail. Fale com a gente em hello@auryx.digital.</p></div>';
     return;
   }
@@ -341,10 +400,13 @@ async function carregarPainel(){
 
 function render(d){
   dadosPainel = d;
-  $("bizName").textContent = d.nome || "Seu negócio";
-  const primeiroNome = String(d.contato_nome || "").trim().split(/\s+/)[0];
-  $("saudacao").textContent = primeiroNome ? "Olá, " + primeiroNome + "! 👋" : "Painel do cliente";
+  const nomeDono = String(d.contato_nome || "").trim();
+  const primeiroNome = nomeDono.split(/\s+/)[0];
+  const iniciais = (nomeDono || d.nome || "").split(/\s+/).filter(Boolean).slice(0, 2).map(s => s[0].toUpperCase()).join("");
   $("planBadge").textContent = d.plano_nome || "";
+  $("avatar").textContent = iniciais;
+  $("quemNome").textContent = nomeDono || d.nome || "";
+  $("sideNegocio").textContent = d.nome || "";
   const emTeste = d.plano_id === "trial";
   let trialTxt = "";
   if (emTeste && d.trial_fim){
@@ -353,7 +415,6 @@ function render(d){
       ? "Teste grátis até " + dataBR(d.trial_fim) + " (" + dias + (dias === 1 ? " dia restante)" : " dias restantes)")
       : "Seu teste grátis terminou em " + dataBR(d.trial_fim) + ". Escolha um plano para continuar.";
   }
-  $("trialInfo").textContent = trialTxt;
 
   // Menu lateral (no celular vira uma barra de botões no topo). Cada item abre uma tela própria.
   const convs = d.conversas_equipe || [];
@@ -368,8 +429,32 @@ function render(d){
   ];
   if (!menu.some(m => m[0] === tela.view)) tela.view = "inicio";
   $("menuLateral").innerHTML = menu.map(([id, nome, n]) =>
-    '<button type="button" data-view="' + id + '"' + (tela.view === id ? ' class="ativo" aria-current="page"' : '') + '><span>' + esc(nome) + '</span>'
+    '<button type="button" data-view="' + id + '"' + (tela.view === id ? ' class="ativo" aria-current="page"' : '') + '>' + icone(id)
+    + '<span class="nome">' + esc(nome) + '</span>'
     + (n ? '<span class="contador alerta">' + n + '</span>' : '') + '</button>').join("");
+  const titulos = {
+    inicio: [primeiroNome ? "Olá, " + primeiroNome + " 👋" : "Início", (d.nome ? d.nome + " · " : "") + "acompanhe a sua secretária, os clientes e os pedidos"],
+    conversas: ["Clientes esperando", "Conversas que a secretária pausou para alguém da equipe responder"],
+    pedidos: ["Pedidos", "Cotações que a secretária coletou para a sua equipe"],
+    personalizar: ["Personalizar", "Perguntas, respostas e serviços que a secretária usa"],
+    dados: ["Seus dados", "Nome do negócio, seu nome e WhatsApp de avisos"],
+    plano: [emTeste ? "Escolher plano" : "Plano", emTeste ? "Continue com a sua secretária depois do teste grátis" : "Seu plano atual"],
+  };
+  $("viewTitulo").textContent = titulos[tela.view][0];
+  $("viewSub").textContent = titulos[tela.view][1];
+
+  // Avisos no topo (como faixas): cliente esperando (amarelo) e teste grátis (azul).
+  let avisos = '';
+  if (convs.length && tela.view !== "conversas"){
+    avisos += '<div class="aviso atencao">' + icone("alerta") + '<div class="txt"><b>' + (convs.length === 1 ? '1 cliente esperando atendimento' : convs.length + ' clientes esperando atendimento') + '</b>'
+      + 'A secretária pausou essas conversas para alguém da sua equipe responder.</div><button class="btn btn-primary" type="button" data-ir="conversas">Ver clientes</button></div>';
+  }
+  if (emTeste && trialTxt && tela.view === "inicio"){
+    avisos += '<div class="aviso info">' + icone("info") + '<div class="txt"><b>' + esc(trialTxt) + '</b>'
+      + 'Escolha um plano para continuar e liberar a personalização das respostas e dos serviços.</div><button class="btn" type="button" data-ir="plano">Ver planos</button></div>';
+  }
+  $("avisos").innerHTML = avisos;
+  $("avisos").querySelectorAll("[data-ir]").forEach(b => b.addEventListener("click", () => irPara(b.getAttribute("data-ir"))));
   $("menuLateral").querySelectorAll("[data-view]").forEach(b => b.addEventListener("click", () => irPara(b.getAttribute("data-view"))));
 
   let html = '';
@@ -378,32 +463,23 @@ function render(d){
     const limite = d.limite_mensagens ? Number(d.limite_mensagens) : null;
     const pct = limite ? Math.min(100, Math.round(usadas / limite * 100)) : 0;
     const s = d.semana || {};
-    html += '<div class="atalhos">'
-      + '<button type="button" class="atalho" data-ir="conversas"><div class="n' + (convs.length ? ' alerta' : '') + '">' + convs.length + '</div>'
-      + '<div class="l">' + (convs.length === 1 ? 'cliente esperando atendimento' : 'clientes esperando atendimento') + '</div><div class="ir">Ver clientes →</div></button>'
-      + '<button type="button" class="atalho" data-ir="pedidos"><div class="n' + (pend ? ' alerta' : '') + '">' + pend + '</div>'
-      + '<div class="l">' + (pend === 1 ? 'pedido pendente' : 'pedidos pendentes') + '</div><div class="ir">Ver pedidos →</div></button>'
+    html += '<div class="cartoes">'
+      + '<div class="cartao destaque"><div class="l">Mensagens usadas</div><div class="n">' + usadas + (limite ? '<small>de ' + limite + '</small>' : '') + '</div>'
+      + (limite ? '<div class="barra"><div style="width:' + pct + '%"></div></div><div class="x">' + Math.max(0, limite - usadas) + ' restantes ' + (emTeste ? 'no teste' : 'neste mês') + '</div>' : '') + '</div>'
+      + '<button type="button" class="cartao" data-ir="conversas"><div class="l">Clientes esperando</div><div class="n' + (convs.length ? ' alerta' : '') + '">' + convs.length + '</div><div class="x">Ver clientes →</div></button>'
+      + '<button type="button" class="cartao" data-ir="pedidos"><div class="l">Pedidos pendentes</div><div class="n' + (pend ? ' alerta' : '') + '">' + pend + '</div><div class="x">Ver pedidos →</div></button>'
+      + '<div class="cartao"><div class="l">Pedidos na semana</div><div class="n">' + (s.pedidos || 0) + '</div><div class="x">Últimos 7 dias</div></div>'
       + '</div>';
-    html += '<div class="panel"><h2>Uso de mensagens</h2>'
-      + '<p class="sub">' + (emTeste ? "Mensagens respondidas pela secretária durante o teste." : "Mensagens respondidas pela secretária neste mês.") + '</p>'
-      + '<div class="usage-row"><span><strong>' + usadas + '</strong> ' + (limite ? 'de ' + limite + ' mensagens' : 'mensagens') + '</span>'
-      + (limite ? '<span>' + Math.max(0, limite - usadas) + ' restantes</span>' : '') + '</div>'
-      + (limite ? '<div class="usage-bar"><div class="usage-fill' + (pct >= 90 ? ' alto' : '') + '" style="width:' + pct + '%"></div></div>' : '')
-      + '</div>';
-    html += '<div class="metric-grid">'
+    html += '<div class="panel"><h2>Últimos 7 dias</h2><p class="sub">Como a secretária trabalhou nesta semana.</p><div class="metric-grid" style="margin:0;">'
       + '<div class="metric-card"><div class="label">Mensagens recebidas</div><div class="value neutral">' + (s.mensagens || 0) + '</div></div>'
       + '<div class="metric-card"><div class="label">Conversas</div><div class="value neutral">' + (s.conversas || 0) + '</div></div>'
-      + '<div class="metric-card"><div class="label">Pedidos recebidos</div><div class="value">' + (s.pedidos || 0) + '</div></div>'
-      + '<div class="metric-card"><div class="label">Passadas p/ equipe</div><div class="value neutral">' + (s.transferidas || 0) + '</div></div>'
-      + '</div><p class="period-note">Últimos 7 dias.</p>';
-    if (emTeste){
-      html += '<div class="panel" style="margin-top:20px;"><h2>Gostou da sua secretária?</h2><p class="sub">Escolha um plano para continuar depois do teste grátis e personalizar as respostas e os serviços.</p>'
-        + '<button class="btn btn-primary" type="button" data-ir="plano">Ver planos</button></div>';
-    }
+      + '<div class="metric-card"><div class="label">Pedidos recebidos</div><div class="value neutral">' + (s.pedidos || 0) + '</div></div>'
+      + '<div class="metric-card"><div class="label">Passadas para a equipe</div><div class="value neutral">' + (s.transferidas || 0) + '</div></div>'
+      + '</div></div>';
   }
 
   if (tela.view === "conversas"){
-    html += '<div class="panel"><h2>Clientes esperando atendimento</h2>'
+    html += '<div class="panel">'
       + '<p class="sub">' + (convs.length ? (convs.length === 1 ? '1 cliente esperando' : convs.length + ' clientes esperando') + ' alguém da sua equipe. A secretária pausou essas conversas.' : 'Nenhum cliente esperando agora.') + '</p>'
       + '<details class="ajuda"><summary>Como funciona?</summary>'
       + '<p>A secretária pausa a conversa e o cliente aparece aqui quando:</p><ul>'
@@ -456,7 +532,22 @@ function render(d){
   document.querySelectorAll("[data-devolver]").forEach(b => b.addEventListener("click", () => devolverConversa(b)));
 }
 
+function icone(nome){
+  const d = {
+    inicio: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+    conversas: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
+    pedidos: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3"/>',
+    personalizar: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+    dados: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    plano: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/>',
+    alerta: '<path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17h0"/>',
+    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h0"/>',
+  }[nome] || '';
+  return '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
+}
+
 function irPara(view){
+  fecharMenu();
   tela.view = view;
   tela.pedido = null;
   try { localStorage.setItem("painelView", view); } catch (e) {}
@@ -472,7 +563,7 @@ function renderPedidos(){
   const box = $("pedidosPainel");
   const todos = d.pedidos || [];
   const pend = Number(d.pedidos_pendentes || 0);
-  let html = '<div class="sec-head"><div><h2>Pedidos</h2>'
+  let html = '<div class="sec-head"><div>'
     + '<p class="sub">' + (pend ? (pend === 1 ? '1 pedido esperando resposta.' : pend + ' pedidos esperando resposta.') : (todos.length ? 'Nenhum pedido pendente.' : 'Nenhum pedido ainda.')) + '</p>'
     + '<details class="ajuda"><summary>Como funciona?</summary>'
     + '<p>Quando um cliente pede uma cotação, a secretária faz as perguntas (destino, datas, pessoas...) e o pedido chega aqui como <b>Pendente</b>, '
@@ -687,6 +778,11 @@ $("passwordForm").addEventListener("submit", async (e) => {
 
 $("logoutBtn").addEventListener("click", async () => { await supa.auth.signOut(); mostrar("login"); });
 $("refreshBtn").addEventListener("click", carregarPainel);
+$("sairBtn").addEventListener("click", async () => { await supa.auth.signOut(); fecharMenu(); mostrar("login"); });
+$("abrirMenu").addEventListener("click", () => { $("side").classList.add("aberta"); $("sideFundo").classList.add("aberta"); });
+$("sideFundo").addEventListener("click", fecharMenu);
+function fecharMenu(){ $("side").classList.remove("aberta"); $("sideFundo").classList.remove("aberta"); }
+$("sideLogo").src = $("navLogo").src;
 
 (async function iniciar(){
   if (erroNoLink){

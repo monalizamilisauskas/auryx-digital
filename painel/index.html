@@ -286,6 +286,9 @@
   .resp-texto{ width:100%; min-height:150px; resize:vertical; background:var(--panel-3); border:1px solid var(--line); color:var(--parchment); border-radius:8px; padding:10px 12px; font-size:14px; line-height:1.5; font-family:'Inter',sans-serif; }
   .resp-texto:focus{ outline:none; border-color:var(--gold); }
   .rr-busca{ width:100%; background:var(--panel-3); border:1px solid var(--line); color:var(--parchment); border-radius:8px; padding:9px 12px; font-size:14px; font-family:'Inter',sans-serif; margin:10px 0 4px; }
+  .rr-evid{ margin-top:10px; padding:9px 12px; border-radius:10px; font-size:13px; line-height:1.5; border:1px solid var(--line); color:var(--muted); }
+  .rr-evid.ok{ color:var(--good); border-color:rgba(52,211,153,0.4); background:rgba(52,211,153,0.07); }
+  .rr-evid.erro{ color:#FCA5A5; border-color:rgba(248,113,113,0.45); background:rgba(248,113,113,0.08); }
   .rr-trava{ display:flex; gap:10px; align-items:flex-start; margin-top:10px; padding:10px 12px; border:1px solid rgba(245,158,11,0.45); background:rgba(245,158,11,0.08); border-radius:10px; font-size:13px; color:#FDE68A; line-height:1.5; cursor:pointer; }
   .rr-trava input{ margin-top:3px; accent-color:#F59E0B; }
   .rr-trava b{ color:#FCD34D; }
@@ -412,7 +415,7 @@
   </div>
 </main>
 
-<script src="respostas.js?v=5"></script>
+<script src="respostas.js?v=7"></script>
 <script>
 const SUPABASE_URL = "https://ypqmrjvuotctiyydfpgb.supabase.co";
 const SUPABASE_KEY = "sb_publishable_V87H9FaZ0gHFm1krAnpZRg_an0puUit"; // chave pública; os dados são protegidos pelo login
@@ -711,7 +714,8 @@ function renderPedidos(){
         const campos = Object.entries(p.dados || {}).map(([k, v]) => '<b>' + esc(ROTULOS[k] || (k.charAt(0).toUpperCase() + k.slice(1))) + ':</b> ' + esc(v)).join(' · ');
         const agP = agendamentoDoPedido(p.id);
         html += '<div class="ped-detalhe"><div class="d">' + campos + '<br><b>Contato:</b> +' + esc(p.remetente)
-          + (agP ? '<br><b>Horário confirmado:</b> ' + esc(quandoBR(agP.data_hora)) : '') + '</div><div class="ped-acoes">'
+          + (agP ? '<br><b>Horário confirmado:</b> ' + esc(quandoBR(agP.data_hora)) : '')
+          + (p.pago_em ? '<br><b>Pagamento:</b> registrado em ' + esc(new Date(p.pago_em).toLocaleDateString("pt-BR")) : '') + '</div><div class="ped-acoes">'
           + '<button class="btn btn-primary" type="button" data-resp="p' + p.id + '">Responder no WhatsApp</button>';
         html += '<button class="btn" type="button" data-conf="' + p.id + '">' + (agP ? 'Remarcar horário' : 'Confirmar horário') + '</button>';
         html += '<button class="btn" type="button" data-fu-ped="' + p.id + '">Agendar follow-up</button>';
@@ -719,6 +723,8 @@ function renderPedidos(){
           const rotulo = s === "pendente" ? "Voltar para pendente" : s === "respondido" ? "Marcar como respondido" : STATUS[s];
           html += '<button class="btn" type="button" data-status="' + s + '" data-id="' + p.id + '">' + rotulo + '</button>';
         });
+        html += (p.pago_em ? '<button class="btn" type="button" data-pago="' + p.id + '" data-valor="0">Desfazer pagamento</button>'
+                           : '<button class="btn" type="button" data-pago="' + p.id + '" data-valor="1">Registrar pagamento</button>');
         html += '<span class="msg" id="pedMsg' + p.id + '"></span></div>' + (tela.resp === "p" + p.id ? formResposta("p" + p.id) : '')
           + (tela.confHorario === p.id ? formHorario(p.id) : '') + '</div>';
       }
@@ -736,6 +742,7 @@ function renderPedidos(){
   box.querySelectorAll("[data-status]").forEach(b => b.addEventListener("click", () => mudarStatus(b)));
   ligarHorario(box, renderPedidos);
   ligarResposta(box, renderPedidos);
+  box.querySelectorAll("[data-pago]").forEach(b => b.addEventListener("click", () => registrarPagamento(b)));
   box.querySelectorAll("[data-fu-ped]").forEach(b => b.addEventListener("click", () => {
     const p = (dadosPainel.pedidos || []).find(x => x.id === Number(b.getAttribute("data-fu-ped")));
     if (!p) return;
@@ -1011,6 +1018,26 @@ function tipoBiblioteca(){
   const r = regras.find(([re]) => re.test(t));
   return r && B[r[1]] ? r[1] : "geral";
 }
+// País da empresa (moeda e fuso do cadastro): números de emergência e respostas que só valem num país (Pix).
+const FUSOS_BR = /^America\/(Sao_Paulo|Fortaleza|Recife|Bahia|Belem|Manaus|Cuiaba|Campo_Grande|Porto_Velho|Boa_Vista|Rio_Branco|Araguaina|Maceio|Noronha|Santarem)$/;
+function paisEmpresa(){
+  const d = dadosPainel, tz = String(d.timezone || ""), moeda = String(d.moeda || "").toUpperCase();
+  if (moeda === "BRL" || FUSOS_BR.test(tz)) return "BR";
+  const porFuso = { "Europe/Lisbon": "PT", "Atlantic/Madeira": "PT", "Atlantic/Azores": "PT", "Europe/Dublin": "IE", "Europe/London": "GB",
+    "Europe/Madrid": "ES", "Europe/Paris": "FR", "Europe/Rome": "IT", "Europe/Berlin": "DE", "America/Mexico_City": "MX",
+    "America/Argentina/Buenos_Aires": "AR", "America/Toronto": "CA", "America/Vancouver": "CA" };
+  if (porFuso[tz]) return porFuso[tz];
+  if (/^America\/(New_York|Chicago|Denver|Los_Angeles|Phoenix|Anchorage)$|^Pacific\/Honolulu$/.test(tz)) return "US";
+  if (moeda === "EUR") return "EU";
+  return "";
+}
+// Números de emergência por país; país desconhecido fica [entre colchetes] e o painel pede para completar.
+function emergenciaPais(){
+  const t = { BR: ["192 (SAMU)", "193 (Bombeiros)"], PT: ["112", "112"], IE: ["112 ou 999", "112 ou 999"], GB: ["999", "999"], EU: ["112", "112"],
+    ES: ["112", "112"], FR: ["15 ou 112", "18 ou 112"], IT: ["118 ou 112", "115 ou 112"], DE: ["112", "112"], US: ["911", "911"], CA: ["911", "911"],
+    MX: ["911", "911"], AR: ["107", "100"] }[paisEmpresa()];
+  return t ? { medica: t[0], bombeiros: t[1] } : { medica: "[número de emergência local]", bombeiros: "[número dos bombeiros local]" };
+}
 function bibliotecaPadrao(){
   const B = window.RESPOSTAS_RAPIDAS || {};
   return B[tipoBiblioteca()] || B.geral || { categorias: [], itens: [], sugestoes: {} };
@@ -1022,7 +1049,10 @@ function bibliotecaConta(incluirEscondidas){
   const lista = base.itens.map(m => meus[m.id] ? Object.assign({}, m, meus[m.id], { padrao: true, editado: true }) : Object.assign({ padrao: true }, m));
   (R.meus || []).filter(m => !base.itens.some(b => b.id === m.id)).forEach(m => lista.push(Object.assign({ cat: "Minhas respostas" }, m, { meu: true })));
   lista.forEach(m => { m.escondida = (R.ocultos || []).includes(m.id); m.fav = (R.favoritos || []).includes(m.id); });
-  return incluirEscondidas ? lista : lista.filter(m => !m.escondida);
+  // Resposta de outro país (ex.: Pix fora do Brasil) não aparece; país desconhecido mostra tudo.
+  const pais = paisEmpresa();
+  const doPais = lista.filter(m => !m.pais || !pais || m.pais === pais);
+  return incluirEscondidas ? doPais : doPais.filter(m => !m.escondida);
 }
 function categoriasConta(lista){
   const cats = bibliotecaPadrao().categorias.slice();
@@ -1034,17 +1064,38 @@ function buscarRespostas(lista, termo){
   if (!partes.length) return lista;
   return lista.filter(m => { const alvo = semAcento(m.titulo + " " + m.texto + " " + (m.chaves || "") + " " + m.cat); return partes.every(p => alvo.includes(p)); });
 }
-// Sugeridas: pela última mensagem do cliente (palavras-chave) ou pela etapa do pedido.
+// Serviços que a empresa oferece (catálogo ligado + serviços do cadastro). Vazio = sem informação, não filtra.
+function servicosEmpresa(){
+  const d = dadosPainel;
+  return semAcento((d.servicos || []).filter(x => x.ativo !== false).map(x => x.titulo).join(" ") + " " + (d.servicos_oferecidos || "")).trim();
+}
+// O que o painel já sabe (dados carregados) sobre a evidência exigida; a confirmação final é feita no banco na hora de enviar.
+function evidenciaLocal(tipo, ctx){
+  const d = dadosPainel, agora = Date.now();
+  const ags = (d.agendamentos || []).filter(a => a.remetente === ctx.remetente);
+  const ped = ctx.pedidoId ? (d.pedidos || []).find(x => x.id === ctx.pedidoId) : (d.pedidos || []).find(x => x.remetente === ctx.remetente);
+  if (tipo === "agendamento") return ags.some(a => a.status === "confirmado" && new Date(a.data_hora).getTime() >= agora - 7200000);
+  if (tipo === "realizado") return ags.some(a => a.status === "realizado" && new Date(a.data_hora).getTime() >= agora - 30 * 86400000);
+  if (tipo === "fechado") return !!ped && ped.status === "fechado";
+  if (tipo === "pagamento") return !!ped && !!ped.pago_em;
+  return true;
+}
+// Sugeridas (até 3): palavras da última mensagem do cliente, etapa do pedido e o que a empresa oferece.
+// Não sugere serviço que a empresa não oferece nem confirmação sem evidência no sistema.
 function sugerirRespostas(lista, ctx){
-  const porId = (ids) => ids.map(id => lista.find(m => m.id === id)).filter(Boolean);
+  const oferece = servicosEmpresa();
+  const pode = (m) => (!m.requer || !oferece || String(m.requer).split(/\s+/).some(k => k && oferece.includes(semAcento(k))))
+    && (!m.evidencia || evidenciaLocal(m.evidencia, ctx));
+  const nota = new Map();
   if (ctx.ultima){
     const msg = " " + semAcento(ctx.ultima).replace(/[^a-z0-9-]+/g, " ") + " ";
-    const nota = lista.map(m => ({ m, n: String(m.chaves || "").split(/\s+/).filter(k => k.length > 2 && msg.includes(" " + k)).length })).filter(x => x.n > 0);
-    nota.sort((a, b) => b.n - a.n);
-    if (nota.length) return nota.slice(0, 3).map(x => x.m);
+    lista.forEach(m => {
+      const n = String(m.chaves || "").split(/\s+/).filter(k => k.length > 2 && msg.includes(" " + k)).length;
+      if (n) nota.set(m.id, (nota.get(m.id) || 0) + n * 3);
+    });
   }
-  const mapa = bibliotecaPadrao().sugestoes || {};
-  return porId(mapa[ctx.etapa] || []);
+  ((bibliotecaPadrao().sugestoes || {})[ctx.etapa] || []).forEach((id, i) => nota.set(id, (nota.get(id) || 0) + 2 - i * 0.1));
+  return lista.filter(m => nota.has(m.id) && pode(m)).sort((a, b) => nota.get(b.id) - nota.get(a.id)).slice(0, 3);
 }
 function assuntoPedido(p){
   const dd = p.dados || {};
@@ -1055,36 +1106,43 @@ function assuntoPedido(p){
 function ctxResposta(chave){
   const d = dadosPainel, tipo = String(chave || "").charAt(0), ref = String(chave || "").slice(1);
   if (tipo === "p"){ const p = (d.pedidos || []).find(x => x.id === Number(ref)) || {};
-    return { remetente: p.remetente, nome: (p.dados || {}).nome, assunto: assuntoPedido(p), dados: p.dados || {}, etapa: p.status }; }
+    return { remetente: p.remetente, nome: (p.dados || {}).nome, assunto: assuntoPedido(p), dados: p.dados || {}, etapa: p.status, pedidoId: p.id }; }
   if (tipo === "a"){ const a = (d.agendamentos || []).find(x => x.id === Number(ref)) || {};
     const tz = d.timezone || "America/Sao_Paulo";
     const quando = a.data_hora ? new Date(a.data_hora).toLocaleDateString("pt-BR", { timeZone: tz, weekday: "long", day: "2-digit", month: "2-digit" })
       + " às " + new Date(a.data_hora).toLocaleTimeString("pt-BR", { timeZone: tz, hour: "2-digit", minute: "2-digit" }) : "";
     return { remetente: a.remetente, nome: a.nome, assunto: a.servico ? "o seu " + a.servico.charAt(0).toLowerCase() + a.servico.slice(1) : "",
-      dados: { servico: a.servico || "", quando, endereco: a.endereco || "" }, etapa: "agendamento" }; }
+      dados: { servico: a.servico || "", quando, endereco: a.endereco || "" }, etapa: "agendamento", pedidoId: a.pedido_id || null }; }
   const c = (d.conversas_equipe || []).find(x => x.remetente === ref) || {};
   return { remetente: ref, nome: "", assunto: "", dados: {}, etapa: "conversa", ultima: c.ultima_mensagem || "" };
 }
-function preencherModelo(texto, ctx){
+function quandoTexto(iso){
+  const tz = dadosPainel.timezone || "America/Sao_Paulo", dt = new Date(iso);
+  return dt.toLocaleDateString("pt-BR", { timeZone: tz, weekday: "long", day: "2-digit", month: "2-digit" }) + " às " + dt.toLocaleTimeString("pt-BR", { timeZone: tz, hour: "2-digit", minute: "2-digit" });
+}
+// Troca as variáveis numa passada só (dado do cliente nunca vira variável). Sem o dado, vira [campo] para completar.
+// ev (opcional): evidência do banco; horário e serviço de uma confirmação vêm do agendamento real, não do pedido.
+function preencherModelo(texto, ctx, ev){
   const n = String(ctx.nome || "").trim().split(/\s+/)[0];
   const dd = ctx.dados || {};
+  const ag = ev && (ev.agendamento || ev.realizado);
+  const minusc = (x) => String(x).charAt(0).toLowerCase() + String(x).slice(1);
+  const emerg = emergenciaPais();
+  const v = {
+    negocio: dadosPainel.nome || "[nome da empresa]",
+    servico: ag && ag.servico ? minusc(ag.servico) : dd.servico ? minusc(dd.servico) : "[serviço]",
+    quando: ag && ag.data_hora ? quandoTexto(ag.data_hora) : ctx.etapa === "agendamento" && dd.quando ? dd.quando : "[dia e horário]",
+    endereco: ag && ag.endereco ? ag.endereco : dd.endereco || "[endereço]",
+    carro: dd.carro || "carro", assunto: ctx.assunto || "o seu pedido",
+    destino: dd.destino || "[destino]", datas: dd.datas || "[datas]", pessoas: dd.pessoas || "[quantas pessoas]", saida: dd.saida || "[cidade de saída]",
+    reserva: "[número da reserva]", data_partida: "[data de partida]", link_pagamento: "[link de pagamento]", horario: "[horário de atendimento]",
+    emergencia_medica: emerg.medica, emergencia_bombeiros: emerg.bombeiros,
+  };
   let t = String(texto || "");
-  if (n) t = t.replace(/\{nome\}/g, n);
-  else t = t.replace(/^\{nome\},\s*(\S)/, (_, c) => c.toUpperCase()).replace(/,\s*\{nome\}/g, "").replace(/\{nome\}/g, "");
-  return t.replace(/\{negocio\}/g, dadosPainel.nome || "")
-    .replace(/\{servico\}/g, dd.servico ? String(dd.servico).charAt(0).toLowerCase() + String(dd.servico).slice(1) : "[serviço]")
-    .replace(/\{quando\}/g, dd.quando || dd.horario || "[dia e horário]")
-    .replace(/\{endereco\}/g, dd.endereco || "[endereço]")
-    .replace(/\{carro\}/g, dd.carro || "carro")
-    .replace(/\{assunto\}/g, ctx.assunto || "o seu pedido")
-    .replace(/\{destino\}/g, dd.destino || "[destino]")
-    .replace(/\{datas\}/g, dd.datas || "[datas]")
-    .replace(/\{pessoas\}/g, dd.pessoas || "[quantas pessoas]")
-    .replace(/\{saida\}/g, dd.saida || "[cidade de saída]")
-    .replace(/\{reserva\}/g, "[número da reserva]")
-    .replace(/\{data_partida\}/g, dd.datas || "[data de partida]")
-    .replace(/\{link_pagamento\}/g, "[link de pagamento]")
-    .replace(/\{horario\}/g, "[horário de atendimento]");
+  t = n ? t.replace(/\{nome\}/g, "\u0000NOME\u0000")
+        : t.replace(/^\{nome\},\s*(\S)/, (_, c) => c.toUpperCase()).replace(/,\s*\{nome\}/g, "").replace(/\{nome\}/g, "");
+  t = t.replace(/\{([a-z_]+)\}/g, (todo, k) => Object.prototype.hasOwnProperty.call(v, k) ? v[k] : todo);
+  return n ? t.split("\u0000NOME\u0000").join(n) : t;
 }
 // Texto escrito para um cliente vira modelo para qualquer cliente.
 function textoParaModelo(texto, ctx){
@@ -1142,13 +1200,54 @@ function formResposta(chave){
       + '<button class="btn btn-primary" type="button" id="respSalvarModelo">Salvar</button></div>' : '')
     + '</div>';
 }
-// Respostas sobre reserva e pagamento só saem depois de a pessoa confirmar que o dado é real.
+const MOTIVO_EVIDENCIA = {
+  agendamento: "Não há horário confirmado e futuro para este cliente no sistema. Confirme o horário (Pedidos → Confirmar horário) antes de enviar.",
+  realizado: "O serviço ainda não está marcado como Realizado. Em Agendamentos, marque o horário como Realizado antes de enviar.",
+  fechado: "O pedido não está como Venda fechada no sistema. Mude o status do pedido antes de enviar.",
+  pagamento: "Não há pagamento registrado para este pedido. Confira que o valor caiu e clique em Registrar pagamento no pedido antes de enviar.",
+};
+const OK_EVIDENCIA = { agendamento: "Horário confirmado no sistema", realizado: "Serviço marcado como realizado", fechado: "Pedido com venda fechada", pagamento: "Pagamento registrado" };
+function respostaSelecionada(){ return tela.respSel ? bibliotecaConta(true).find(x => x.id === tela.respSel) : null; }
+// Resposta própria que afirma confirmação, pagamento ou serviço pronto também pede a checagem manual.
+const AFIRMA = /confirmad|pagamento (foi )?(recebido|confirmado|aprovado)|recebemos (o seu |seu )?pagamento|est[aá] pront|conclu[ií]d|emitid/i;
+// Trava: evidência no banco (quando a resposta exige) e/ou confirmação marcada pela pessoa.
 function travaResposta(){
-  const m = tela.respSel ? bibliotecaConta(true).find(x => x.id === tela.respSel) : null;
-  if (!m || !m.confirmar) return "";
-  return '<label class="rr-trava"><input type="checkbox" id="respConfirmo"> <span><b>Antes de enviar, confirme:</b> ' + esc(m.confirmar) + '</span></label>';
+  const m = respostaSelecionada();
+  if (!m) return "";
+  let h = "";
+  if (m.evidencia){
+    const ev = tela.respEv && tela.respEv.id === m.id ? tela.respEv : null;
+    if (!ev || ev.estado === "verificando") h += '<div class="rr-evid">Verificando no sistema…</div>';
+    else if (ev.ok) h += '<div class="rr-evid ok">✔ ' + esc(OK_EVIDENCIA[m.evidencia]) + (ev.detalhe ? ': ' + esc(ev.detalhe) : '') + '</div>';
+    else h += '<div class="rr-evid erro">✖ ' + esc(ev.motivo) + '</div>';
+  }
+  const conf = m.confirmar || ((m.meu || m.editado) && AFIRMA.test(m.texto) ? "o que esta mensagem afirma está registrado e conferido." : "");
+  if (conf) h += '<label class="rr-trava"><input type="checkbox" id="respConfirmo"> <span><b>Antes de enviar, confirme:</b> ' + esc(conf) + '</span></label>';
+  return h;
 }
-function camposAbertos(texto){ return (String(texto || "").match(/\[[^\]\n]{1,60}\]/g) || []).filter((v, i, a) => a.indexOf(v) === i); }
+// Consulta o banco agora (o painel pode estar aberto há horas). Falha na consulta = não libera o envio.
+async function verificarEvidencia(m, ctx, aoTerminar){
+  const id = m.id;
+  tela.respEv = { id, estado: "verificando" };
+  let res;
+  try {
+    const { data, error } = await supa.rpc("verificar_evidencia", { p_remetente: ctx.remetente, p_pedido_id: ctx.pedidoId || null });
+    if (error || !data || !data.ok) throw new Error("falhou");
+    const ok = m.evidencia === "agendamento" ? !!data.agendamento : m.evidencia === "realizado" ? !!data.realizado
+      : m.evidencia === "fechado" ? !!(data.pedido && data.pedido.status === "fechado") : m.evidencia === "pagamento" ? !!(data.pedido && data.pedido.pago_em) : false;
+    const ag = data.agendamento || data.realizado;
+    const detalhe = ok && (m.evidencia === "agendamento" || m.evidencia === "realizado") && ag ? (ag.servico ? ag.servico + ", " : "") + quandoTexto(ag.data_hora)
+      : ok && m.evidencia === "pagamento" ? "em " + new Date(data.pedido.pago_em).toLocaleDateString("pt-BR") : "";
+    res = { id, estado: "pronto", ok, motivo: ok ? "" : MOTIVO_EVIDENCIA[m.evidencia], detalhe, dados: data, em: Date.now() };
+  } catch (e) {
+    res = { id, estado: "pronto", ok: false, motivo: "Não foi possível verificar no sistema agora. Tente de novo em instantes.", em: Date.now() };
+  }
+  if (tela.respSel !== id) return;   // a pessoa já escolheu outra resposta
+  tela.respEv = res;
+  if (aoTerminar) aoTerminar(res);
+}
+// Campo por completar: [colchetes] ou {variável} que o painel não conhece.
+function camposAbertos(texto){ return (String(texto || "").match(/\[[^\]\n]{1,60}\]|\{[a-zA-Z_]{1,40}\}/g) || []).filter((v, i, a) => a.indexOf(v) === i); }
 function listaResposta(ctx){
   const lista = bibliotecaConta(false);
   if ((tela.respBusca || "").trim()) return '<div class="rr-lista">' + cartoesResposta(buscarRespostas(lista, tela.respBusca), ctx, tela.respSel) + '</div>';
@@ -1165,7 +1264,7 @@ function ligarResposta(box, redesenhar){
   box.querySelectorAll("[data-resp]").forEach(b => b.addEventListener("click", () => {
     const k = b.getAttribute("data-resp");
     tela.resp = tela.resp === k ? null : k;
-    tela.respTexto = null; tela.respSalvando = false; tela.respBusca = ""; tela.respCat = null; tela.respSel = null;
+    tela.respTexto = null; tela.respSalvando = false; tela.respBusca = ""; tela.respCat = null; tela.respSel = null; tela.respEv = null;
     redesenhar();
   }));
   if (!$("formResp")) return;
@@ -1176,8 +1275,9 @@ function ligarResposta(box, redesenhar){
     $("respLista").querySelectorAll("[data-usar]").forEach(b => b.addEventListener("click", () => {
       const m = bibliotecaConta(true).find(x => x.id === b.getAttribute("data-usar"));
       if (!m) return;
-      tela.respSel = m.id; $("respTexto").value = preencherModelo(m.texto, ctx); atualizar(); refazer();
+      tela.respSel = m.id; tela.respEv = null; $("respTexto").value = preencherModelo(m.texto, ctx); atualizar(); refazer();
       $("respTrava").innerHTML = travaResposta(); $("respMsg").textContent = "";
+      if (m.evidencia) checar(m);
       const t = $("respTexto"), i = t.value.indexOf("[");
       t.focus(); if (i >= 0){ t.setSelectionRange(i, t.value.indexOf("]", i) + 1); }
     }));
@@ -1188,16 +1288,35 @@ function ligarResposta(box, redesenhar){
     }));
   };
   const refazer = () => { $("respLista").innerHTML = listaResposta(ctx); ligarLista(); };
+  // Verifica a evidência; se a pessoa ainda não mexeu no texto, refaz com o horário e o serviço reais do agendamento.
+  const checar = (m) => {
+    const antes = $("respTexto").value;
+    verificarEvidencia(m, ctx, (res) => {
+      if (!$("respTrava")) return;
+      if (res.ok && $("respTexto").value === antes){ $("respTexto").value = preencherModelo(m.texto, ctx, res.dados); atualizar(); }
+      const marcado = !!($("respConfirmo") && $("respConfirmo").checked);   // não desmarca o que a pessoa já marcou
+      $("respTrava").innerHTML = travaResposta();
+      if (marcado && $("respConfirmo")) $("respConfirmo").checked = true;
+    });
+  };
   ligarLista();
   $("respBusca").addEventListener("input", (e) => { tela.respBusca = e.target.value; refazer(); });
   $("respTexto").addEventListener("input", atualizar);
-  // Não abre o WhatsApp com campo por completar ou sem a confirmação exigida (reserva, pagamento).
+  // Não abre o WhatsApp com campo por completar, sem evidência no sistema (verificada há menos de 2 minutos) ou sem a confirmação marcada.
   $("respAbrir").addEventListener("click", (e) => {
-    const msg = $("respMsg"), faltam = camposAbertos($("respTexto").value);
-    if (faltam.length){ e.preventDefault(); msg.className = "msg erro"; msg.textContent = "Complete antes de enviar: " + faltam.join(", "); $("respTexto").focus(); return; }
-    if ($("respConfirmo") && !$("respConfirmo").checked){ e.preventDefault(); msg.className = "msg erro"; msg.textContent = "Marque a confirmação acima para enviar."; return; }
+    const msg = $("respMsg"), faltam = camposAbertos($("respTexto").value), m = respostaSelecionada();
+    const bloquear = (texto) => { e.preventDefault(); msg.className = "msg erro"; msg.textContent = texto; };
+    if (faltam.length){ bloquear("Complete antes de enviar: " + faltam.join(", ")); $("respTexto").focus(); return; }
+    if (m && m.evidencia){
+      const ev = tela.respEv && tela.respEv.id === m.id ? tela.respEv : null;
+      if (!ev || ev.estado === "verificando"){ bloquear("Aguarde a verificação no sistema."); return; }
+      if (!ev.ok){ bloquear(ev.motivo); return; }
+      if (Date.now() - ev.em > 120000){ bloquear("Verificando de novo no sistema… clique outra vez em seguida."); checar(m); return; }
+    }
+    if ($("respConfirmo") && !$("respConfirmo").checked){ bloquear("Marque a confirmação acima para enviar."); return; }
     msg.textContent = "";
   });
+  { const m0 = respostaSelecionada(); if (m0 && m0.evidencia && !(tela.respEv && tela.respEv.id === m0.id)) checar(m0); }
   $("respCancelar").addEventListener("click", () => { tela.resp = null; tela.respTexto = null; tela.respSalvando = false; redesenhar(); });
   if ($("respNovoModelo")) $("respNovoModelo").addEventListener("click", () => { tela.respSalvando = !tela.respSalvando; redesenhar(); if ($("respTitulo")) $("respTitulo").focus(); });
   if ($("respSalvarModelo")) $("respSalvarModelo").addEventListener("click", async () => {
@@ -1529,6 +1648,22 @@ async function mudarAgendamento(btn){
   }
   tela.agendamento = null;
   render(dadosPainel);
+}
+
+// Pagamento registrado pela dona: é a evidência que libera a resposta "pagamento recebido".
+async function registrarPagamento(btn){
+  const id = Number(btn.getAttribute("data-pago")), pago = btn.getAttribute("data-valor") === "1";
+  if (pago && !confirm("Confirma que o pagamento deste pedido já caiu na conta (não só o comprovante)?")) return;
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Salvando...';
+  const { data, error } = await supa.rpc("registrar_pagamento", { p_pedido_id: id, p_pago: pago });
+  if (error || !data || !data.ok){
+    btn.disabled = false; btn.textContent = "Tentar de novo";
+    const m = $("pedMsg" + id); if (m) m.textContent = "Não foi possível salvar. Tente de novo.";
+    return;
+  }
+  const p = (dadosPainel.pedidos || []).find(x => x.id === id);
+  if (p) p.pago_em = data.pago_em || null;
+  renderPedidos();
 }
 
 async function mudarStatus(btn){

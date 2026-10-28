@@ -342,6 +342,7 @@
   .pmock-st.p{ color:#FCD34D; border-color:rgba(245,158,11,0.45); }
   .pmock-st.r{ color:var(--parchment); border-color:var(--line); }
   .pmock-st.f{ color:#34D399; border-color:rgba(52,211,153,0.4); }
+  .pmock-st.c{ color:var(--gold-bright); border-color:rgba(96,165,250,0.45); }
   @media (max-width:480px){ .pmock-cards{ grid-template-columns:1fr 1fr; } .pmock-cards .pmock-card:first-child{ grid-column:1 / -1; } }
 </style>
 </head>
@@ -648,8 +649,8 @@
       <div>
         <p class="eyebrow">Client dashboard</p>
         <h2 style="font-size:clamp(26px,3.2vw,36px); font-weight:500; margin-bottom:20px;">Stay in control<br>without living on your phone.</h2>
-        <p class="lead">While you work, she answers. When you check in, everything is ready: who needs you, which quotes are open and what already turned into a sale. And every week a summary lands on your WhatsApp.</p>
-        <ul class="painel-lista"><li><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg></span><span><b>No one is left waiting.</b> Anyone who asks for you is highlighted, with a button to reply right away.</span></li><li><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg></span><span><b>No quote goes cold.</b> Every request arrives ready, with everything the customer said, and stays tracked until it becomes a sale.</span></li><li><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/></svg></span><span><b>Changed something? She already knows.</b> Update hours, answers and services in seconds, and the secretary replies correctly right away.</span></li></ul>
+        <p class="lead">While you work, she answers. When you check in, everything is ready: who needs you, today's appointments and open quotes. And every week a summary lands on your WhatsApp.</p>
+        <ul class="painel-lista"><li><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg></span><span><b>No one is left waiting.</b> Anyone who asks for you is highlighted, with a button to reply right away.</span></li><li><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span><span><b>Your calendar fills itself.</b> Every slot she books shows up in the dashboard and in your Google Calendar, organized by day.</span></li><li><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg></span><span><b>No quote goes cold.</b> Every request arrives ready, with everything the customer said, and stays tracked until it becomes a sale.</span></li></ul>
       </div>
       <div class="pmock" aria-label="Client dashboard example">
         <div class="pmock-top"><div><div class="t">Hi, Ana 👋</div><div class="s">Silva Electric</div></div><div class="av">AS</div></div>
@@ -658,9 +659,9 @@
           <div class="pmock-cards">
             <div class="pmock-card azul"><div class="l">Messages used</div><div class="n"><span class="contar">312</span><small>of 500</small></div><div class="barra"><i></i></div></div>
             <div class="pmock-card"><div class="l">Customers waiting</div><div class="n contar">1</div></div>
-            <div class="pmock-card"><div class="l">Pending requests</div><div class="n contar">3</div></div>
+            <div class="pmock-card"><div class="l">Appointments today</div><div class="n contar">3</div></div>
           </div>
-          <div class="pmock-lista"><div class="cab">Requests</div><div class="pmock-linha"><span>Quote <span class="q">· New outlets</span></span><span class="pmock-st p">Pending</span></div><div class="pmock-linha"><span>Quote <span class="q">· Breaker replacement</span></span><span class="pmock-st r">Replied</span></div><div class="pmock-linha"><span>Quote <span class="q">· New shower</span></span><span class="pmock-st f">Won</span></div></div>
+          <div class="pmock-lista"><div class="cab">Today's schedule</div><div class="pmock-linha"><span><b style="font-weight:700;margin-right:8px;">9:00</b>Breaker replacement</span><span class="pmock-st f">Done</span></div><div class="pmock-linha"><span><b style="font-weight:700;margin-right:8px;">11:30</b>New outlets</span><span class="pmock-st c">Confirmed</span></div><div class="pmock-linha"><span><b style="font-weight:700;margin-right:8px;">15:00</b>New shower</span><span class="pmock-st c">Confirmed</span></div></div></div>
         </div>
       </div>
     </div>

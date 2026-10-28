@@ -267,6 +267,14 @@
   .badge{ text-transform:none; font-size:12px; color:var(--gold-bright); }
   .status{ text-transform:none; font-size:12px; }
   .status.pendente{ color:#FCD34D; border-color:rgba(245,158,11,0.45); }
+  .status.confirmado{ color:var(--gold-bright); border-color:rgba(96,165,250,0.45); }
+  .status.realizado{ color:var(--good); border-color:rgba(52,211,153,0.4); }
+  .status.cancelado{ color:var(--muted); }
+  .status.nao_compareceu{ color:#FCD34D; border-color:rgba(245,158,11,0.45); }
+  .dia{ font-size:12.5px; font-weight:600; color:var(--gold-bright); text-transform:uppercase; letter-spacing:.04em; margin:18px 0 6px; }
+  .dia:first-child{ margin-top:0; }
+  .ag-linha .hora{ font-weight:700; font-size:15px; min-width:52px; color:var(--parchment); }
+  .ag-linha .quem{ color:var(--muted); font-size:13px; }
   .subtitulo{ text-transform:none; font-size:13px; font-weight:600; color:var(--parchment); }
   .login-card .eyebrow{ font-family:'Inter',sans-serif; letter-spacing:.04em; color:var(--gold-bright); }
   .side{ width:260px; } .conteudo{ margin-left:260px; }
@@ -363,7 +371,8 @@ const ROTULOS = { nome: "Nome", tipo: "Tipo", destino: "Destino", datas: "Datas"
   orcamento: "Orçamento", servico: "Serviço", viagem: "Viagem", assunto: "Assunto", roteiro: "Roteiro", interesse: "Interesse" };
 let faqEdicao = [];
 // O que está aberto na tela continua aberto quando o painel atualiza.
-const tela = { view: (() => { try { return localStorage.getItem("painelView") || "inicio"; } catch (e) { return "inicio"; } })(), aba: "pendente", pedido: null, limite: 20 };
+const STATUS_AG = { confirmado: "Confirmado", realizado: "Realizado", cancelado: "Cancelado", nao_compareceu: "Não compareceu" };
+const tela = { abaAg: "proximos", agendamento: null, view: (() => { try { return localStorage.getItem("painelView") || "inicio"; } catch (e) { return "inicio"; } })(), aba: "pendente", pedido: null, limite: 20 };
 let dadosPainel = null;
 const STATUS = { pendente: "Pendente", respondido: "Respondido", fechado: "Venda fechada", nao_fechou: "Não fechou" };
 
@@ -421,23 +430,30 @@ function render(d){
   // Menu lateral (no celular vira uma barra de botões no topo). Cada item abre uma tela própria.
   const convs = d.conversas_equipe || [];
   const pend = Number(d.pedidos_pendentes || 0);
+  const hoje = Number(d.agendamentos_hoje || 0);
+  // Agendamentos e Pedidos aparecem conforme o negócio: quem usa agenda, quem recebe pedidos, ou os dois.
+  const usaAgenda = !!d.usa_agenda || (d.agendamentos || []).length > 0;
+  const usaPedidos = !!d.usa_pedidos || (d.pedidos || []).length > 0 || !usaAgenda;
   const menu = [
     ["inicio", "Início", 0],
     ["conversas", "Clientes esperando", convs.length],
-    ["pedidos", "Pedidos", pend],
+  ];
+  if (usaAgenda) menu.push(["agenda", "Agendamentos", hoje]);
+  if (usaPedidos) menu.push(["pedidos", "Pedidos", pend]);
+  menu.push(
     ["personalizar", "Personalizar" + (d.pode_personalizar ? "" : " 🔒"), 0],
     ["dados", "Seus dados", 0],
-    ["plano", emTeste ? "Escolher plano" : "Plano", 0],
-  ];
+    ["plano", emTeste ? "Escolher plano" : "Plano", 0]);
   if (!menu.some(m => m[0] === tela.view)) tela.view = "inicio";
   $("menuLateral").innerHTML = menu.map(([id, nome, n]) =>
     '<button type="button" data-view="' + id + '"' + (tela.view === id ? ' class="ativo" aria-current="page"' : '') + '>' + icone(id)
     + '<span class="nome">' + esc(nome) + '</span>'
     + (n ? '<span class="contador alerta">' + n + '</span>' : '') + '</button>').join("");
   const titulos = {
-    inicio: [primeiroNome ? "Olá, " + primeiroNome + " 👋" : "Início", (d.nome ? d.nome + " · " : "") + "acompanhe a sua secretária, os clientes e os pedidos"],
+    inicio: [primeiroNome ? "Olá, " + primeiroNome + " 👋" : "Início", (d.nome ? d.nome + " · " : "") + "acompanhe a sua secretária, os clientes e " + (usaAgenda && !usaPedidos ? "a agenda" : usaAgenda ? "a agenda e os pedidos" : "os pedidos")],
+    agenda: ["Agendamentos", "Horários que a secretária marcou com os seus clientes"],
     conversas: ["Clientes esperando", "Conversas que a secretária pausou para alguém da equipe responder"],
-    pedidos: ["Pedidos", "Cotações que a secretária coletou para a sua equipe"],
+    pedidos: ["Pedidos", "Orçamentos e pedidos que a secretária coletou para a sua equipe"],
     personalizar: ["Personalizar", "Perguntas, respostas e serviços que a secretária usa"],
     dados: ["Seus dados", "Nome do negócio, seu nome e WhatsApp de avisos"],
     plano: [emTeste ? "Escolher plano" : "Plano", emTeste ? "Continue com a sua secretária depois do teste grátis" : "Seu plano atual"],
@@ -469,8 +485,11 @@ function render(d){
       + '<div class="cartao destaque"><div class="l">Mensagens usadas</div><div class="n">' + usadas + (limite ? '<small>de ' + limite + '</small>' : '') + '</div>'
       + (limite ? '<div class="barra"><div style="width:' + pct + '%"></div></div><div class="x">' + Math.max(0, limite - usadas) + ' restantes ' + (emTeste ? 'no teste' : 'neste mês') + '</div>' : '') + '</div>'
       + '<button type="button" class="cartao" data-ir="conversas"><div class="l">Clientes esperando</div><div class="n' + (convs.length ? ' alerta' : '') + '">' + convs.length + '</div><div class="x">Ver clientes →</div></button>'
-      + '<button type="button" class="cartao" data-ir="pedidos"><div class="l">Pedidos pendentes</div><div class="n' + (pend ? ' alerta' : '') + '">' + pend + '</div><div class="x">Ver pedidos →</div></button>'
-      + '<div class="cartao"><div class="l">Pedidos na semana</div><div class="n">' + (s.pedidos || 0) + '</div><div class="x">Últimos 7 dias</div></div>'
+      + (usaAgenda ? '<button type="button" class="cartao" data-ir="agenda"><div class="l">Agendamentos hoje</div><div class="n' + (hoje ? ' alerta' : '') + '">' + hoje + '</div><div class="x">Ver agenda →</div></button>' : '')
+      + (usaPedidos ? '<button type="button" class="cartao" data-ir="pedidos"><div class="l">Pedidos pendentes</div><div class="n' + (pend ? ' alerta' : '') + '">' + pend + '</div><div class="x">Ver pedidos →</div></button>' : '')
+      + (usaAgenda && usaPedidos ? '' : usaAgenda
+          ? '<div class="cartao"><div class="l">Próximos 7 dias</div><div class="n">' + Number(d.agendamentos_semana || 0) + '</div><div class="x">Agendamentos confirmados</div></div>'
+          : '<div class="cartao"><div class="l">Pedidos na semana</div><div class="n">' + (s.pedidos || 0) + '</div><div class="x">Últimos 7 dias</div></div>')
       + '</div>';
     html += '<div class="panel"><h2>Últimos 7 dias</h2><p class="sub">Como a secretária trabalhou nesta semana.</p><div class="metric-grid" style="margin:0;">'
       + '<div class="metric-card"><div class="label">Mensagens recebidas</div><div class="value neutral">' + (s.mensagens || 0) + '</div></div>'
@@ -505,6 +524,7 @@ function render(d){
   }
 
   if (tela.view === "pedidos") html += '<div class="panel" id="pedidosPainel"></div>';
+  if (tela.view === "agenda") html += '<div class="panel" id="agendaPainel"></div>';
   if (tela.view === "personalizar") html += '<div class="panel" id="personalizar"></div>';
   if (tela.view === "dados") html += '<div class="panel" id="seusDados"></div>';
 
@@ -528,6 +548,7 @@ function render(d){
 
   $("dashContent").innerHTML = html;
   if ($("pedidosPainel")) renderPedidos();
+  if ($("agendaPainel")) renderAgenda();
   if ($("personalizar")) renderPersonalizar(d);
   if ($("seusDados")) renderDados(d);
   document.querySelectorAll("#dashContent [data-ir]").forEach(b => b.addEventListener("click", () => irPara(b.getAttribute("data-ir"))));
@@ -538,6 +559,7 @@ function icone(nome){
   const d = {
     inicio: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
     conversas: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
+    agenda: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 14h3v3H8z"/>',
     pedidos: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3"/>',
     personalizar: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
     dados: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
@@ -613,6 +635,101 @@ function renderPedidos(){
     const id = Number(b.getAttribute("data-pedido")); tela.pedido = tela.pedido === id ? null : id; renderPedidos();
   }));
   box.querySelectorAll("[data-status]").forEach(b => b.addEventListener("click", () => mudarStatus(b)));
+}
+
+/* ---------- Agendamentos: horários marcados pela secretária, por dia, e o dono muda o status ---------- */
+function renderAgenda(){
+  const d = dadosPainel;
+  const box = $("agendaPainel");
+  const tz = d.timezone || "America/Sao_Paulo";
+  const todos = d.agendamentos || [];
+  const diaDe = (iso) => new Date(iso).toLocaleDateString("en-CA", { timeZone: tz });
+  const hojeStr = diaDe(new Date().toISOString());
+  const amanhaStr = diaDe(new Date(Date.now() + 86400000).toISOString());
+  const filtros = {
+    proximos: (a) => diaDe(a.data_hora) >= hojeStr && a.status !== "cancelado",
+    anteriores: (a) => diaDe(a.data_hora) < hojeStr && a.status !== "cancelado",
+    cancelados: (a) => a.status === "cancelado",
+    todos: () => true,
+  };
+  const nHoje = Number(d.agendamentos_hoje || 0);
+  let html = '<p class="sub">' + (nHoje ? (nHoje === 1 ? '1 agendamento hoje.' : nHoje + ' agendamentos hoje.') : 'Nenhum agendamento para hoje.')
+    + (Number(d.agendamentos_semana || 0) ? ' ' + d.agendamentos_semana + ' nos próximos 7 dias.' : '') + '</p>'
+    + '<details class="ajuda"><summary>Como funciona?</summary>'
+    + '<p>Quando um cliente marca um horário pelo WhatsApp, a secretária confere a sua agenda, confirma com ele e o agendamento aparece aqui (e no seu Google Agenda).</p>'
+    + '<p>Depois do horário, marque como <b>Realizado</b> ou <b>Não compareceu</b>. Se o cliente desmarcar, marque <b>Cancelado</b> e lembre de tirar também do Google Agenda.</p>'
+    + '</details>';
+  if (todos.length){
+    html += '<div class="sec-corpo"><div class="abas">';
+    [["proximos", "Próximos"], ["anteriores", "Anteriores"], ["cancelados", "Cancelados"], ["todos", "Todos"]].forEach(([s, n]) => {
+      html += '<button type="button" class="aba' + (tela.abaAg === s ? ' ativa' : '') + '" data-abaag="' + s + '">' + n + ' (' + todos.filter(filtros[s]).length + ')</button>';
+    });
+    html += '</div>';
+    let lista = todos.filter(filtros[tela.abaAg]);
+    if (tela.abaAg !== "proximos") lista = lista.slice().sort((a, b) => new Date(b.data_hora) - new Date(a.data_hora));
+    if (!lista.length) html += '<p class="sub" style="margin:0;">Nenhum agendamento aqui.</p>';
+    let diaAtual = "";
+    lista.forEach(a => {
+      const dia = diaDe(a.data_hora);
+      if (dia !== diaAtual){
+        diaAtual = dia;
+        const rot = dia === hojeStr ? "Hoje" : dia === amanhaStr ? "Amanhã"
+          : new Date(a.data_hora).toLocaleDateString("pt-BR", { timeZone: tz, weekday: "short", day: "2-digit", month: "2-digit" });
+        html += '<div class="dia">' + esc(rot) + '</div>';
+      }
+      const hora = new Date(a.data_hora).toLocaleTimeString("pt-BR", { timeZone: tz, hour: "2-digit", minute: "2-digit" });
+      const aberto = tela.agendamento === a.id;
+      html += '<div class="pedido ag-linha"><button type="button" class="ped-linha" data-ag="' + a.id + '">'
+        + '<span style="display:flex;gap:12px;align-items:center;"><span class="hora">' + hora + '</span><span>' + esc(a.servico || "Agendamento")
+        + ' <span class="quem">· ' + esc(a.nome || ("+" + a.remetente)) + '</span></span></span>'
+        + '<span class="lado"><span class="status ' + esc(a.status) + '">' + esc(STATUS_AG[a.status] || a.status) + '</span>' + (aberto ? '▴' : '▾') + '</span></button>';
+      if (aberto){
+        html += '<div class="ped-detalhe"><div class="d">'
+          + (a.endereco ? '<b>Endereço:</b> ' + esc(a.endereco) + '<br>' : '')
+          + '<b>Data:</b> ' + esc(new Date(a.data_hora).toLocaleString("pt-BR", { timeZone: tz, weekday: "long", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }))
+          + '<br><b>Contato:</b> +' + esc(a.remetente) + '</div><div class="ped-acoes">'
+          + '<a class="btn btn-primary" href="https://wa.me/' + esc(a.remetente) + '" target="_blank" rel="noopener">Falar no WhatsApp</a>';
+        Object.keys(STATUS_AG).filter(s => s !== a.status).forEach(s => {
+          html += '<button class="btn" type="button" data-statusag="' + s + '" data-id="' + a.id + '">' + (s === "confirmado" ? "Voltar para confirmado" : STATUS_AG[s]) + '</button>';
+        });
+        html += '<span class="msg" id="agMsg' + a.id + '"></span></div></div>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+  } else {
+    html += '<p class="sub" style="margin-top:14px;">Ainda não há agendamentos. Quando a secretária marcar o primeiro horário com um cliente, ele aparece aqui.</p>';
+  }
+  box.innerHTML = html;
+  box.querySelectorAll("[data-abaag]").forEach(b => b.addEventListener("click", () => { tela.abaAg = b.getAttribute("data-abaag"); tela.agendamento = null; renderAgenda(); }));
+  box.querySelectorAll("[data-ag]").forEach(b => b.addEventListener("click", () => {
+    const id = Number(b.getAttribute("data-ag")); tela.agendamento = tela.agendamento === id ? null : id; renderAgenda();
+  }));
+  box.querySelectorAll("[data-statusag]").forEach(b => b.addEventListener("click", () => mudarAgendamento(b)));
+}
+
+async function mudarAgendamento(btn){
+  const id = Number(btn.getAttribute("data-id"));
+  const status = btn.getAttribute("data-statusag");
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Salvando...';
+  const { data, error } = await supa.rpc("atualizar_agendamento", { p_id: id, p_status: status });
+  if (error || !data || !data.ok){
+    btn.disabled = false; btn.textContent = "Tentar de novo";
+    const m = $("agMsg" + id); if (m) m.textContent = "Não foi possível salvar. Tente de novo.";
+    return;
+  }
+  // Atualiza na tela; "hoje" no menu e no início conta só os confirmados de hoje.
+  const ag = dadosPainel.agendamentos.find(a => a.id === id);
+  if (ag){
+    const tz = dadosPainel.timezone || "America/Sao_Paulo";
+    const diaDe = (iso) => new Date(iso).toLocaleDateString("en-CA", { timeZone: tz });
+    const ehHoje = diaDe(ag.data_hora) === diaDe(new Date().toISOString());
+    if (ehHoje && ag.status === "confirmado" && status !== "confirmado") dadosPainel.agendamentos_hoje = Math.max(0, Number(dadosPainel.agendamentos_hoje || 0) - 1);
+    if (ehHoje && ag.status !== "confirmado" && status === "confirmado") dadosPainel.agendamentos_hoje = Number(dadosPainel.agendamentos_hoje || 0) + 1;
+    ag.status = status;
+  }
+  tela.agendamento = null;
+  render(dadosPainel);
 }
 
 async function mudarStatus(btn){

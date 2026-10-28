@@ -438,7 +438,7 @@ function render(d){
     ["inicio", "Início", 0],
     ["conversas", "Clientes esperando", convs.length],
   ];
-  if (usaAgenda) menu.push(["agenda", "Agendamentos", hoje]);
+  menu.push(["agenda", "Agendamentos", hoje]);   // sempre no menu; vazio, explica como começar
   if (usaPedidos) menu.push(["pedidos", "Pedidos", pend]);
   menu.push(
     ["personalizar", "Personalizar" + (d.pode_personalizar ? "" : " 🔒"), 0],
@@ -697,8 +697,12 @@ function renderAgenda(){
       html += '</div>';
     });
     html += '</div>';
-  } else {
+  } else if (d.usa_agenda){
     html += '<p class="sub" style="margin-top:14px;">Ainda não há agendamentos. Quando a secretária marcar o primeiro horário com um cliente, ele aparece aqui.</p>';
+  } else {
+    html += '<div class="aviso info" style="margin-top:16px;">' + icone("info") + '<div class="txt"><b>Sua agenda ainda não está conectada</b>'
+      + 'Para a secretária marcar horários com os seus clientes, ela precisa da sua agenda do Google. Fale com a gente que fazemos a conexão.</div>'
+      + '<a class="btn" href="mailto:hello@auryx.digital?subject=Conectar%20minha%20agenda" style="text-decoration:none;">Conectar agenda</a></div>';
   }
   box.innerHTML = html;
   box.querySelectorAll("[data-abaag]").forEach(b => b.addEventListener("click", () => { tela.abaAg = b.getAttribute("data-abaag"); tela.agendamento = null; renderAgenda(); }));

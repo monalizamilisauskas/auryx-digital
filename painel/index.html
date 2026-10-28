@@ -278,6 +278,7 @@
   .status.agendado{ color:var(--gold-bright); border-color:rgba(96,165,250,0.45); }
   .status.enviado{ color:var(--good); border-color:rgba(52,211,153,0.4); }
   .status.falhou{ color:#FCA5A5; border-color:rgba(248,113,113,0.4); }
+  .aba.bloqueada{ opacity:.55; cursor:not-allowed; }
   .fu-form{ border:1px solid var(--line-strong); border-radius:12px; padding:18px; margin:16px 0; background:var(--panel-2); }
   .fu-previa{ border-radius:12px; background:#0E1830; border:1px solid var(--line); padding:12px 14px; margin-top:4px; }
   .fu-previa span{ font-size:12px; color:var(--muted); }
@@ -693,14 +694,18 @@ function exemploAssunto(tipoNegocio, tipo){
 function textoFollowup(nome, assunto, tipo){
   const n = String(nome || "").trim().split(/\s+/)[0];
   const T = TIPOS_FU[tipo || "como_foi"] || TIPOS_FU.como_foi;
-  return "Olá" + (n ? ", " + n : "") + "! Aqui é da " + (dadosPainel.nome || "sua empresa") + T.abertura + T.antes + (assunto || "___") + T.depois;
+  return "Olá" + (n ? ", " + n : "") + "! Aqui é da equipe " + (dadosPainel.nome || "sua empresa") + T.abertura + T.antes + (assunto || "___") + T.depois;
 }
+// Tipos liberados no plano (vazio = plano antigo sem a coluna: libera "Como foi").
+function tiposDoPlano(){ const t = (dadosPainel && dadosPainel.followup_tipos) || []; return t.length ? t : ["como_foi"]; }
+function tipoInicial(){ return tiposDoPlano()[0]; }
+function limiteAtingido(){ const d = dadosPainel; return d.followup_limite_mes != null && Number(d.followups_mes || 0) >= Number(d.followup_limite_mes); }
 function hojeNegocio(dias){
   const tz = dadosPainel.timezone || "America/Sao_Paulo";
   return new Date(Date.now() + (dias || 0) * 86400000).toLocaleDateString("en-CA", { timeZone: tz });
 }
 function novoFollowup(pre){
-  tela.fuForm = Object.assign({ id: null, tipo: "como_foi", remetente: "", nome: "", assunto: "", data_envio: hojeNegocio(1) }, pre || {});
+  tela.fuForm = Object.assign({ id: null, tipo: tipoInicial(), remetente: "", nome: "", assunto: "", data_envio: hojeNegocio(1) }, pre || {});
   tela.view = "followup";
   try { localStorage.setItem("painelView", "followup"); } catch (e) {}
   render(dadosPainel);
@@ -713,7 +718,7 @@ function renderFollowup(){
   let html = '';
   if (!d.tem_followup){
     html += '<div class="aviso info" style="margin-bottom:16px;">' + icone("info") + '<div class="txt"><b>O follow-up não está no seu plano</b>'
-      + 'Com ele, você escolhe o dia e a secretária pergunta ao cliente como foi o serviço. Assim você cuida de cada cliente e fica sabendo de qualquer problema antes de virar reclamação.</div>'
+      + 'Com ele, você escolhe o dia e a secretária pergunta ao cliente como foi o serviço. Assim você cuida de cada cliente e fica sabendo de qualquer problema antes de virar reclamação. Faz parte dos planos Premium e Completo.</div>'
       + '<button class="btn" type="button" data-ir="plano">Ver planos</button></div>';
   } else if (!FOLLOWUP_ATIVO){
     html += '<div class="aviso info" style="margin-bottom:16px;">' + icone("info") + '<div class="txt"><b>Os envios começam em breve</b>'
@@ -735,8 +740,10 @@ function renderFollowup(){
       const T = TIPOS_FU[f.tipo] || TIPOS_FU.como_foi;
       html += '<div class="fu-form"><div class="subtitulo" style="margin-top:0;">' + (f.id ? 'Alterar follow-up' : 'Novo follow-up') + '</div>'
         + '<div class="campo"><label>Tipo de mensagem</label><div class="abas" style="margin:0;">'
-        + Object.keys(TIPOS_FU).map(k => '<button type="button" class="aba' + (f.tipo === k ? ' ativa' : '') + '" data-fu-tipo="' + k + '">' + TIPOS_FU[k].nome + '</button>').join("")
-        + '</div><small>' + esc(T.dica) + '</small></div>'
+        + Object.keys(TIPOS_FU).map(k => tiposDoPlano().includes(k)
+            ? '<button type="button" class="aba' + (f.tipo === k ? ' ativa' : '') + '" data-fu-tipo="' + k + '">' + TIPOS_FU[k].nome + '</button>'
+            : '<button type="button" class="aba bloqueada" disabled title="Disponível no plano Completo">' + TIPOS_FU[k].nome + ' 🔒</button>').join("")
+        + '</div><small>' + esc(T.dica) + (tiposDoPlano().length < Object.keys(TIPOS_FU).length ? ' Os tipos com 🔒 fazem parte do plano Completo.' : '') + '</small></div>'
         + '<div class="campo"><label for="fuFone">WhatsApp do cliente</label><input id="fuFone" list="fuClientes" inputmode="tel" placeholder="Escolha um cliente ou digite o número com DDI e DDD" value="' + esc(f.remetente) + '"><datalist id="fuClientes">' + opcoes + '</datalist></div>'
         + '<div class="campo"><label for="fuNome">Nome do cliente</label><input id="fuNome" maxlength="60" placeholder="Ex.: Helena" value="' + esc(f.nome) + '"></div>'
         + '<div class="campo"><label for="fuAssunto">' + esc(T.rotulo) + '</label><input id="fuAssunto" maxlength="80" placeholder="Ex.: ' + esc(exemploAssunto(d.tipo_negocio, f.tipo)) + '" value="' + esc(f.assunto) + '"></div>'
@@ -745,7 +752,11 @@ function renderFollowup(){
         + '<div class="acoes"><button class="btn btn-primary" type="button" id="fuSalvar">' + (f.id ? 'Salvar alteração' : 'Agendar follow-up') + '</button>'
         + '<button class="btn" type="button" id="fuCancelarForm">Cancelar</button><span class="msg" id="fuMsg"></span></div></div>';
     } else {
-      html += '<div class="acoes" style="margin:16px 0 4px;"><button class="btn btn-primary" type="button" id="fuNovo">+ Agendar follow-up</button></div>';
+      const lim = d.followup_limite_mes;
+      html += '<div class="acoes" style="margin:16px 0 4px;"><button class="btn btn-primary" type="button" id="fuNovo"' + (limiteAtingido() ? ' disabled' : '') + '>+ Agendar follow-up</button>'
+        + (lim != null ? '<span class="msg" style="color:var(--muted);">' + Number(d.followups_mes || 0) + ' de ' + lim + ' follow-ups usados este mês'
+          + (limiteAtingido() ? '. Limite do mês atingido: no plano Completo não há limite.' : '') + '</span>' : '')
+        + '</div>';
     }
   }
   if (todos.length){
@@ -774,7 +785,7 @@ function renderFollowup(){
   }
   box.innerHTML = html;
   box.querySelectorAll("[data-ir]").forEach(b => b.addEventListener("click", () => irPara(b.getAttribute("data-ir"))));
-  if ($("fuNovo")) $("fuNovo").addEventListener("click", () => { tela.fuForm = { id: null, tipo: "como_foi", remetente: "", nome: "", assunto: "", data_envio: hojeNegocio(1) }; renderFollowup(); });
+  if ($("fuNovo")) $("fuNovo").addEventListener("click", () => { tela.fuForm = { id: null, tipo: tipoInicial(), remetente: "", nome: "", assunto: "", data_envio: hojeNegocio(1) }; renderFollowup(); });
   box.querySelectorAll("[data-fu-tipo]").forEach(b => b.addEventListener("click", () => {
     const f = tela.fuForm; f.remetente = $("fuFone").value; f.nome = $("fuNome").value; f.data_envio = $("fuData").value;
     const novo = b.getAttribute("data-fu-tipo");
@@ -812,7 +823,14 @@ async function salvarFollowup(){
   const { data: r, error } = await supa.rpc("salvar_followup", { p_id: f.id, p_remetente: fone, p_nome: nome, p_assunto: assunto, p_data: data,
     p_pedido_id: f.pedido_id || null, p_agendamento_id: f.agendamento_id || null, p_tipo: f.tipo || "como_foi" });
   btn.disabled = false; btn.textContent = f.id ? "Salvar alteração" : "Agendar follow-up";
-  if (error || !r || !r.ok){ msg.className = "msg erro"; msg.textContent = "Não foi possível salvar agora. Tente de novo em alguns instantes."; return; }
+  if (error || !r || !r.ok){
+    const m = String((error && error.message) || "");
+    msg.className = "msg erro";
+    msg.textContent = /limite/.test(m) ? "Você chegou ao limite de follow-ups deste mês do seu plano. No plano Completo não há limite."
+      : /fora do plano/.test(m) ? "Esse tipo de mensagem faz parte do plano Completo."
+      : "Não foi possível salvar agora. Tente de novo em alguns instantes.";
+    return;
+  }
   tela.fuForm = null; tela.abaFu = "agendado";
   await carregarPainel();
 }

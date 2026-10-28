@@ -305,6 +305,40 @@
   .phone{ animation:flutua 6s ease-in-out infinite; }
   @keyframes flutua{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-8px); } }
   @media (prefers-reduced-motion: reduce){ .aurora, .bolhas, .btn-primary::after{ display:none; } .phone, body::before{ animation:none; } .reveal-on .rv{ opacity:1; transform:none; } }
+
+  /* ===== Seção do painel do cliente (28/10/2026): lista do que o painel tem + miniatura do painel real ===== */
+  .painel-lista{ list-style:none; padding:0; margin:26px 0 0; display:grid; gap:14px; }
+  .painel-lista li{ display:flex; gap:12px; align-items:flex-start; font-size:14.5px; line-height:1.55; color:var(--muted); }
+  .painel-lista li b{ color:var(--parchment); font-weight:600; }
+  .painel-lista .ic{ flex:none; width:30px; height:30px; border-radius:8px; background:rgba(37,99,235,0.16); color:var(--gold-bright); display:flex; align-items:center; justify-content:center; margin-top:1px; }
+  .pmock{ border:1px solid var(--line-strong); border-radius:14px; overflow:hidden; background:#0B1222; box-shadow:0 30px 70px -30px rgba(37,99,235,0.45); font-size:12.5px; }
+  .pmock-top{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--line); }
+  .pmock-top .t{ font-weight:600; font-size:14px; color:var(--parchment); }
+  .pmock-top .s{ color:var(--muted); font-size:11.5px; margin-top:2px; }
+  .pmock-top .av{ width:28px; height:28px; border-radius:50%; background:rgba(37,99,235,0.25); color:var(--gold-bright); display:flex; align-items:center; justify-content:center; font-weight:600; font-size:11px; }
+  .pmock-corpo{ padding:14px 16px 16px; }
+  .pmock-aviso{ border:1px solid rgba(245,158,11,0.45); background:rgba(245,158,11,0.08); color:#FCD34D; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:12px; }
+  .pmock-aviso span.b{ background:#2563EB; color:#fff; border-radius:6px; padding:4px 9px; font-weight:600; font-size:11px; white-space:nowrap; }
+  .pmock-cards{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:12px; }
+  .pmock-card{ border:1px solid var(--line); border-radius:10px; padding:10px 11px; background:#0F172A; }
+  .pmock-card .l{ color:var(--muted); font-size:11px; }
+  .pmock-card .n{ font-size:22px; font-weight:700; color:var(--parchment); margin-top:4px; }
+  .pmock-card .n small{ font-size:11px; color:var(--muted); font-weight:500; margin-left:3px; }
+  .pmock-card.azul{ background:#2563EB; border-color:#2563EB; }
+  .pmock-card.azul .l, .pmock-card.azul .n small{ color:rgba(255,255,255,0.85); }
+  .pmock-card.azul .n{ color:#fff; }
+  .pmock-card .barra{ height:4px; background:rgba(255,255,255,0.25); border-radius:3px; margin-top:7px; overflow:hidden; }
+  .pmock-card .barra i{ display:block; height:100%; width:62%; background:#fff; }
+  .pmock-lista{ border:1px solid var(--line); border-radius:10px; background:#0F172A; }
+  .pmock-lista .cab{ padding:9px 12px; border-bottom:1px solid var(--line); color:var(--parchment); font-weight:600; font-size:12px; }
+  .pmock-linha{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:9px 12px; border-top:1px solid var(--line); color:var(--parchment); }
+  .pmock-linha:first-of-type{ border-top:none; }
+  .pmock-linha .q{ color:var(--muted); }
+  .pmock-st{ font-size:10.5px; padding:2px 7px; border-radius:5px; border:1px solid; white-space:nowrap; }
+  .pmock-st.p{ color:#FCD34D; border-color:rgba(245,158,11,0.45); }
+  .pmock-st.r{ color:var(--parchment); border-color:var(--line); }
+  .pmock-st.f{ color:#34D399; border-color:rgba(52,211,153,0.4); }
+  @media (max-width:480px){ .pmock-cards{ grid-template-columns:1fr 1fr; } .pmock-cards .pmock-card:first-child{ grid-column:1 / -1; } }
 </style>
 </head>
 <body>
@@ -606,30 +640,20 @@
     <div class="intro-split">
       <div>
         <p class="eyebrow">Painel do cliente</p>
-        <h2 style="font-size:clamp(26px,3.2vw,36px); font-weight:500; margin-bottom:20px;">Acompanhe tudo, quando quiser</h2>
-        <p class="lead">Além do resumo semanal que chega no seu WhatsApp, você tem acesso a um painel próprio — com login e senha — pra ver a qualquer hora quantas mensagens sua AI Secretária respondeu, quantos agendamentos ela fechou e quanto ela resolveu sozinha, sem precisar de você.</p>
+        <h2 style="font-size:clamp(26px,3.2vw,36px); font-weight:500; margin-bottom:20px;">Tudo da sua secretária num só lugar</h2>
+        <p class="lead">Você entra com e-mail e senha em auryx.digital/painel, pelo computador ou pelo celular. E toda semana chega um resumo no seu WhatsApp.</p>
+        <ul class="painel-lista"><li><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg></span><span><b>Clientes esperando atendimento.</b> Quem pede uma pessoa ou manda um caso urgente aparece na hora. Você responde pelo WhatsApp e, ao terminar, devolve a conversa para a secretária.</span></li><li><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 10h6M9 14h6M9 18h3"/></svg></span><span><b>Pedidos organizados.</b> Cada orçamento chega com os dados que a secretária coletou. Você marca como respondido, venda fechada ou não fechou, e vê só o que falta responder.</span></li><li><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span><span><b>Uso de mensagens.</b> Quantas mensagens ela respondeu no mês e quantas ainda restam no seu plano.</span></li><li><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/></svg></span><span><b>Personalização.</b> Edite as perguntas e respostas e escolha quais serviços ela oferece (nos planos pagos).</span></li><li><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span><span><b>Seus dados e seu plano.</b> Nome do negócio, WhatsApp que recebe os avisos e assinatura, tudo pelo painel.</span></li></ul>
       </div>
-      <div class="not-chatbot" style="padding:0; overflow:hidden;">
-        <div style="padding:20px 22px 16px; border-bottom:1px solid var(--line);">
-          <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em; color:var(--muted); text-transform:uppercase;">Últimos 7 dias</div>
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--line);">
-          <div style="background:var(--panel); padding:20px 22px;">
-            <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.06em; color:var(--muted); text-transform:uppercase; margin-bottom:10px;">Mensagens</div>
-            <div style="font-family:'Fraunces',serif; font-size:26px; font-weight:600; color:var(--parchment);">86</div>
+      <div class="pmock" aria-label="Exemplo do painel do cliente">
+        <div class="pmock-top"><div><div class="t">Olá, Ana 👋</div><div class="s">Elétrica Silva</div></div><div class="av">AS</div></div>
+        <div class="pmock-corpo">
+          <div class="pmock-aviso"><span>1 cliente esperando atendimento</span><span class="b">Ver clientes</span></div>
+          <div class="pmock-cards">
+            <div class="pmock-card azul"><div class="l">Mensagens usadas</div><div class="n"><span class="contar">312</span><small>de 500</small></div><div class="barra"><i></i></div></div>
+            <div class="pmock-card"><div class="l">Clientes esperando</div><div class="n contar">1</div></div>
+            <div class="pmock-card"><div class="l">Pedidos pendentes</div><div class="n contar">3</div></div>
           </div>
-          <div style="background:var(--panel); padding:20px 22px;">
-            <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.06em; color:var(--muted); text-transform:uppercase; margin-bottom:10px;">Agendamentos</div>
-            <div style="font-family:'Fraunces',serif; font-size:26px; font-weight:600; color:var(--gold-bright);">14</div>
-          </div>
-          <div style="background:var(--panel); padding:20px 22px;">
-            <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.06em; color:var(--muted); text-transform:uppercase; margin-bottom:10px;">P/ humano</div>
-            <div style="font-family:'Fraunces',serif; font-size:26px; font-weight:600; color:var(--parchment);">2</div>
-          </div>
-          <div style="background:var(--panel); padding:20px 22px;">
-            <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.06em; color:var(--muted); text-transform:uppercase; margin-bottom:10px;">Resolvido pela IA</div>
-            <div style="font-family:'Fraunces',serif; font-size:26px; font-weight:600; color:var(--gold-bright);">88%</div>
-          </div>
+          <div class="pmock-lista"><div class="cab">Pedidos</div><div class="pmock-linha"><span>Orçamento <span class="q">· Instalação de tomadas</span></span><span class="pmock-st p">Pendente</span></div><div class="pmock-linha"><span>Orçamento <span class="q">· Troca de disjuntor</span></span><span class="pmock-st r">Respondido</span></div><div class="pmock-linha"><span>Orçamento <span class="q">· Chuveiro novo</span></span><span class="pmock-st f">Venda fechada</span></div></div>
         </div>
       </div>
     </div>
@@ -775,7 +799,7 @@ playDemo(0);
     });
 
     // Números do painel de exemplo contam do zero até o valor.
-    const numeros = Array.from(document.querySelectorAll('.not-chatbot div')).filter((d) => /^\d+%?$/.test(d.textContent.trim()) && !d.children.length);
+    const numeros = Array.from(document.querySelectorAll('.pmock .contar'));
     const obsN = new IntersectionObserver((itens) => {
       itens.forEach((it) => {
         if (!it.isIntersecting) return;

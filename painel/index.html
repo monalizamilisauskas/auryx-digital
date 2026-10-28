@@ -283,6 +283,15 @@
   .fu-previa{ border-radius:12px; background:#0E1830; border:1px solid var(--line); padding:12px 14px; margin-top:4px; }
   .fu-previa span{ font-size:12px; color:var(--muted); }
   .fu-previa p{ margin:6px 0 0; font-size:14px; line-height:1.5; color:#DBEAFE; background:#1E3A8A; display:inline-block; padding:9px 12px; border-radius:12px; border-bottom-left-radius:4px; }
+  .resp-texto{ width:100%; min-height:150px; resize:vertical; background:var(--panel-3); border:1px solid var(--line); color:var(--parchment); border-radius:8px; padding:10px 12px; font-size:14px; line-height:1.5; font-family:'Inter',sans-serif; }
+  .resp-texto:focus{ outline:none; border-color:var(--gold); }
+  .modelos{ display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 12px; }
+  .modelos .aba{ margin:0; }
+  .modelos .meu{ display:inline-flex; align-items:center; gap:6px; }
+  .modelos .tirar{ background:none; border:0; color:var(--muted); cursor:pointer; font-size:15px; line-height:1; padding:0 2px; }
+  .modelos .tirar:hover{ color:var(--bad); }
+  .salvar-modelo{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+  .salvar-modelo input{ flex:1; min-width:180px; background:var(--panel-3); border:1px solid var(--line); color:var(--parchment); border-radius:8px; padding:8px 10px; font-size:13.5px; font-family:'Inter',sans-serif; }
   .chip{ font-size:11.5px; padding:3px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); white-space:nowrap; }
   .chip.ok{ color:var(--good); border-color:rgba(52,211,153,0.4); }
   .chip.alerta{ color:#FCD34D; border-color:rgba(245,158,11,0.45); }
@@ -407,6 +416,7 @@ const AGENDA_AURYX = "";
 const FOLLOWUP_ATIVO = false;
 // Confirmação e lembrete de horário pelo WhatsApp: muda para true quando o envio estiver ligado no n8n (modelos aprovados na Meta).
 const AVISOS_ATIVO = false;
+let respostasProntas = [];
 // Tipos de follow-up: cada um é um modelo aprovado na Meta; a dona só escreve a parte do meio ({{3}}).
 const TIPOS_FU = {
   como_foi: { nome: "Como foi", rotulo: "Como foi…", antes: "Como foi ", depois: "? Ficou tudo certo? Se quiser contar ou precisar de algo, é só responder por aqui.", abertura: " 😊 ",
@@ -451,6 +461,8 @@ async function carregarPainel(){
     return;
   }
   const { data: u } = await supa.auth.getUser();
+  // Modelos de resposta da dona (se o SQL ainda não rodou, fica só com os modelos padrão).
+  try { const r = await supa.rpc("get_respostas_prontas"); respostasProntas = (!r.error && Array.isArray(r.data)) ? r.data : []; } catch (e) { respostasProntas = []; }
   emailLogado = (u && u.user && u.user.email) || "";
   render(data);
 }
@@ -561,8 +573,9 @@ function render(d){
       convs.forEach(c => {
         html += '<div class="conv"><div class="info">+' + esc(c.remetente) + ' · desde ' + dataHoraBR(c.desde)
           + (c.ultima_mensagem ? '<span>“' + esc(c.ultima_mensagem) + '”</span>' : '') + '</div>'
-          + '<div class="botoes"><a class="btn btn-primary" href="https://wa.me/' + esc(c.remetente) + '" target="_blank" rel="noopener">Responder no WhatsApp</a>'
-          + '<button class="btn" type="button" data-devolver="' + esc(c.remetente) + '">Devolver para a secretária</button></div></div>';
+          + '<div class="botoes"><button class="btn btn-primary" type="button" data-resp="c' + esc(c.remetente) + '">Responder no WhatsApp</button>'
+          + '<button class="btn" type="button" data-devolver="' + esc(c.remetente) + '">Devolver para a secretária</button></div></div>'
+          + (tela.resp === "c" + c.remetente ? formResposta("c" + c.remetente) : '');
       });
       html += '</div>';
     }
@@ -601,6 +614,7 @@ function render(d){
   if ($("seusDados")) renderDados(d);
   document.querySelectorAll("#dashContent [data-ir]").forEach(b => b.addEventListener("click", () => irPara(b.getAttribute("data-ir"))));
   document.querySelectorAll("[data-devolver]").forEach(b => b.addEventListener("click", () => devolverConversa(b)));
+  if (tela.view === "conversas") ligarResposta($("dashContent"), () => render(dadosPainel));
 }
 
 function icone(nome){
@@ -624,6 +638,7 @@ function irPara(view){
   tela.view = view;
   tela.pedido = null;
   tela.confHorario = null;
+  tela.resp = null;
   try { localStorage.setItem("painelView", view); } catch (e) {}
   render(dadosPainel);
   window.scrollTo({ top: 0 });
@@ -668,14 +683,15 @@ function renderPedidos(){
         const agP = agendamentoDoPedido(p.id);
         html += '<div class="ped-detalhe"><div class="d">' + campos + '<br><b>Contato:</b> +' + esc(p.remetente)
           + (agP ? '<br><b>Horário confirmado:</b> ' + esc(quandoBR(agP.data_hora)) : '') + '</div><div class="ped-acoes">'
-          + '<a class="btn btn-primary" href="https://wa.me/' + esc(p.remetente) + '" target="_blank" rel="noopener">Responder no WhatsApp</a>';
+          + '<button class="btn btn-primary" type="button" data-resp="p' + p.id + '">Responder no WhatsApp</button>';
         html += '<button class="btn" type="button" data-conf="' + p.id + '">' + (agP ? 'Remarcar horário' : 'Confirmar horário') + '</button>';
         html += '<button class="btn" type="button" data-fu-ped="' + p.id + '">Agendar follow-up</button>';
         Object.keys(STATUS).filter(s => s !== p.status).forEach(s => {
           const rotulo = s === "pendente" ? "Voltar para pendente" : s === "respondido" ? "Marcar como respondido" : STATUS[s];
           html += '<button class="btn" type="button" data-status="' + s + '" data-id="' + p.id + '">' + rotulo + '</button>';
         });
-        html += '<span class="msg" id="pedMsg' + p.id + '"></span></div>' + (tela.confHorario === p.id ? formHorario(p.id) : '') + '</div>';
+        html += '<span class="msg" id="pedMsg' + p.id + '"></span></div>' + (tela.resp === "p" + p.id ? formResposta("p" + p.id) : '')
+          + (tela.confHorario === p.id ? formHorario(p.id) : '') + '</div>';
       }
       html += '</div>';
     });
@@ -690,13 +706,11 @@ function renderPedidos(){
   }));
   box.querySelectorAll("[data-status]").forEach(b => b.addEventListener("click", () => mudarStatus(b)));
   ligarHorario(box, renderPedidos);
+  ligarResposta(box, renderPedidos);
   box.querySelectorAll("[data-fu-ped]").forEach(b => b.addEventListener("click", () => {
     const p = (dadosPainel.pedidos || []).find(x => x.id === Number(b.getAttribute("data-fu-ped")));
     if (!p) return;
-    const dd = p.dados || {};
-    const titulo = ((dadosPainel.itens || {})[p.item] || "").toLowerCase();
-    const assunto = dd.destino ? "a sua viagem para " + dd.destino : dd.servico ? "o seu " + String(dd.servico).toLowerCase() : titulo ? "o seu pedido de " + titulo : "";
-    novoFollowup({ remetente: p.remetente, nome: dd.nome || "", assunto, pedido_id: p.id });
+    novoFollowup({ remetente: p.remetente, nome: (p.dados || {}).nome || "", assunto: assuntoPedido(p), pedido_id: p.id });
   }));
 }
 
@@ -919,13 +933,14 @@ function renderAgenda(){
           + (a.endereco ? '<b>Endereço:</b> ' + esc(a.endereco) + '<br>' : '')
           + '<b>Data:</b> ' + esc(new Date(a.data_hora).toLocaleString("pt-BR", { timeZone: tz, weekday: "long", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }))
           + '<br><b>Contato:</b> +' + esc(a.remetente) + linhaLembrete(a) + '</div><div class="ped-acoes">'
-          + '<a class="btn btn-primary" href="https://wa.me/' + esc(a.remetente) + '" target="_blank" rel="noopener">Falar no WhatsApp</a>'
+          + '<button class="btn btn-primary" type="button" data-resp="a' + a.id + '">Falar no WhatsApp</button>'
           + (remarcavel ? '<button class="btn" type="button" data-conf="' + a.pedido_id + '">Remarcar horário</button>' : '')
           + '<button class="btn" type="button" data-fu-ag="' + a.id + '">Agendar follow-up</button>';
         Object.keys(STATUS_AG).filter(s => s !== a.status).forEach(s => {
           html += '<button class="btn" type="button" data-statusag="' + s + '" data-id="' + a.id + '">' + (s === "confirmado" ? "Voltar para confirmado" : STATUS_AG[s]) + '</button>';
         });
-        html += '<span class="msg" id="agMsg' + a.id + '"></span></div>' + (remarcavel && tela.confHorario === a.pedido_id ? formHorario(a.pedido_id) : '') + '</div>';
+        html += '<span class="msg" id="agMsg' + a.id + '"></span></div>' + (tela.resp === "a" + a.id ? formResposta("a" + a.id) : '')
+          + (remarcavel && tela.confHorario === a.pedido_id ? formHorario(a.pedido_id) : '') + '</div>';
       }
       html += '</div>';
     });
@@ -937,6 +952,7 @@ function renderAgenda(){
   box.innerHTML = html;
   ligarAgenda();
   ligarHorario(box, renderAgenda);
+  ligarResposta(box, renderAgenda);
   if ($("lembreteDias")) $("lembreteDias").addEventListener("change", (e) => salvarLembrete(e.target.value));
   box.querySelectorAll("[data-abaag]").forEach(b => b.addEventListener("click", () => { tela.abaAg = b.getAttribute("data-abaag"); tela.agendamento = null; renderAgenda(); }));
   box.querySelectorAll("[data-ag]").forEach(b => b.addEventListener("click", () => {
@@ -947,6 +963,112 @@ function renderAgenda(){
     const a = (dadosPainel.agendamentos || []).find(x => x.id === Number(b.getAttribute("data-fu-ag")));
     if (a) novoFollowup({ remetente: a.remetente, nome: a.nome || "", assunto: a.servico ? "o seu " + a.servico.charAt(0).toLowerCase() + a.servico.slice(1) : "", agendamento_id: a.id });
   }));
+}
+
+/* ---------- Respostas prontas: a dona escolhe um modelo, ajusta e abre o WhatsApp com o texto escrito ---------- */
+function assuntoPedido(p){
+  const dd = p.dados || {};
+  const titulo = ((dadosPainel.itens || {})[p.item] || "").toLowerCase();
+  return dd.destino ? "a sua viagem para " + dd.destino : dd.servico ? "o seu " + String(dd.servico).toLowerCase() : titulo ? "o seu pedido de " + titulo : "";
+}
+function modelosPadrao(){
+  const viagem = /viage|turis/i.test(String(dadosPainel.tipo_negocio || ""));
+  const ola = "Olá{nome}! Aqui é da equipe {negocio}. ";
+  if (viagem) return [
+    { titulo: "Proposta", texto: ola + "Preparei a proposta para {assunto}:\n\n[valores, datas e condições]\n\nQualquer dúvida, estou à disposição!" },
+    { titulo: "Preciso de mais informações", texto: ola + "Para montar a melhor opção para {assunto}, preciso de mais alguns detalhes:\n\n[o que falta saber]" },
+    { titulo: "Sem disponibilidade", texto: ola + "Infelizmente não encontramos disponibilidade para {assunto} do jeito que você pediu. Posso te sugerir outras datas ou opções?" },
+    { titulo: "Acompanhar proposta", texto: ola + "Passando para saber se você conseguiu ver a proposta para {assunto}. Ficou alguma dúvida?" },
+    { titulo: "Pagamento", texto: ola + "Para garantir {assunto}, seguem os dados para pagamento:\n\n[link ou dados de pagamento]\n\nAssim que o pagamento for confirmado, eu te aviso por aqui." },
+  ];
+  return [
+    { titulo: "Orçamento", texto: ola + "Preparei o orçamento para {assunto}:\n\n[valores e condições]\n\nQualquer dúvida, estou à disposição!" },
+    { titulo: "Preciso de mais informações", texto: ola + "Para te passar o orçamento de {assunto}, preciso de mais alguns detalhes:\n\n[o que falta saber]" },
+    { titulo: "Horários disponíveis", texto: ola + "Para {assunto}, tenho estes horários disponíveis:\n\n[dias e horários]\n\nQual fica melhor para você?" },
+    { titulo: "Acompanhar orçamento", texto: ola + "Passando para saber se você conseguiu ver o orçamento de {assunto}. Ficou alguma dúvida?" },
+  ];
+}
+// De quem é a conversa: p<id> = pedido, a<id> = agendamento, c<telefone> = cliente esperando.
+function ctxResposta(chave){
+  const d = dadosPainel, tipo = chave.charAt(0), ref = chave.slice(1);
+  if (tipo === "p"){ const p = (d.pedidos || []).find(x => x.id === Number(ref)) || {}; return { remetente: p.remetente, nome: (p.dados || {}).nome, assunto: assuntoPedido(p) }; }
+  if (tipo === "a"){ const a = (d.agendamentos || []).find(x => x.id === Number(ref)) || {};
+    return { remetente: a.remetente, nome: a.nome, assunto: a.servico ? "o seu " + a.servico.charAt(0).toLowerCase() + a.servico.slice(1) : "" }; }
+  return { remetente: ref, nome: "", assunto: "" };
+}
+function preencherModelo(texto, ctx){
+  const n = String(ctx.nome || "").trim().split(/\s+/)[0];
+  return String(texto)
+    .replace(/\{nome\}/g, n ? ", " + n : "")
+    .replace(/\{negocio\}/g, dadosPainel.nome || "")
+    .replace(/\{assunto\}/g, ctx.assunto || "o seu pedido");
+}
+function todosModelos(){
+  return modelosPadrao().map(m => Object.assign({ meu: false }, m)).concat((respostasProntas || []).map((m, i) => Object.assign({ meu: true, i }, m)));
+}
+function linkWhatsApp(remetente, texto){
+  return "https://wa.me/" + String(remetente || "").replace(/\D/g, "") + (texto ? "?text=" + encodeURIComponent(texto) : "");
+}
+function formResposta(chave){
+  const ctx = ctxResposta(chave);
+  const modelos = todosModelos();
+  if (tela.respTexto == null) tela.respTexto = modelos.length ? preencherModelo(modelos[0].texto, ctx) : "";
+  return '<div class="fu-form" id="formResp"><div class="subtitulo" style="margin-top:0;">Responder ' + esc(String(ctx.nome || "").trim() || ("+" + ctx.remetente)) + ' no WhatsApp</div>'
+    + '<div class="modelos">' + modelos.map((m, k) => m.meu
+        ? '<span class="aba meu"><button type="button" class="tirar-fundo" data-modelo="' + k + '" style="background:none;border:0;color:inherit;font:inherit;cursor:pointer;padding:0;">★ ' + esc(m.titulo) + '</button>'
+          + '<button type="button" class="tirar" data-tirar="' + m.i + '" title="Apagar este modelo" aria-label="Apagar o modelo ' + esc(m.titulo) + '">×</button></span>'
+        : '<button type="button" class="aba" data-modelo="' + k + '">' + esc(m.titulo) + '</button>').join("") + '</div>'
+    + '<textarea id="respTexto" class="resp-texto" maxlength="1000">' + esc(tela.respTexto) + '</textarea>'
+    + '<small style="display:block;color:var(--muted);font-size:12.5px;margin-top:6px;line-height:1.5;">Complete o que está entre [colchetes]. O WhatsApp abre com o texto pronto: é só conferir e enviar.</small>'
+    + '<div class="acoes" style="margin-top:12px;"><a class="btn btn-primary" id="respAbrir" target="_blank" rel="noopener" href="' + esc(linkWhatsApp(ctx.remetente, tela.respTexto)) + '">Abrir no WhatsApp</a>'
+    + '<button class="btn" type="button" id="respNovoModelo">Salvar como meu modelo</button>'
+    + '<button class="btn" type="button" id="respCancelar">Fechar</button><span class="msg" id="respMsg"></span></div>'
+    + (tela.respSalvando ? '<div class="salvar-modelo"><input id="respTitulo" maxlength="40" placeholder="Nome do modelo, ex.: Chave Pix">'
+      + '<button class="btn btn-primary" type="button" id="respSalvarModelo">Salvar modelo</button></div>' : '')
+    + '</div>';
+}
+function ligarResposta(box, redesenhar){
+  box.querySelectorAll("[data-resp]").forEach(b => b.addEventListener("click", () => {
+    const k = b.getAttribute("data-resp");
+    tela.resp = tela.resp === k ? null : k; tela.respTexto = null; tela.respSalvando = false; redesenhar();
+  }));
+  if (!$("formResp")) return;
+  const ctx = ctxResposta(tela.resp);
+  const atualizar = () => { tela.respTexto = $("respTexto").value; $("respAbrir").href = linkWhatsApp(ctx.remetente, tela.respTexto); };
+  $("respTexto").addEventListener("input", atualizar);
+  box.querySelectorAll("#formResp [data-modelo]").forEach(b => b.addEventListener("click", () => {
+    const m = todosModelos()[Number(b.getAttribute("data-modelo"))];
+    if (m){ $("respTexto").value = preencherModelo(m.texto, ctx); atualizar(); $("respTexto").focus(); }
+  }));
+  box.querySelectorAll("#formResp [data-tirar]").forEach(b => b.addEventListener("click", () => {
+    const i = Number(b.getAttribute("data-tirar"));
+    if (confirm('Apagar o modelo "' + ((respostasProntas[i] || {}).titulo || "") + '"?')) salvarModelos(respostasProntas.filter((_, j) => j !== i), redesenhar);
+  }));
+  $("respCancelar").addEventListener("click", () => { tela.resp = null; tela.respTexto = null; tela.respSalvando = false; redesenhar(); });
+  $("respNovoModelo").addEventListener("click", () => { tela.respSalvando = !tela.respSalvando; redesenhar(); if ($("respTitulo")) $("respTitulo").focus(); });
+  if ($("respSalvarModelo")) $("respSalvarModelo").addEventListener("click", () => {
+    const titulo = $("respTitulo").value.trim(), texto = $("respTexto").value.trim();
+    const msg = $("respMsg"); msg.className = "msg erro";
+    if (!titulo){ msg.textContent = "Dê um nome ao modelo."; return; }
+    if (!texto){ msg.textContent = "Escreva o texto do modelo."; return; }
+    if ((respostasProntas || []).length >= 20){ msg.textContent = "Você já tem 20 modelos. Apague um para salvar outro."; return; }
+    // Guarda o nome do cliente como {nome}, para o modelo servir para qualquer cliente.
+    const n = String(ctx.nome || "").trim().split(/\s+/)[0];
+    let base = texto;
+    if (n) base = base.split(", " + n).join("{nome}");
+    if (dadosPainel.nome) base = base.split(dadosPainel.nome).join("{negocio}");
+    salvarModelos((respostasProntas || []).concat([{ titulo, texto: base }]), redesenhar);
+  });
+}
+async function salvarModelos(lista, redesenhar){
+  const msg = $("respMsg");
+  if (msg){ msg.className = "msg"; msg.textContent = "Salvando..."; }
+  const { data, error } = await supa.rpc("salvar_respostas_prontas", { p_lista: lista });
+  if (error || !data || !data.ok){ if (msg){ msg.className = "msg erro"; msg.textContent = "Não foi possível salvar agora. Tente de novo."; } return; }
+  respostasProntas = data.respostas || lista;
+  tela.respSalvando = false;
+  redesenhar();
+  if ($("respMsg")){ $("respMsg").className = "msg ok"; $("respMsg").textContent = "Modelo salvo ✓"; }
 }
 
 /* ---------- Confirmação e lembrete: a dona confirma o horário de um pedido e o cliente recebe a confirmação ---------- */

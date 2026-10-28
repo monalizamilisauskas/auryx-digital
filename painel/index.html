@@ -285,6 +285,27 @@
   .fu-previa p{ margin:6px 0 0; font-size:14px; line-height:1.5; color:#DBEAFE; background:#1E3A8A; display:inline-block; padding:9px 12px; border-radius:12px; border-bottom-left-radius:4px; }
   .resp-texto{ width:100%; min-height:150px; resize:vertical; background:var(--panel-3); border:1px solid var(--line); color:var(--parchment); border-radius:8px; padding:10px 12px; font-size:14px; line-height:1.5; font-family:'Inter',sans-serif; }
   .resp-texto:focus{ outline:none; border-color:var(--gold); }
+  .rr-busca{ width:100%; background:var(--panel-3); border:1px solid var(--line); color:var(--parchment); border-radius:8px; padding:9px 12px; font-size:14px; font-family:'Inter',sans-serif; margin:10px 0 4px; }
+  .rr-trava{ display:flex; gap:10px; align-items:flex-start; margin-top:10px; padding:10px 12px; border:1px solid rgba(245,158,11,0.45); background:rgba(245,158,11,0.08); border-radius:10px; font-size:13px; color:#FDE68A; line-height:1.5; cursor:pointer; }
+  .rr-trava input{ margin-top:3px; accent-color:#F59E0B; }
+  .rr-trava b{ color:#FCD34D; }
+  .rr-busca:focus{ outline:none; border-color:var(--gold); }
+  .rr-abas{ margin:10px 0 8px; }
+  .rr-lista{ display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:8px; max-height:300px; overflow:auto; padding:2px; }
+  .rr-card{ position:relative; border:1px solid var(--line); border-radius:10px; background:var(--panel-3); }
+  .rr-card.ativo{ border-color:var(--gold); box-shadow:0 0 0 1px var(--gold) inset; }
+  .rr-usar{ display:block; width:100%; text-align:left; background:none; border:0; color:var(--parchment); cursor:pointer; padding:10px 34px 10px 12px; font-family:'Inter',sans-serif; }
+  .rr-usar b{ display:block; font-size:13.5px; font-weight:600; margin-bottom:4px; }
+  .rr-usar span{ display:block; font-size:12.5px; color:var(--muted); line-height:1.45; }
+  .rr-fav{ position:absolute; top:6px; right:6px; background:none; border:0; color:var(--muted); font-size:17px; cursor:pointer; line-height:1; padding:2px 4px; }
+  .rr-fav.on, .rr-fav:hover{ color:#FCD34D; }
+  .rr-linha{ display:flex; gap:12px; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; padding:12px 0; border-top:1px solid var(--line); }
+  .rr-texto{ flex:1; min-width:240px; }
+  .rr-texto b{ font-size:14px; font-weight:600; color:var(--parchment); }
+  .rr-texto p{ margin:6px 0 0; font-size:13px; color:var(--muted); line-height:1.5; white-space:pre-line; }
+  .rr-linha .quem{ color:var(--muted); font-size:12.5px; }
+  .rr-select, .salvar-modelo select{ width:100%; background:var(--panel-3); border:1px solid var(--line); color:var(--parchment); border-radius:8px; padding:10px 12px; font-size:14px; font-family:'Inter',sans-serif; }
+  .salvar-modelo select{ width:auto; padding:8px 10px; font-size:13.5px; }
   .modelos{ display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 12px; }
   .modelos .aba{ margin:0; }
   .modelos .meu{ display:inline-flex; align-items:center; gap:6px; }
@@ -391,6 +412,7 @@
   </div>
 </main>
 
+<script src="respostas.js?v=2"></script>
 <script>
 const SUPABASE_URL = "https://ypqmrjvuotctiyydfpgb.supabase.co";
 const SUPABASE_KEY = "sb_publishable_V87H9FaZ0gHFm1krAnpZRg_an0puUit"; // chave pública; os dados são protegidos pelo login
@@ -416,7 +438,7 @@ const AGENDA_AURYX = "";
 const FOLLOWUP_ATIVO = false;
 // Confirmação e lembrete de horário pelo WhatsApp: muda para true quando o envio estiver ligado no n8n (modelos aprovados na Meta).
 const AVISOS_ATIVO = false;
-let respostasProntas = [];
+let respostasRapidas = { meus: [], favoritos: [], ocultos: [] };
 // Tipos de follow-up: cada um é um modelo aprovado na Meta; a dona só escreve a parte do meio ({{3}}).
 const TIPOS_FU = {
   como_foi: { nome: "Como foi", rotulo: "Como foi…", antes: "Como foi ", depois: "? Ficou tudo certo? Se quiser contar ou precisar de algo, é só responder por aqui.", abertura: " 😊 ",
@@ -461,8 +483,9 @@ async function carregarPainel(){
     return;
   }
   const { data: u } = await supa.auth.getUser();
-  // Modelos de resposta da dona (se o SQL ainda não rodou, fica só com os modelos padrão).
-  try { const r = await supa.rpc("get_respostas_prontas"); respostasProntas = (!r.error && Array.isArray(r.data)) ? r.data : []; } catch (e) { respostasProntas = []; }
+  // Central de Respostas Rápidas: o que a dona mudou na biblioteca (se o SQL ainda não rodou, fica só a padrão).
+  try { const r = await supa.rpc("get_respostas_rapidas"); respostasRapidas = Object.assign({ meus: [], favoritos: [], ocultos: [] }, (!r.error && r.data && typeof r.data === "object" && !Array.isArray(r.data)) ? r.data : {}); }
+  catch (e) { respostasRapidas = { meus: [], favoritos: [], ocultos: [] }; }
   emailLogado = (u && u.user && u.user.email) || "";
   render(data);
 }
@@ -499,6 +522,7 @@ function render(d){
   menu.push(["agenda", "Agendamentos", hoje]);   // sempre no menu; vazio, explica como começar
   if (usaPedidos) menu.push(["pedidos", "Pedidos", pend]);
   menu.push(["followup", "Follow-up", 0]);
+  menu.push(["respostas", "Respostas rápidas", 0]);
   menu.push(
     ["personalizar", "Personalizar" + (d.pode_personalizar ? "" : " 🔒"), 0],
     ["dados", "Seus dados", 0],
@@ -513,6 +537,7 @@ function render(d){
     agenda: ["Agendamentos", "Horários que a secretária marcou com os seus clientes"],
     conversas: ["Clientes esperando", "Conversas que a secretária pausou para alguém da equipe responder"],
     pedidos: ["Pedidos", "Orçamentos e pedidos que a secretária coletou para a sua equipe"],
+    respostas: ["Respostas rápidas", "Textos prontos para a sua equipe responder os clientes pelo WhatsApp"],
     followup: ["Follow-up", "Escolha o dia e a secretária manda uma mensagem para saber como foi"],
     personalizar: ["Personalizar", "Perguntas, respostas e serviços que a secretária usa"],
     dados: ["Seus dados", "Nome do negócio, seu nome e WhatsApp de avisos"],
@@ -585,6 +610,7 @@ function render(d){
   if (tela.view === "pedidos") html += '<div class="panel" id="pedidosPainel"></div>';
   if (tela.view === "agenda") html += '<div class="panel" id="agendaPainel"></div>';
   if (tela.view === "followup") html += '<div class="panel" id="followupPainel"></div>';
+  if (tela.view === "respostas") html += '<div class="panel" id="respostasPainel"></div>';
   if (tela.view === "personalizar") html += '<div class="panel" id="personalizar"></div>';
   if (tela.view === "dados") html += '<div class="panel" id="seusDados"></div>';
 
@@ -610,6 +636,7 @@ function render(d){
   if ($("pedidosPainel")) renderPedidos();
   if ($("agendaPainel")) renderAgenda();
   if ($("followupPainel")) renderFollowup();
+  if ($("respostasPainel")) renderRespostas();
   if ($("personalizar")) renderPersonalizar(d);
   if ($("seusDados")) renderDados(d);
   document.querySelectorAll("#dashContent [data-ir]").forEach(b => b.addEventListener("click", () => irPara(b.getAttribute("data-ir"))));
@@ -621,6 +648,7 @@ function icone(nome){
   const d = {
     inicio: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
     conversas: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
+    respostas: '<path d="M4 5h16v10H9l-5 4z"/><path d="M8 9h8M8 12h5"/>',
     followup: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M12 8v4l2.5 1.5"/>',
     agenda: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 14h3v3H8z"/>',
     pedidos: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3"/>',
@@ -639,6 +667,7 @@ function irPara(view){
   tela.pedido = null;
   tela.confHorario = null;
   tela.resp = null;
+  tela.rrEditar = null;
   try { localStorage.setItem("painelView", view); } catch (e) {}
   render(dadosPainel);
   window.scrollTo({ top: 0 });
@@ -965,110 +994,330 @@ function renderAgenda(){
   }));
 }
 
-/* ---------- Respostas prontas: a dona escolhe um modelo, ajusta e abre o WhatsApp com o texto escrito ---------- */
+/* ---------- Central de Respostas Rápidas: biblioteca de textos para a equipe responder pelo WhatsApp ----------
+   Biblioteca padrão em painel/respostas.js; o que a dona muda (minhas, editadas, favoritas, escondidas) fica em
+   businesses.respostas_rapidas. O texto vai pelo WhatsApp da equipe (wa.me), não pela API da Meta. */
+function semAcento(s){ return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
+function bibliotecaPadrao(){
+  const B = window.RESPOSTAS_RAPIDAS || {};
+  const vazia = { categorias: [], itens: [] };
+  return /viage|turis/i.test(String(dadosPainel.tipo_negocio || "")) ? (B.viagem || vazia) : (B.geral || vazia);
+}
+// Padrão (com as versões editadas pela dona) + as criadas por ela. Escondidas só quando pedido.
+function bibliotecaConta(incluirEscondidas){
+  const R = respostasRapidas, base = bibliotecaPadrao();
+  const meus = {}; (R.meus || []).forEach(m => { meus[m.id] = m; });
+  const lista = base.itens.map(m => meus[m.id] ? Object.assign({}, m, meus[m.id], { padrao: true, editado: true }) : Object.assign({ padrao: true }, m));
+  (R.meus || []).filter(m => !base.itens.some(b => b.id === m.id)).forEach(m => lista.push(Object.assign({ cat: "Minhas respostas" }, m, { meu: true })));
+  lista.forEach(m => { m.escondida = (R.ocultos || []).includes(m.id); m.fav = (R.favoritos || []).includes(m.id); });
+  return incluirEscondidas ? lista : lista.filter(m => !m.escondida);
+}
+function categoriasConta(lista){
+  const cats = bibliotecaPadrao().categorias.slice();
+  lista.forEach(m => { if (m.cat && !cats.includes(m.cat)) cats.push(m.cat); });
+  return cats.filter(c => lista.some(m => m.cat === c));
+}
+function buscarRespostas(lista, termo){
+  const partes = semAcento(termo).trim().split(/\s+/).filter(Boolean);
+  if (!partes.length) return lista;
+  return lista.filter(m => { const alvo = semAcento(m.titulo + " " + m.texto + " " + (m.chaves || "") + " " + m.cat); return partes.every(p => alvo.includes(p)); });
+}
+// Sugeridas: pela última mensagem do cliente (palavras-chave) ou pela etapa do pedido.
+function sugerirRespostas(lista, ctx){
+  const porId = (ids) => ids.map(id => lista.find(m => m.id === id)).filter(Boolean);
+  if (ctx.ultima){
+    const msg = " " + semAcento(ctx.ultima).replace(/[^a-z0-9-]+/g, " ") + " ";
+    const nota = lista.map(m => ({ m, n: String(m.chaves || "").split(/\s+/).filter(k => k.length > 2 && msg.includes(" " + k)).length })).filter(x => x.n > 0);
+    nota.sort((a, b) => b.n - a.n);
+    if (nota.length) return nota.slice(0, 3).map(x => x.m);
+  }
+  const viagem = bibliotecaPadrao() === (window.RESPOSTAS_RAPIDAS || {}).viagem;
+  const mapa = viagem
+    ? { pendente: ["a10", "a06", "a08"], respondido: ["a37", "a25", "a11"], fechado: ["a24", "a26", "a39"],
+        nao_fechou: ["a38", "a11"], agendamento: ["a39", "a32", "a13"], conversa: ["a01", "a22", "a09"] }
+    : { pendente: ["g_orcamento", "g_detalhes", "g_horarios"], respondido: ["g_acompanhar", "g_formas", "g_pix"], fechado: ["g_recebido", "g_horarios", "g_avaliacao"],
+        nao_fechou: ["g_sumiu", "g_avaliacao"], agendamento: ["g_confirmado", "g_endereco", "g_remarcar"], conversa: ["g_continuar", "g_momento"] };
+  return porId(mapa[ctx.etapa] || []);
+}
 function assuntoPedido(p){
   const dd = p.dados || {};
   const titulo = ((dadosPainel.itens || {})[p.item] || "").toLowerCase();
   return dd.destino ? "a sua viagem para " + dd.destino : dd.servico ? "o seu " + String(dd.servico).toLowerCase() : titulo ? "o seu pedido de " + titulo : "";
 }
-function modelosPadrao(){
-  const viagem = /viage|turis/i.test(String(dadosPainel.tipo_negocio || ""));
-  const ola = "Olá{nome}! Aqui é da equipe {negocio}. ";
-  if (viagem) return [
-    { titulo: "Proposta", texto: ola + "Preparei a proposta para {assunto}:\n\n[valores, datas e condições]\n\nQualquer dúvida, estou à disposição!" },
-    { titulo: "Preciso de mais informações", texto: ola + "Para montar a melhor opção para {assunto}, preciso de mais alguns detalhes:\n\n[o que falta saber]" },
-    { titulo: "Sem disponibilidade", texto: ola + "Infelizmente não encontramos disponibilidade para {assunto} do jeito que você pediu. Posso te sugerir outras datas ou opções?" },
-    { titulo: "Acompanhar proposta", texto: ola + "Passando para saber se você conseguiu ver a proposta para {assunto}. Ficou alguma dúvida?" },
-    { titulo: "Pagamento", texto: ola + "Para garantir {assunto}, seguem os dados para pagamento:\n\n[link ou dados de pagamento]\n\nAssim que o pagamento for confirmado, eu te aviso por aqui." },
-  ];
-  return [
-    { titulo: "Orçamento", texto: ola + "Preparei o orçamento para {assunto}:\n\n[valores e condições]\n\nQualquer dúvida, estou à disposição!" },
-    { titulo: "Preciso de mais informações", texto: ola + "Para te passar o orçamento de {assunto}, preciso de mais alguns detalhes:\n\n[o que falta saber]" },
-    { titulo: "Horários disponíveis", texto: ola + "Para {assunto}, tenho estes horários disponíveis:\n\n[dias e horários]\n\nQual fica melhor para você?" },
-    { titulo: "Acompanhar orçamento", texto: ola + "Passando para saber se você conseguiu ver o orçamento de {assunto}. Ficou alguma dúvida?" },
-  ];
-}
 // De quem é a conversa: p<id> = pedido, a<id> = agendamento, c<telefone> = cliente esperando.
 function ctxResposta(chave){
-  const d = dadosPainel, tipo = chave.charAt(0), ref = chave.slice(1);
-  if (tipo === "p"){ const p = (d.pedidos || []).find(x => x.id === Number(ref)) || {}; return { remetente: p.remetente, nome: (p.dados || {}).nome, assunto: assuntoPedido(p) }; }
+  const d = dadosPainel, tipo = String(chave || "").charAt(0), ref = String(chave || "").slice(1);
+  if (tipo === "p"){ const p = (d.pedidos || []).find(x => x.id === Number(ref)) || {};
+    return { remetente: p.remetente, nome: (p.dados || {}).nome, assunto: assuntoPedido(p), dados: p.dados || {}, etapa: p.status }; }
   if (tipo === "a"){ const a = (d.agendamentos || []).find(x => x.id === Number(ref)) || {};
-    return { remetente: a.remetente, nome: a.nome, assunto: a.servico ? "o seu " + a.servico.charAt(0).toLowerCase() + a.servico.slice(1) : "" }; }
-  return { remetente: ref, nome: "", assunto: "" };
+    return { remetente: a.remetente, nome: a.nome, assunto: a.servico ? "o seu " + a.servico.charAt(0).toLowerCase() + a.servico.slice(1) : "", dados: {}, etapa: "agendamento" }; }
+  const c = (d.conversas_equipe || []).find(x => x.remetente === ref) || {};
+  return { remetente: ref, nome: "", assunto: "", dados: {}, etapa: "conversa", ultima: c.ultima_mensagem || "" };
 }
 function preencherModelo(texto, ctx){
   const n = String(ctx.nome || "").trim().split(/\s+/)[0];
-  return String(texto)
-    .replace(/\{nome\}/g, n ? ", " + n : "")
-    .replace(/\{negocio\}/g, dadosPainel.nome || "")
-    .replace(/\{assunto\}/g, ctx.assunto || "o seu pedido");
+  const dd = ctx.dados || {};
+  let t = String(texto || "");
+  if (n) t = t.replace(/\{nome\}/g, n);
+  else t = t.replace(/^\{nome\},\s*(\S)/, (_, c) => c.toUpperCase()).replace(/,\s*\{nome\}/g, "").replace(/\{nome\}/g, "");
+  return t.replace(/\{negocio\}/g, dadosPainel.nome || "")
+    .replace(/\{assunto\}/g, ctx.assunto || "o seu pedido")
+    .replace(/\{destino\}/g, dd.destino || "[destino]")
+    .replace(/\{datas\}/g, dd.datas || "[datas]")
+    .replace(/\{pessoas\}/g, dd.pessoas || "[quantas pessoas]")
+    .replace(/\{saida\}/g, dd.saida || "[cidade de saída]")
+    .replace(/\{reserva\}/g, "[número da reserva]")
+    .replace(/\{data_partida\}/g, dd.datas || "[data de partida]")
+    .replace(/\{link_pagamento\}/g, "[link de pagamento]")
+    .replace(/\{horario\}/g, "[horário de atendimento]");
 }
-function todosModelos(){
-  return modelosPadrao().map(m => Object.assign({ meu: false }, m)).concat((respostasProntas || []).map((m, i) => Object.assign({ meu: true, i }, m)));
+// Texto escrito para um cliente vira modelo para qualquer cliente.
+function textoParaModelo(texto, ctx){
+  let t = String(texto || "");
+  const n = String(ctx.nome || "").trim().split(/\s+/)[0];
+  const dd = ctx.dados || {};
+  if (n) t = t.replace(new RegExp("\\b" + n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "g"), "{nome}");
+  if (dadosPainel.nome) t = t.split(dadosPainel.nome).join("{negocio}");
+  if (dd.destino) t = t.split(dd.destino).join("{destino}");
+  if (dd.datas) t = t.split(dd.datas).join("{datas}");
+  return t;
 }
 function linkWhatsApp(remetente, texto){
   return "https://wa.me/" + String(remetente || "").replace(/\D/g, "") + (texto ? "?text=" + encodeURIComponent(texto) : "");
 }
+async function salvarRespostasRapidas(novo){
+  const antes = respostasRapidas;
+  respostasRapidas = novo;
+  const { data, error } = await supa.rpc("salvar_respostas_rapidas", { p_dados: novo });
+  if (error || !data || !data.ok){ respostasRapidas = antes; return false; }
+  respostasRapidas = Object.assign({ meus: [], favoritos: [], ocultos: [] }, data.dados || novo);
+  return true;
+}
+function alternarFavorita(id){
+  const R = respostasRapidas, fav = (R.favoritos || []).slice();
+  const i = fav.indexOf(id); if (i >= 0) fav.splice(i, 1); else fav.unshift(id);
+  return salvarRespostasRapidas(Object.assign({}, R, { favoritos: fav }));
+}
+function cartoesResposta(lista, ctx, selecionada){
+  if (!lista.length) return '<p class="sub" style="margin:6px 0;">Nenhuma resposta encontrada.</p>';
+  return lista.map(m => '<div class="rr-card' + (m.id === selecionada ? ' ativo' : '') + '">'
+    + '<button type="button" class="rr-usar" data-usar="' + esc(m.id) + '"><b>' + esc(m.titulo) + '</b><span>' + esc(preencherModelo(m.texto, ctx).replace(/\s+/g, " ").slice(0, 140)) + '</span></button>'
+    + '<button type="button" class="rr-fav' + (m.fav ? ' on' : '') + '" data-fav="' + esc(m.id) + '" title="' + (m.fav ? 'Tirar das favoritas' : 'Favoritar') + '" aria-label="' + (m.fav ? 'Tirar das favoritas' : 'Favoritar') + '">' + (m.fav ? '★' : '☆') + '</button></div>').join("");
+}
+
+// Caixa de resposta (pedido, agendamento ou cliente esperando).
 function formResposta(chave){
   const ctx = ctxResposta(chave);
-  const modelos = todosModelos();
-  if (tela.respTexto == null) tela.respTexto = modelos.length ? preencherModelo(modelos[0].texto, ctx) : "";
+  const lista = bibliotecaConta(false);
+  const sug = sugerirRespostas(lista, ctx);
+  if (tela.respCat == null) tela.respCat = sug.length ? "Sugeridas" : (lista.some(m => m.fav) ? "Favoritas" : (categoriasConta(lista)[0] || ""));
+  if (tela.respTexto == null){ const m0 = sug[0]; tela.respTexto = m0 ? preencherModelo(m0.texto, ctx) : preencherModelo("Olá, {nome}! Aqui é da equipe {negocio}. ", ctx); tela.respSel = m0 ? m0.id : null; }
   return '<div class="fu-form" id="formResp"><div class="subtitulo" style="margin-top:0;">Responder ' + esc(String(ctx.nome || "").trim() || ("+" + ctx.remetente)) + ' no WhatsApp</div>'
-    + '<div class="modelos">' + modelos.map((m, k) => m.meu
-        ? '<span class="aba meu"><button type="button" class="tirar-fundo" data-modelo="' + k + '" style="background:none;border:0;color:inherit;font:inherit;cursor:pointer;padding:0;">★ ' + esc(m.titulo) + '</button>'
-          + '<button type="button" class="tirar" data-tirar="' + m.i + '" title="Apagar este modelo" aria-label="Apagar o modelo ' + esc(m.titulo) + '">×</button></span>'
-        : '<button type="button" class="aba" data-modelo="' + k + '">' + esc(m.titulo) + '</button>').join("") + '</div>'
-    + '<textarea id="respTexto" class="resp-texto" maxlength="1000">' + esc(tela.respTexto) + '</textarea>'
+    + '<input id="respBusca" class="rr-busca" placeholder="Buscar resposta (ex.: bagagem, reembolso, Pix)" value="' + esc(tela.respBusca || "") + '">'
+    + '<div id="respLista">' + listaResposta(ctx) + '</div>'
+    + '<label for="respTexto" class="subtitulo" style="display:block;margin:14px 0 6px;">Editar antes de enviar</label>'
+    + '<textarea id="respTexto" class="resp-texto" maxlength="1500">' + esc(tela.respTexto) + '</textarea>'
     + '<small style="display:block;color:var(--muted);font-size:12.5px;margin-top:6px;line-height:1.5;">Complete o que está entre [colchetes]. O WhatsApp abre com o texto pronto: é só conferir e enviar.</small>'
+    + '<div id="respTrava">' + travaResposta() + '</div>'
     + '<div class="acoes" style="margin-top:12px;"><a class="btn btn-primary" id="respAbrir" target="_blank" rel="noopener" href="' + esc(linkWhatsApp(ctx.remetente, tela.respTexto)) + '">Abrir no WhatsApp</a>'
-    + '<button class="btn" type="button" id="respNovoModelo">Salvar como meu modelo</button>'
+    + '<button class="btn" type="button" id="respNovoModelo">Salvar como minha resposta</button>'
     + '<button class="btn" type="button" id="respCancelar">Fechar</button><span class="msg" id="respMsg"></span></div>'
-    + (tela.respSalvando ? '<div class="salvar-modelo"><input id="respTitulo" maxlength="40" placeholder="Nome do modelo, ex.: Chave Pix">'
-      + '<button class="btn btn-primary" type="button" id="respSalvarModelo">Salvar modelo</button></div>' : '')
+    + (tela.respSalvando ? '<div class="salvar-modelo"><input id="respTitulo" maxlength="60" placeholder="Nome da resposta, ex.: Chave Pix">'
+      + '<select id="respCatNova">' + categoriasConta(bibliotecaConta(true)).concat(["Minhas respostas"]).filter((c, i, a) => a.indexOf(c) === i).map(c => '<option>' + esc(c) + '</option>').join("") + '</select>'
+      + '<button class="btn btn-primary" type="button" id="respSalvarModelo">Salvar</button></div>' : '')
     + '</div>';
+}
+// Respostas sobre reserva e pagamento só saem depois de a pessoa confirmar que o dado é real.
+function travaResposta(){
+  const m = tela.respSel ? bibliotecaConta(true).find(x => x.id === tela.respSel) : null;
+  if (!m || !m.confirmar) return "";
+  return '<label class="rr-trava"><input type="checkbox" id="respConfirmo"> <span><b>Antes de enviar, confirme:</b> ' + esc(m.confirmar) + '</span></label>';
+}
+function camposAbertos(texto){ return (String(texto || "").match(/\[[^\]\n]{1,60}\]/g) || []).filter((v, i, a) => a.indexOf(v) === i); }
+function listaResposta(ctx){
+  const lista = bibliotecaConta(false);
+  if ((tela.respBusca || "").trim()) return '<div class="rr-lista">' + cartoesResposta(buscarRespostas(lista, tela.respBusca), ctx, tela.respSel) + '</div>';
+  const sug = sugerirRespostas(lista, ctx);
+  const favs = lista.filter(m => m.fav);
+  const abas = (sug.length ? ["Sugeridas"] : []).concat(favs.length ? ["Favoritas"] : []).concat(categoriasConta(lista));
+  if (!abas.includes(tela.respCat)) tela.respCat = abas[0];
+  const itens = tela.respCat === "Sugeridas" ? sug : tela.respCat === "Favoritas" ? favs : lista.filter(m => m.cat === tela.respCat);
+  return '<div class="abas rr-abas">' + abas.map(c => '<button type="button" class="aba' + (c === tela.respCat ? ' ativa' : '') + '" data-respcat="' + esc(c) + '">'
+      + (c === "Sugeridas" ? '✨ ' : c === "Favoritas" ? '★ ' : '') + esc(c) + '</button>').join("") + '</div>'
+    + '<div class="rr-lista">' + cartoesResposta(itens, ctx, tela.respSel) + '</div>';
 }
 function ligarResposta(box, redesenhar){
   box.querySelectorAll("[data-resp]").forEach(b => b.addEventListener("click", () => {
     const k = b.getAttribute("data-resp");
-    tela.resp = tela.resp === k ? null : k; tela.respTexto = null; tela.respSalvando = false; redesenhar();
+    tela.resp = tela.resp === k ? null : k;
+    tela.respTexto = null; tela.respSalvando = false; tela.respBusca = ""; tela.respCat = null; tela.respSel = null;
+    redesenhar();
   }));
   if (!$("formResp")) return;
   const ctx = ctxResposta(tela.resp);
   const atualizar = () => { tela.respTexto = $("respTexto").value; $("respAbrir").href = linkWhatsApp(ctx.remetente, tela.respTexto); };
+  const ligarLista = () => {
+    $("respLista").querySelectorAll("[data-respcat]").forEach(b => b.addEventListener("click", () => { tela.respCat = b.getAttribute("data-respcat"); refazer(); }));
+    $("respLista").querySelectorAll("[data-usar]").forEach(b => b.addEventListener("click", () => {
+      const m = bibliotecaConta(true).find(x => x.id === b.getAttribute("data-usar"));
+      if (!m) return;
+      tela.respSel = m.id; $("respTexto").value = preencherModelo(m.texto, ctx); atualizar(); refazer();
+      $("respTrava").innerHTML = travaResposta(); $("respMsg").textContent = "";
+      const t = $("respTexto"), i = t.value.indexOf("[");
+      t.focus(); if (i >= 0){ t.setSelectionRange(i, t.value.indexOf("]", i) + 1); }
+    }));
+    $("respLista").querySelectorAll("[data-fav]").forEach(b => b.addEventListener("click", async () => {
+      b.disabled = true;
+      if (!(await alternarFavorita(b.getAttribute("data-fav")))){ $("respMsg").className = "msg erro"; $("respMsg").textContent = "Não foi possível salvar a favorita agora."; }
+      refazer();
+    }));
+  };
+  const refazer = () => { $("respLista").innerHTML = listaResposta(ctx); ligarLista(); };
+  ligarLista();
+  $("respBusca").addEventListener("input", (e) => { tela.respBusca = e.target.value; refazer(); });
   $("respTexto").addEventListener("input", atualizar);
-  box.querySelectorAll("#formResp [data-modelo]").forEach(b => b.addEventListener("click", () => {
-    const m = todosModelos()[Number(b.getAttribute("data-modelo"))];
-    if (m){ $("respTexto").value = preencherModelo(m.texto, ctx); atualizar(); $("respTexto").focus(); }
-  }));
-  box.querySelectorAll("#formResp [data-tirar]").forEach(b => b.addEventListener("click", () => {
-    const i = Number(b.getAttribute("data-tirar"));
-    if (confirm('Apagar o modelo "' + ((respostasProntas[i] || {}).titulo || "") + '"?')) salvarModelos(respostasProntas.filter((_, j) => j !== i), redesenhar);
-  }));
+  // Não abre o WhatsApp com campo por completar ou sem a confirmação exigida (reserva, pagamento).
+  $("respAbrir").addEventListener("click", (e) => {
+    const msg = $("respMsg"), faltam = camposAbertos($("respTexto").value);
+    if (faltam.length){ e.preventDefault(); msg.className = "msg erro"; msg.textContent = "Complete antes de enviar: " + faltam.join(", "); $("respTexto").focus(); return; }
+    if ($("respConfirmo") && !$("respConfirmo").checked){ e.preventDefault(); msg.className = "msg erro"; msg.textContent = "Marque a confirmação acima para enviar."; return; }
+    msg.textContent = "";
+  });
   $("respCancelar").addEventListener("click", () => { tela.resp = null; tela.respTexto = null; tela.respSalvando = false; redesenhar(); });
   $("respNovoModelo").addEventListener("click", () => { tela.respSalvando = !tela.respSalvando; redesenhar(); if ($("respTitulo")) $("respTitulo").focus(); });
-  if ($("respSalvarModelo")) $("respSalvarModelo").addEventListener("click", () => {
+  if ($("respSalvarModelo")) $("respSalvarModelo").addEventListener("click", async () => {
     const titulo = $("respTitulo").value.trim(), texto = $("respTexto").value.trim();
     const msg = $("respMsg"); msg.className = "msg erro";
-    if (!titulo){ msg.textContent = "Dê um nome ao modelo."; return; }
-    if (!texto){ msg.textContent = "Escreva o texto do modelo."; return; }
-    if ((respostasProntas || []).length >= 20){ msg.textContent = "Você já tem 20 modelos. Apague um para salvar outro."; return; }
-    // Guarda o nome do cliente como {nome}, para o modelo servir para qualquer cliente.
-    const n = String(ctx.nome || "").trim().split(/\s+/)[0];
-    let base = texto;
-    if (n) base = base.split(", " + n).join("{nome}");
-    if (dadosPainel.nome) base = base.split(dadosPainel.nome).join("{negocio}");
-    salvarModelos((respostasProntas || []).concat([{ titulo, texto: base }]), redesenhar);
+    if (!titulo){ msg.textContent = "Dê um nome à resposta."; return; }
+    if (!texto){ msg.textContent = "Escreva o texto."; return; }
+    const R = respostasRapidas;
+    if ((R.meus || []).length >= 80){ msg.textContent = "Limite de respostas atingido. Apague uma para salvar outra."; return; }
+    const nova = { id: "m" + Date.now().toString(36), cat: $("respCatNova").value, titulo, texto: textoParaModelo(texto, ctx) };
+    msg.className = "msg"; msg.textContent = "Salvando...";
+    if (!(await salvarRespostasRapidas(Object.assign({}, R, { meus: (R.meus || []).concat([nova]) })))){ msg.className = "msg erro"; msg.textContent = "Não foi possível salvar agora. Tente de novo."; return; }
+    tela.respSalvando = false; tela.respCat = nova.cat; tela.respSel = nova.id;
+    redesenhar();
+    if ($("respMsg")){ $("respMsg").className = "msg ok"; $("respMsg").textContent = "Resposta salva ✓"; }
   });
 }
-async function salvarModelos(lista, redesenhar){
-  const msg = $("respMsg");
-  if (msg){ msg.className = "msg"; msg.textContent = "Salvando..."; }
-  const { data, error } = await supa.rpc("salvar_respostas_prontas", { p_lista: lista });
-  if (error || !data || !data.ok){ if (msg){ msg.className = "msg erro"; msg.textContent = "Não foi possível salvar agora. Tente de novo."; } return; }
-  respostasProntas = data.respostas || lista;
-  tela.respSalvando = false;
-  redesenhar();
-  if ($("respMsg")){ $("respMsg").className = "msg ok"; $("respMsg").textContent = "Modelo salvo ✓"; }
+
+// Tela "Respostas rápidas": a dona organiza a biblioteca (favoritar, editar, esconder, criar).
+function renderRespostas(){
+  const box = $("respostasPainel");
+  const todas = bibliotecaConta(true);
+  const visiveis = todas.filter(m => !m.escondida);
+  const escondidas = todas.filter(m => m.escondida);
+  const cats = categoriasConta(visiveis);
+  const busca = tela.rrBusca || "";
+  if (tela.rrCat !== "Favoritas" && !cats.includes(tela.rrCat)) tela.rrCat = cats[0] || "";
+  let html = '<p class="sub">Textos prontos para você e a sua equipe responderem os clientes pelo WhatsApp: escolha, ajuste e envie. '
+    + 'As respostas automáticas da secretária ficam em <b>Personalizar</b>; aqui é sempre uma pessoa que decide o que enviar.</p>'
+    + '<details class="ajuda"><summary>Como funciona?</summary>'
+    + '<p>Em <b>Pedidos</b>, <b>Agendamentos</b> e <b>Clientes esperando</b>, o botão <b>Responder no WhatsApp</b> abre esta biblioteca com o nome do cliente e os dados do pedido já preenchidos. '
+    + 'Você escolhe a resposta, ajusta o texto e o WhatsApp abre com a mensagem pronta.</p>'
+    + '<p>Aqui você pode <b>favoritar</b> (aparecem primeiro), <b>editar</b>, <b>esconder</b> as que não usa e criar as suas. '
+    + 'Nos textos, use {nome}, {negocio}, {destino}, {datas} e {assunto}: o painel troca pelos dados de cada cliente.</p></details>'
+    + '<div class="acoes" style="margin:14px 0;"><input id="rrBusca" class="rr-busca" style="flex:1;min-width:200px;margin:0;" placeholder="Buscar (ex.: bagagem, reembolso, Pix)" value="' + esc(busca) + '">'
+    + '<button class="btn btn-primary" type="button" id="rrNova">+ Nova resposta</button><span class="msg" id="rrMsg"></span></div>';
+  if (tela.rrEditar) html += formEditarResposta();
+  html += '<div id="rrCorpo">' + corpoRespostas() + '</div>';
+  if (escondidas.length) html += '<details class="ajuda" style="margin-top:16px;"' + (tela.rrVerEscondidas ? ' open' : '') + ' id="rrEscondidas"><summary>Respostas escondidas (' + escondidas.length + ')</summary>'
+    + escondidas.map(m => '<div class="rr-linha"><div><b>' + esc(m.titulo) + '</b><span class="quem"> · ' + esc(m.cat) + '</span></div>'
+      + '<div class="ped-acoes" style="margin:0;"><button class="btn" type="button" data-rrmostrar="' + esc(m.id) + '">Mostrar de novo</button></div></div>').join("") + '</details>';
+  box.innerHTML = html;
+  ligarRespostas();
+}
+function corpoRespostas(){
+  const visiveis = bibliotecaConta(false);
+  const busca = (tela.rrBusca || "").trim();
+  const cats = categoriasConta(visiveis);
+  const favs = visiveis.filter(m => m.fav);
+  let html = '';
+  let lista;
+  if (busca) lista = buscarRespostas(visiveis, busca);
+  else {
+    const abas = (favs.length ? ["Favoritas"] : []).concat(cats);
+    if (!abas.includes(tela.rrCat)) tela.rrCat = abas[0];
+    html += '<div class="abas">' + abas.map(c => '<button type="button" class="aba' + (c === tela.rrCat ? ' ativa' : '') + '" data-rrcat="' + esc(c) + '">'
+      + (c === "Favoritas" ? '★ ' : '') + esc(c) + ' (' + (c === "Favoritas" ? favs.length : visiveis.filter(m => m.cat === c).length) + ')</button>').join("") + '</div>';
+    lista = tela.rrCat === "Favoritas" ? favs : visiveis.filter(m => m.cat === tela.rrCat);
+  }
+  if (!lista.length) return html + '<p class="sub" style="margin:0;">Nenhuma resposta encontrada.</p>';
+  return html + lista.map(m => '<div class="rr-linha"><div class="rr-texto"><b>' + esc(m.titulo) + '</b>'
+      + (busca ? '<span class="quem"> · ' + esc(m.cat) + '</span>' : '') + (m.editado ? '<span class="quem"> · editada</span>' : '') + (m.meu ? '<span class="quem"> · sua</span>' : '')
+      + '<p>' + esc(m.texto) + '</p></div>'
+      + '<div class="ped-acoes" style="margin:0;">'
+      + '<button class="btn" type="button" data-rrfav="' + esc(m.id) + '">' + (m.fav ? '★ Favorita' : '☆ Favoritar') + '</button>'
+      + '<button class="btn" type="button" data-rreditar="' + esc(m.id) + '">Editar</button>'
+      + (m.meu ? '<button class="btn" type="button" data-rrapagar="' + esc(m.id) + '">Apagar</button>'
+               : '<button class="btn" type="button" data-rresconder="' + esc(m.id) + '">Esconder</button>')
+      + (m.editado ? '<button class="btn" type="button" data-rrrestaurar="' + esc(m.id) + '">Voltar ao original</button>' : '')
+      + '</div></div>').join("");
+}
+function formEditarResposta(){
+  const e = tela.rrEditar;
+  const cats = categoriasConta(bibliotecaConta(true)).concat(["Minhas respostas"]).filter((c, i, a) => a.indexOf(c) === i);
+  if (e.cat && !cats.includes(e.cat)) cats.push(e.cat);
+  return '<div class="fu-form" id="rrForm"><div class="subtitulo" style="margin-top:0;">' + (e.id ? 'Editar resposta' : 'Nova resposta') + '</div>'
+    + '<div class="dois-campos" style="margin-bottom:14px;"><div class="campo"><label for="rrTitulo">Nome</label><input id="rrTitulo" maxlength="60" value="' + esc(e.titulo || "") + '" placeholder="Ex.: Chave Pix"></div>'
+    + '<div class="campo"><label for="rrCatSel">Categoria</label><select id="rrCatSel" class="rr-select">' + cats.map(c => '<option' + (c === (e.cat || "Minhas respostas") ? ' selected' : '') + '>' + esc(c) + '</option>').join("") + '</select></div></div>'
+    + '<div class="campo"><label for="rrTextoEd">Texto</label><textarea id="rrTextoEd" class="resp-texto" maxlength="1500">' + esc(e.texto || "") + '</textarea>'
+    + '<small>Use {nome}, {negocio}, {destino}, {datas}, {reserva} e {assunto} para o painel preencher com os dados do cliente. Use [colchetes] para o que a equipe completa na hora: o painel não deixa enviar sem completar.</small></div>'
+    + '<div class="acoes" style="margin-top:12px;"><button class="btn btn-primary" type="button" id="rrSalvar">Salvar</button>'
+    + '<button class="btn" type="button" id="rrCancelar">Cancelar</button><span class="msg" id="rrFormMsg"></span></div></div>';
+}
+function ligarRespostas(){
+  const R = () => respostasRapidas;
+  const salvar = async (novo, msgId) => {
+    const m = $(msgId || "rrMsg"); if (m){ m.className = "msg"; m.textContent = "Salvando..."; }
+    const ok = await salvarRespostasRapidas(novo);
+    if (!ok){ if (m){ m.className = "msg erro"; m.textContent = "Não foi possível salvar agora. Tente de novo."; } return false; }
+    return true;
+  };
+  const ligarCorpo = () => {
+    const c = $("rrCorpo");
+    c.querySelectorAll("[data-rrcat]").forEach(b => b.addEventListener("click", () => { tela.rrCat = b.getAttribute("data-rrcat"); c.innerHTML = corpoRespostas(); ligarCorpo(); }));
+    c.querySelectorAll("[data-rrfav]").forEach(b => b.addEventListener("click", async () => { b.disabled = true; if (await alternarFavorita(b.getAttribute("data-rrfav"))) renderRespostas(); else b.disabled = false; }));
+    c.querySelectorAll("[data-rreditar]").forEach(b => b.addEventListener("click", () => {
+      const m = bibliotecaConta(true).find(x => x.id === b.getAttribute("data-rreditar"));
+      if (m){ tela.rrEditar = { id: m.id, cat: m.cat, titulo: m.titulo, texto: m.texto }; renderRespostas(); window.scrollTo({ top: 0, behavior: "smooth" }); }
+    }));
+    c.querySelectorAll("[data-rresconder]").forEach(b => b.addEventListener("click", async () => {
+      const id = b.getAttribute("data-rresconder");
+      if (await salvar(Object.assign({}, R(), { ocultos: (R().ocultos || []).concat([id]), favoritos: (R().favoritos || []).filter(x => x !== id) }))) renderRespostas();
+    }));
+    c.querySelectorAll("[data-rrapagar]").forEach(b => b.addEventListener("click", async () => {
+      const id = b.getAttribute("data-rrapagar");
+      const m = (R().meus || []).find(x => x.id === id);
+      if (!confirm('Apagar a resposta "' + ((m || {}).titulo || "") + '"?')) return;
+      if (await salvar(Object.assign({}, R(), { meus: (R().meus || []).filter(x => x.id !== id), favoritos: (R().favoritos || []).filter(x => x !== id) }))) renderRespostas();
+    }));
+    c.querySelectorAll("[data-rrrestaurar]").forEach(b => b.addEventListener("click", async () => {
+      const id = b.getAttribute("data-rrrestaurar");
+      if (await salvar(Object.assign({}, R(), { meus: (R().meus || []).filter(x => x.id !== id) }))) renderRespostas();
+    }));
+  };
+  ligarCorpo();
+  $("rrBusca").addEventListener("input", (e) => { tela.rrBusca = e.target.value; $("rrCorpo").innerHTML = corpoRespostas(); ligarCorpo(); });
+  $("rrNova").addEventListener("click", () => { tela.rrEditar = { id: null, cat: tela.rrCat && tela.rrCat !== "Favoritas" ? tela.rrCat : "Minhas respostas", titulo: "", texto: "Olá, {nome}! " }; renderRespostas(); if ($("rrTitulo")) $("rrTitulo").focus(); });
+  if ($("rrEscondidas")) $("rrEscondidas").addEventListener("toggle", (e) => { tela.rrVerEscondidas = e.target.open; });
+  document.querySelectorAll("[data-rrmostrar]").forEach(b => b.addEventListener("click", async () => {
+    const id = b.getAttribute("data-rrmostrar");
+    if (await salvar(Object.assign({}, R(), { ocultos: (R().ocultos || []).filter(x => x !== id) }))) renderRespostas();
+  }));
+  if ($("rrForm")){
+    $("rrCancelar").addEventListener("click", () => { tela.rrEditar = null; renderRespostas(); });
+    $("rrSalvar").addEventListener("click", async () => {
+      const titulo = $("rrTitulo").value.trim(), texto = $("rrTextoEd").value.trim(), cat = $("rrCatSel").value;
+      const msg = $("rrFormMsg"); msg.className = "msg erro";
+      if (!titulo){ msg.textContent = "Dê um nome à resposta."; return; }
+      if (!texto){ msg.textContent = "Escreva o texto."; return; }
+      if (!tela.rrEditar.id && (R().meus || []).length >= 80){ msg.textContent = "Limite de respostas atingido. Apague uma para criar outra."; return; }
+      const id = tela.rrEditar.id || ("m" + Date.now().toString(36));
+      const meus = (R().meus || []).filter(x => x.id !== id).concat([{ id, cat, titulo, texto }]);
+      if (await salvar(Object.assign({}, R(), { meus }), "rrFormMsg")){ tela.rrEditar = null; tela.rrCat = cat; tela.rrBusca = ""; renderRespostas(); $("rrMsg").className = "msg ok"; $("rrMsg").textContent = "Resposta salva ✓"; }
+    });
+  }
 }
 
 /* ---------- Confirmação e lembrete: a dona confirma o horário de um pedido e o cliente recebe a confirmação ---------- */

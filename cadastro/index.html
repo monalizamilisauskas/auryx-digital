@@ -720,17 +720,7 @@ document.addEventListener("visibilitychange", ()=>{
   if (document.visibilityState === "visible" && aguardandoMeta) setTimeout(()=>{ if (aguardandoMeta) semRespostaDaMeta(); }, 8000);
 });
 
-async function submitForm(){
-  document.getElementById("fatalMsg").classList.remove("show");
-  if (typeof FB === "undefined"){ showFatal("err.popup"); return; }
-  btnNext.disabled = true; btnNext.textContent = I18N[lang]["nav.sending"];
-  signupInfo = null;
-  aguardandoMeta = true;
-  saiuDaPagina = false;
-  relogioMeta = setTimeout(semRespostaDaMeta, 5 * 60 * 1000);
-  // A janela não abriu (bloqueador de pop-up, navegador do app): em 15 s sem sair desta página, avisa na hora.
-  setTimeout(()=>{ if (aguardandoMeta && !saiuDaPagina){ pararEspera(); showFatal("err.naoabriu"); } }, 15000);
-  FB.login(async (response)=>{
+async function concluirConexao(response){
     pararEspera();
     const code = response && response.authResponse && response.authResponse.code;
     if (!code){ showFatal("err.cancel"); return; }
@@ -758,7 +748,21 @@ async function submitForm(){
     }catch(e){
       showFatal("err.fatal");
     }
-  }, {
+}
+
+async function submitForm(){
+  document.getElementById("fatalMsg").classList.remove("show");
+  if (typeof FB === "undefined"){ showFatal("err.popup"); return; }
+  btnNext.disabled = true; btnNext.textContent = I18N[lang]["nav.sending"];
+  signupInfo = null;
+  aguardandoMeta = true;
+  saiuDaPagina = false;
+  relogioMeta = setTimeout(semRespostaDaMeta, 5 * 60 * 1000);
+  // A janela não abriu (bloqueador de pop-up, navegador do app): em 15 s sem sair desta página, avisa na hora.
+  setTimeout(()=>{ if (aguardandoMeta && !saiuDaPagina){ pararEspera(); showFatal("err.naoabriu"); } }, 15000);
+  // A Meta só aceita função comum no FB.login (função async é recusada: "Expression is of type asyncfunction, not function"
+  // e a janela nem abre). A parte que espera (await) fica numa função separada.
+  FB.login(function(response){ concluirConexao(response); }, {
     config_id: META_CONFIG_ID,
     response_type: "code",
     override_default_response_type: true,

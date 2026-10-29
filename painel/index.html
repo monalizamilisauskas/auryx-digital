@@ -182,6 +182,8 @@
   .usage-fill.alto{ background:linear-gradient(90deg, #c98a27, var(--bad)); }
   .usage-row{ display:flex; justify-content:space-between; font-size:13.5px; color:var(--muted); }
   .usage-row strong{ color:var(--parchment); font-size:15px; }
+  .pers-lista{ margin:6px 0 0; padding-left:20px; color:var(--parchment); line-height:1.6; font-size:14px; }
+  .pers-lista li{ margin-bottom:6px; }
   .planos{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-top:14px; }
   @media (max-width:700px){ .planos{ grid-template-columns:1fr; } }
   .plano{ border:1px solid var(--line); border-radius:10px; padding:16px; background:var(--panel-2); }
@@ -623,7 +625,9 @@ function render(d){
       html += '<p class="sub">Continue com a sua secretária depois do teste grátis. Depois de contratar, você personaliza as respostas e os serviços aqui no painel.</p><div class="planos">';
       (d.planos || []).forEach(p => {
         html += '<div class="plano"><div class="n">' + esc(p.nome) + '</div><div class="p">' + moeda(p.preco_brl) + '/mês</div>'
-          + '<div class="l">Até ' + Number(p.limite || 0).toLocaleString("pt-BR") + ' mensagens/mês</div>'
+          + '<div class="l">Até ' + Number(p.limite || 0).toLocaleString("pt-BR") + ' mensagens/mês'
+          + (PERGUNTAS_POR_PLANO[p.id] ? '<br>Personalizar: até ' + PERGUNTAS_POR_PLANO[p.id] + ' perguntas' : '')
+          + (p.id === 'premium' || p.id === 'completo' ? '<br>Edita as respostas prontas' : '') + '</div>'
           + (p.link ? '<a class="btn btn-primary" href="' + esc(linkPagamento(p.link, d.id)) + '" target="_blank" rel="noopener">Assinar</a>' : '')
           + '</div>';
       });
@@ -1005,6 +1009,8 @@ function renderAgenda(){
    Biblioteca padrão em painel/respostas.js; o que a dona muda (minhas, editadas, favoritas, escondidas) fica em
    businesses.respostas_rapidas. O texto vai pelo WhatsApp da equipe (wa.me), não pela API da Meta. */
 // Editar, esconder e criar respostas: Premium, Completo e teste (sem a informação, ainda não rodou o SQL: libera).
+// Perguntas frequentes por plano (planos.faq_limite), para os cartões de "Escolha seu plano".
+const PERGUNTAS_POR_PLANO = { light: 5, basico: 10, premium: 30, completo: 30 };
 function podeEditarRespostas(){ return respostasRapidas.pode_editar !== false; }
 function semAcento(s){ return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
 // Biblioteca do tipo de negócio (código do cadastro, ex.: "salao"; negócios antigos podem ter o nome escrito).
@@ -1709,7 +1715,12 @@ function renderPersonalizar(d){
   const box = $("personalizar");
   if (!d.pode_personalizar){
     box.innerHTML = '<h2>Personalizar sua secretária 🔒</h2>'
-      + '<p class="bloqueado">Disponível depois de assinar um plano: você edita as perguntas e respostas da secretária e escolhe quais serviços ela oferece aos seus clientes.</p>';
+      + '<p class="sub">Aqui você ajusta o que a secretária sabe sobre o seu negócio:</p>'
+      + '<ul class="pers-lista"><li><b>Perguntas frequentes:</b> as dúvidas que seus clientes sempre fazem e a resposta exata que ela deve dar (ex.: horário, preços, formas de pagamento).</li>'
+      + '<li><b>Serviços:</b> você escolhe quais serviços ela oferece aos clientes.</li></ul>'
+      + '<div class="aviso info" style="margin-top:14px;"><div class="txt"><b>No teste grátis, a secretária já usa as respostas que você preencheu no cadastro.</b>'
+      + 'Para mudar ou acrescentar perguntas, escolha um plano: Light até 5 perguntas, Básico até 10, Premium e Completo até 30.</div>'
+      + '<button class="btn btn-primary" type="button" data-ir="plano">Ver planos</button></div>';
     return;
   }
   faqEdicao = (Array.isArray(d.faq) ? d.faq : []).map(f => ({ pergunta: f.pergunta || "", resposta: f.resposta || "" }));

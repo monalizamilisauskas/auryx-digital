@@ -419,6 +419,7 @@ const I18N = {
     "err.cancel":"A conexão com o WhatsApp não foi concluída. Clique em \u201cConectar meu WhatsApp\u201d para tentar de novo.",
     "err.used":"Este número ou esta empresa já usou o teste grátis. Para contratar um plano, fale com a gente: hello@auryx.digital",
     "err.popup":"Não conseguimos abrir a janela da Meta. Libere pop-ups para auryx.digital e tente de novo.",
+    "err.naoabriu":"A janela da Meta não abriu. Libere pop-ups para auryx.digital (ícone na barra de endereço) ou abra auryx.digital/cadastro no Chrome ou no Safari, fora do Facebook e do Instagram, e tente de novo.",
     "err.timeout":"A janela da Meta não respondeu. Se ela não abriu, abra auryx.digital/cadastro no Chrome ou no Safari (fora do Facebook e do Instagram) e tente de novo.",
     "inapp.titulo":"Abra no navegador para conectar o WhatsApp",
     "inapp.texto":"Você está no navegador do Facebook, Instagram ou WhatsApp, e a janela da Meta pode não abrir aqui. Toque nos três pontinhos (⋯) e escolha \u201cAbrir no navegador\u201d, ou copie o link e cole no Chrome ou no Safari.",
@@ -473,6 +474,7 @@ const I18N = {
     "err.cancel":"The WhatsApp connection wasn't completed. Click \u201cConnect my WhatsApp\u201d to try again.",
     "err.used":"This number or business has already used the free trial. To subscribe to a plan, contact us: hello@auryx.digital",
     "err.popup":"We couldn't open the Meta window. Allow pop-ups for auryx.digital and try again.",
+    "err.naoabriu":"The Meta window didn't open. Allow pop-ups for auryx.digital (icon in the address bar) or open auryx.digital/cadastro in Chrome or Safari, outside Facebook and Instagram, and try again.",
     "err.timeout":"The Meta window didn't respond. If it didn't open, open auryx.digital/cadastro in Chrome or Safari (outside Facebook and Instagram) and try again.",
     "inapp.titulo":"Open in your browser to connect WhatsApp",
     "inapp.texto":"You are in the Facebook, Instagram or WhatsApp browser, and the Meta window may not open here. Tap the three dots (⋯) and choose \u201cOpen in browser\u201d, or copy the link and paste it into Chrome or Safari.",
@@ -709,9 +711,12 @@ document.getElementById("btnCopiarLink").addEventListener("click", async ()=>{
 // em vez de ficar "Conectando..." para sempre. Se a resposta chegar depois, o cadastro segue normalmente.
 let aguardandoMeta = false;
 let relogioMeta = null;
+let saiuDaPagina = false;   // a janela da Meta abriu (a página perdeu o foco ou ficou escondida)
+window.addEventListener("blur", ()=>{ if (aguardandoMeta) saiuDaPagina = true; });
 function pararEspera(){ aguardandoMeta = false; if (relogioMeta){ clearTimeout(relogioMeta); relogioMeta = null; } }
 function semRespostaDaMeta(){ if (!aguardandoMeta) return; pararEspera(); if (NAVEGADOR_INTERNO) document.getElementById("inappAviso").classList.add("show"); showFatal("err.timeout"); }
 document.addEventListener("visibilitychange", ()=>{
+  if (document.visibilityState === "hidden" && aguardandoMeta) saiuDaPagina = true;
   if (document.visibilityState === "visible" && aguardandoMeta) setTimeout(()=>{ if (aguardandoMeta) semRespostaDaMeta(); }, 8000);
 });
 
@@ -721,7 +726,10 @@ async function submitForm(){
   btnNext.disabled = true; btnNext.textContent = I18N[lang]["nav.sending"];
   signupInfo = null;
   aguardandoMeta = true;
+  saiuDaPagina = false;
   relogioMeta = setTimeout(semRespostaDaMeta, 5 * 60 * 1000);
+  // A janela não abriu (bloqueador de pop-up, navegador do app): em 15 s sem sair desta página, avisa na hora.
+  setTimeout(()=>{ if (aguardandoMeta && !saiuDaPagina){ pararEspera(); showFatal("err.naoabriu"); } }, 15000);
   FB.login(async (response)=>{
     pararEspera();
     const code = response && response.authResponse && response.authResponse.code;

@@ -625,7 +625,9 @@ function render(d){
       html += '<p class="sub">Continue com a sua secretária depois do teste grátis. Depois de contratar, você personaliza as respostas e os serviços aqui no painel.</p><div class="planos">';
       (d.planos || []).forEach(p => {
         html += '<div class="plano"><div class="n">' + esc(p.nome) + '</div><div class="p">' + moeda(p.preco_brl) + '/mês</div>'
-          + '<div class="l">Até ' + Number(p.limite || 0).toLocaleString("pt-BR") + ' mensagens/mês</div>'
+          + '<div class="l">Até ' + Number(p.limite || 0).toLocaleString("pt-BR") + ' mensagens/mês'
+          + (PERGUNTAS_POR_PLANO[p.id] ? '<br>Personalizar: até ' + PERGUNTAS_POR_PLANO[p.id] + ' perguntas' : '')
+          + (p.id === 'premium' || p.id === 'completo' ? '<br>Edita as respostas prontas' : '') + '</div>'
           + (p.link ? '<a class="btn btn-primary" href="' + esc(linkPagamento(p.link, d.id)) + '" target="_blank" rel="noopener">Assinar</a>' : '')
           + '</div>';
       });
@@ -1007,6 +1009,8 @@ function renderAgenda(){
    Biblioteca padrão em painel/respostas.js; o que a dona muda (minhas, editadas, favoritas, escondidas) fica em
    businesses.respostas_rapidas. O texto vai pelo WhatsApp da equipe (wa.me), não pela API da Meta. */
 // Editar, esconder e criar respostas: Premium, Completo e teste (sem a informação, ainda não rodou o SQL: libera).
+// Perguntas frequentes por plano (planos.faq_limite), para os cartões de "Escolha seu plano".
+const PERGUNTAS_POR_PLANO = { light: 5, basico: 10, premium: 30, completo: 30 };
 function podeEditarRespostas(){ return respostasRapidas.pode_editar !== false; }
 function semAcento(s){ return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
 // Biblioteca do tipo de negócio (código do cadastro, ex.: "salao"; negócios antigos podem ter o nome escrito).

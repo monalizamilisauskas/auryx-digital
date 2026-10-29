@@ -207,11 +207,24 @@
   .plan-price{ font-family:'Fraunces',serif; font-size:32px; font-weight:600; margin:12px 0 2px; }
   .plan-price sup{ font-size:14px; font-weight:500; top:-1.1em; }
   .plan-cycle{ font-size:12px; color:var(--muted); margin-bottom:20px; }
+  .plan-price{ margin-top:10px; }
   .plan-features{ list-style:none; padding:0; margin:0 0 24px; flex:1; }
   .plan-features li{ font-size:13px; color:var(--parchment); padding:8px 0; border-top:1px solid var(--line); display:flex; gap:8px; }
   .plan-features li:first-child{ border-top:none; }
   .plan-features li::before{ content:'—'; color:var(--gold); flex-shrink:0; }
   .plan .btn{ width:100%; text-align:center; padding:11px; font-size:13.5px; }
+  .plan-for{ font-size:13px; color:var(--muted); line-height:1.45; min-height:38px; }
+  .plan-volume{ margin:4px 0 18px; padding:10px 12px; border-radius:8px; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.22); }
+  .plan-volume b{ display:block; font-size:14.5px; color:var(--parchment); font-weight:600; }
+  .plan-volume span{ font-size:12px; color:var(--muted); }
+  .plan-features li.plus{ font-weight:600; }
+  .plan-features li.plus::before{ content:'+'; }
+  .plan-falar{ display:block; text-align:center; margin-top:10px; font-size:12.5px; color:var(--muted); text-decoration:underline; text-underline-offset:3px; }
+  .plan-falar:hover{ color:var(--parchment); }
+  .pricing-garantias{ list-style:none; padding:0; margin:28px auto 0; display:flex; flex-wrap:wrap; justify-content:center; gap:10px 22px; max-width:900px; }
+  .pricing-garantias li{ font-size:13.5px; color:var(--parchment); display:flex; gap:7px; align-items:center; }
+  .pricing-garantias li::before{ content:'✓'; color:#34D399; font-weight:700; }
+
 
   .trust-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--line); border:1px solid var(--line); margin-top:44px; }
   @media (max-width:920px){ .trust-grid{ grid-template-columns:repeat(2,1fr); } }
@@ -362,7 +375,7 @@
         <a href="/cadastro" class="btn btn-primary">Testar grátis por 7 dias</a>
         <a href="#demonstracao" class="btn btn-ghost">Ver como funciona</a>
       </div>
-      <p class="hero-note">Sem cartão de crédito. Sem taxa de setup.</p>
+      <p class="hero-note">Sem cartão de crédito. Sem taxa de implantação.</p>
     </div>
     <div class="hero-phone-wrap">
       <div class="phone">
@@ -565,68 +578,77 @@
     <div class="price-hero">
       <p class="eyebrow" style="justify-content:center;">Preço</p>
       <div class="big">A partir de <span class="gold">R$149/mês</span></div>
-      <p class="fine">Sem taxa de setup. Cancele quando quiser.</p>
+      <p class="fine">Sem taxa de implantação. Cancele quando quiser.</p>
       <div class="trial-callout">✦ Teste grátis por 7 dias, sem cartão de crédito</div>
     </div>
-    <p class="pricing-all">Em todos os planos, a secretária tira dúvidas, anota pedidos e horários, faz orçamentos, atende reclamações e emergências e passa a conversa para você quando precisa. O que muda entre os planos é o volume de mensagens e as ferramentas.</p>
+    <p class="pricing-all">Em todos os planos, a secretária tira dúvidas, anota pedidos e horários, faz orçamentos, atende reclamações e emergências e passa a conversa para você quando precisa. O que muda entre os planos é quantos atendimentos ela faz por mês e as ferramentas do painel.</p>
     <div class="pricing-grid">
       <div class="plan">
         <div class="plan-name">Light</div>
+        <div class="plan-for">Para quem atende sozinho e está começando</div>
         <div class="plan-price">R$149<sup>/mês</sup></div>
-        <div class="plan-cycle">sem taxa de setup</div>
+        <div class="plan-volume"><b>~20 a 40 atendimentos/mês</b><span>até 200 mensagens de clientes</span></div>
         <ul class="plan-features">
-          <li>Atende 24h no seu WhatsApp: tira dúvidas e anota os pedidos</li>
-          <li>Avisa você quando um cliente precisa de atenção</li>
-          <li>Painel com seus clientes e pedidos</li>
-          <li>Respostas prontas para o seu tipo de negócio: o painel sugere a certa para cada cliente, você confere e envia</li>
-          <li>Personalize a secretária: até 5 perguntas frequentes com as suas respostas e os serviços que ela oferece</li>
-          <li>Até 200 mensagens/mês</li>
+          <li>Secretária com IA 24h: tira dúvidas, faz orçamento, anota pedidos e horários</li>
+          <li>Confirma o horário com o cliente automaticamente</li>
+          <li>Mensagens prontas para o seu tipo de negócio</li>
+          <li>Avisa você quando o cliente precisa de uma pessoa</li>
+          <li>Painel com clientes, pedidos e o histórico das conversas</li>
+          <li>Ensine a secretária: até 5 perguntas com as suas respostas</li>
         </ul>
-        <a href="/cadastro" class="btn btn-ghost">Começar</a>
+        <a href="/cadastro" class="btn btn-ghost">Testar grátis por 7 dias</a>
+        <a href="mailto:hello@auryx.digital?subject=D%C3%BAvida%20sobre%20o%20plano%20Light" class="plan-falar">Prefiro falar antes</a>
       </div>
       <div class="plan">
         <div class="plan-name">Básico</div>
+        <div class="plan-for">Para quem atende clientes todos os dias</div>
         <div class="plan-price">R$497<sup>/mês</sup></div>
-        <div class="plan-cycle">sem taxa de setup</div>
+        <div class="plan-volume"><b>~50 a 100 atendimentos/mês</b><span>até 500 mensagens de clientes</span></div>
         <ul class="plan-features">
-          <li>Atende 24h no seu WhatsApp: tira dúvidas e anota os pedidos</li>
-          <li>Avisa você quando um cliente precisa de atenção</li>
-          <li>Painel com seus clientes e pedidos</li>
-          <li>Respostas prontas para o seu tipo de negócio: o painel sugere a certa para cada cliente, você confere e envia</li>
-          <li>Personalize a secretária: até 10 perguntas frequentes com as suas respostas (ex.: horário, preços, pagamento) e os serviços que ela oferece</li>
-          <li>Follow-up “Como foi”: até 20 por mês (em breve)</li>
-          <li>Até 500 mensagens/mês</li>
+          <li class="plus">Tudo do Light</li>
+          <li>Pós-atendimento: “Como foi o serviço?” no dia certo, com a mensagem pronta (20 clientes/mês)</li>
+          <li>Ensine a secretária: até 10 perguntas com as suas respostas</li>
         </ul>
-        <a href="/cadastro" class="btn btn-ghost">Começar</a>
+        <a href="/cadastro" class="btn btn-ghost">Testar grátis por 7 dias</a>
+        <a href="mailto:hello@auryx.digital?subject=D%C3%BAvida%20sobre%20o%20plano%20Básico" class="plan-falar">Prefiro falar antes</a>
       </div>
       <div class="plan featured">
-        <span class="plan-badge">Mais escolhido</span>
+        <span class="plan-badge">Recomendado</span>
         <div class="plan-name">Premium</div>
+        <div class="plan-for">Para quem vive de agenda</div>
         <div class="plan-price">R$797<sup>/mês</sup></div>
-        <div class="plan-cycle">sem taxa de setup</div>
+        <div class="plan-volume"><b>~150 a 300 atendimentos/mês</b><span>até 1.500 mensagens de clientes</span></div>
         <ul class="plan-features">
-          <li>Tudo do Básico</li>
-          <li>Marca horários direto na sua agenda do Google</li>
-          <li>Edite as respostas prontas e crie as suas (ex.: sua chave Pix)</li>
-          <li>Personalize ainda mais: até 30 perguntas frequentes</li>
-          <li>Follow-up “Como foi”: até 50 por mês (em breve)</li>
-          <li>Até 1.500 mensagens/mês</li>
+          <li class="plus">Tudo do Básico</li>
+          <li>Marca direto na sua agenda do Google</li>
+          <li>Escreva as suas próprias mensagens prontas (ex.: com a sua chave Pix)</li>
+          <li>Pós-atendimento para 50 clientes/mês</li>
+          <li>Até 30 perguntas com as suas respostas</li>
         </ul>
-        <a href="/cadastro" class="btn btn-primary">Começar</a>
+        <a href="/cadastro" class="btn btn-primary">Testar grátis por 7 dias</a>
+        <a href="mailto:hello@auryx.digital?subject=D%C3%BAvida%20sobre%20o%20plano%20Premium" class="plan-falar">Prefiro falar antes</a>
       </div>
       <div class="plan">
         <div class="plan-name">Completo</div>
+        <div class="plan-for">Para negócios com muito movimento</div>
         <div class="plan-price">R$1.197<sup>/mês</sup></div>
-        <div class="plan-cycle">sem taxa de setup</div>
+        <div class="plan-volume"><b>~500 a 1.000 atendimentos/mês</b><span>até 5.000 mensagens de clientes</span></div>
         <ul class="plan-features">
-          <li>Tudo do Premium</li>
-          <li>Follow-up completo: como foi, lembrete de retorno e agradecimento, sem limite (em breve)</li>
-          <li>Até 5.000 mensagens/mês, para negócios com muito movimento</li>
+          <li class="plus">Tudo do Premium</li>
+          <li>Pós-atendimento completo, sem limite: “Como foi?”, “Vamos marcar o próximo?” e “Obrigado pela preferência”</li>
         </ul>
-        <a href="/cadastro" class="btn btn-ghost">Começar</a>
+        <a href="/cadastro" class="btn btn-ghost">Testar grátis por 7 dias</a>
+        <a href="mailto:hello@auryx.digital?subject=D%C3%BAvida%20sobre%20o%20plano%20Completo" class="plan-falar">Prefiro falar antes</a>
       </div>
     </div>
-    <p class="pricing-note">Contam só as mensagens que os seus clientes enviam. As respostas da secretária não contam.</p>
+    <ul class="pricing-garantias">
+      <li>Sem taxa de implantação</li>
+      <li>7 dias grátis, sem cartão</li>
+      <li>WhatsApp oficial da Meta, sem risco de bloqueio</li>
+      <li>Você continua usando o seu WhatsApp no celular</li>
+      <li>Cancele quando quiser</li>
+    </ul>
+    <p class="pricing-note">Um atendimento tem em média de 5 a 10 mensagens do cliente. Contam só as mensagens que os seus clientes enviam: as respostas da secretária não contam.</p>
   </div>
 </section>
 

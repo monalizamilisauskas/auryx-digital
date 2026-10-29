@@ -182,7 +182,7 @@
   .usage-fill.alto{ background:linear-gradient(90deg, #c98a27, var(--bad)); }
   .usage-row{ display:flex; justify-content:space-between; font-size:13.5px; color:var(--muted); }
   .usage-row strong{ color:var(--parchment); font-size:15px; }
-  .planos{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:14px; }
+  .planos{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-top:14px; }
   @media (max-width:700px){ .planos{ grid-template-columns:1fr; } }
   .plano{ border:1px solid var(--line); border-radius:10px; padding:16px; background:var(--panel-2); }
   .plano .n{ font-family:'Fraunces',serif; font-size:17px; margin-bottom:4px; }
@@ -1745,12 +1745,12 @@ function renderFaqLista(){
     del.addEventListener("click", () => { faqEdicao.splice(i, 1); renderFaqLista(); });
     row.appendChild(del); row.appendChild(q); row.appendChild(a); lista.appendChild(row);
   });
-  // Limite do plano: Básico 10, Premium e Completo 30.
+  // Limite do plano: Light 5, Básico 10, Premium e Completo 30.
   const limite = Number((dadosPainel && dadosPainel.faq_limite) || 30);
   $("faqAdd").style.display = faqEdicao.length >= limite ? "none" : "inline-block";
   $("faqConta").textContent = "(" + faqEdicao.length + " de " + limite + ")"
     + (faqEdicao.length > limite ? " · o seu plano guarda só as " + limite + " primeiras" : "")
-    + (faqEdicao.length >= limite && limite < 30 ? " · no Premium, até 30" : "");
+    + (faqEdicao.length >= limite && limite < 30 ? (limite < 10 ? " · no Básico, até 10" : " · no Premium, até 30") : "");
 }
 
 async function salvarPersonalizacao(){

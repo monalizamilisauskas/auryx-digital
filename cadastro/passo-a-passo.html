@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auryx — Passo a passo: conectar o WhatsApp</title>
+<link rel="icon" type="image/png" href="/img/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#050A16; --panel:#0B1222; --line:rgba(148,163,184,0.16); --gold:#2563EB; --gold-bright:#60A5FA;
+         --parchment:#EEF2FF; --muted:#94A3B8; --ok:#34D399; --warn:#FBBF24; --radius:3px; }
+  *{box-sizing:border-box;}
+  body{ margin:0; color:var(--parchment); font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased;
+        background: radial-gradient(1200px 600px at 15% -10%, rgba(59,130,246,0.10), transparent 60%), var(--ink); }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; padding:24px 16px 0; max-width:720px; margin:0 auto; }
+  .brand-mark{ height:44px; width:auto; display:block; }
+  .langtoggle{ display:flex; border:1px solid var(--line); border-radius:20px; overflow:hidden; font-family:'IBM Plex Mono',monospace; font-size:12px; }
+  .langtoggle a{ color:var(--muted); padding:7px 14px; text-decoration:none; }
+  .langtoggle a.active{ background:var(--gold); color:#fff; }
+  main{ max-width:720px; margin:0 auto; padding:28px 16px 64px; }
+  .eyebrow{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.08em; color:var(--gold-bright); text-transform:uppercase; margin:0 0 10px; }
+  h1{ font-family:'Fraunces',serif; font-weight:600; font-size:clamp(28px,6vw,38px); line-height:1.15; margin:0 0 12px; }
+  .sub{ color:var(--muted); font-size:15.5px; line-height:1.6; margin:0 0 26px; }
+  h2{ font-family:'Fraunces',serif; font-weight:500; font-size:21px; margin:34px 0 12px; }
+  .box{ border:1px solid var(--line); border-radius:var(--radius); background:var(--panel); padding:16px 18px; margin-bottom:12px; }
+  .box ul{ margin:0; padding-left:20px; } .box li{ margin:6px 0; line-height:1.55; font-size:15px; }
+  ol.passos{ list-style:none; counter-reset:p; padding:0; margin:0; }
+  ol.passos > li{ counter-increment:p; position:relative; border:1px solid var(--line); border-radius:var(--radius);
+                  background:var(--panel); padding:16px 18px 16px 62px; margin-bottom:12px; line-height:1.6; font-size:15px; }
+  ol.passos > li::before{ content:counter(p); position:absolute; left:18px; top:16px; width:30px; height:30px; border-radius:50%;
+                  background:rgba(37,99,235,0.18); color:var(--gold-bright); font-family:'IBM Plex Mono',monospace;
+                  display:flex; align-items:center; justify-content:center; font-size:14px; }
+  ol.passos b.t{ display:block; font-size:16px; margin-bottom:4px; color:var(--parchment); }
+  .muted{ color:var(--muted); }
+  .pagamento{ border-color:rgba(251,191,36,0.45); background:rgba(251,191,36,0.06); }
+  .pagamento b.t{ color:var(--warn) !important; }
+  .tag{ display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.05em; padding:2px 8px;
+        border-radius:20px; background:rgba(52,211,153,0.14); color:var(--ok); margin-left:6px; vertical-align:2px; }
+  details{ border:1px solid var(--line); border-radius:var(--radius); background:var(--panel); padding:14px 18px; margin-bottom:10px; }
+  summary{ cursor:pointer; font-weight:600; font-size:15px; }
+  details p{ color:var(--muted); line-height:1.6; font-size:14.5px; margin:10px 0 0; }
+  .voltar{ display:inline-block; margin-top:28px; background:var(--gold); color:#fff; text-decoration:none; padding:13px 22px;
+           border-radius:24px; font-weight:600; font-size:15px; }
+  a{ color:var(--gold-bright); }
+  [data-lang]{ display:none; } html[lang="pt-BR"] [data-lang="pt"], html[lang="en"] [data-lang="en"]{ display:block; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a href="/"><img class="brand-mark" src="/img/logo-auryx-branca.png" alt="Auryx"></a>
+  <nav class="langtoggle"><a href="?lang=pt" id="lpt">PT</a><a href="?lang=en" id="len">EN</a></nav>
+</header>
+
+<main>
+<!-- ======================= PORTUGUÊS ======================= -->
+<div data-lang="pt">
+  <p class="eyebrow">Passo a passo · 3 a 5 minutos</p>
+  <h1>Como conectar o WhatsApp do seu negócio</h1>
+  <p class="sub">Depois de preencher o cadastro, o último passo é conectar o seu WhatsApp. Isso é feito numa janela oficial da Meta
+    (empresa dona do Facebook e do WhatsApp). Veja o que vai aparecer, tela por tela.</p>
+
+  <h2>Antes de começar</h2>
+  <div class="box"><ul>
+    <li>O número precisa estar no app <b>WhatsApp Business</b> (ícone com um "B"). O WhatsApp comum não pode ser conectado.</li>
+    <li>Deixe o <b>celular com o WhatsApp Business</b> por perto: você vai escanear um QR code.</li>
+    <li>Tenha o seu <b>login do Facebook</b>.</li>
+    <li>Use o <b>computador</b> ou o <b>Chrome/Safari</b> do celular. Se abriu o link pelo Facebook ou Instagram, abra
+      <b>auryx.digital/cadastro</b> no navegador.</li>
+  </ul></div>
+
+  <h2>As telas da Meta</h2>
+  <ol class="passos">
+    <li><b class="t">Clique em "Conectar meu WhatsApp"</b>Abre a janela da Meta. Se não abrir, libere pop-ups para auryx.digital.</li>
+    <li><b class="t">Entre com o seu Facebook</b>Confirme que quer continuar com a Auryx.</li>
+    <li><b class="t">Escolha a empresa</b>Escolha o portfólio empresarial do seu negócio ou crie um novo, com o nome do seu negócio.
+      <span class="muted">É só um cadastro da Meta para organizar a conta: não tem custo.</span></li>
+    <li><b class="t">Conecte o seu app WhatsApp Business</b>Escolha a opção de conectar o app WhatsApp Business que você já usa.
+      Aparece um <b>QR code</b> na tela.</li>
+    <li><b class="t">Escaneie o QR code com o celular</b>Abra o <b>WhatsApp Business</b> no celular e siga o aviso que aparece
+      para escanear o código. Se pedir para compartilhar o histórico das conversas, você pode aceitar ou pular.
+      <span class="muted">Você continua usando o app normalmente: as mensagens aparecem no celular e a secretária responde junto.</span></li>
+    <li class="pagamento"><b class="t">Forma de pagamento: pode pular <span class="tag">SEM CUSTO NO TESTE</span></b>
+      A Meta pode pedir um cartão. <b>Não é a Auryx cobrando</b> e <b>não é obrigatório</b>: clique em <b>pular / ignorar</b> e continue.
+      O seu teste grátis de 7 dias não depende disso.
+      <span class="muted">Se quiser, adicione depois na Meta: ela cobra centavos só por avisos automáticos enviados fora de uma
+      conversa (por exemplo, o lembrete na véspera do horário). As respostas da secretária ao cliente não dependem do cartão.</span></li>
+    <li><b class="t">"Sua conta está conectada"</b>Clique para <b>concluir</b>. A janela da Meta fecha sozinha.</li>
+    <li><b class="t">Pronto!</b>A página do cadastro mostra <b>"Seu teste grátis começou"</b> e você recebe um <b>e-mail com o acesso ao
+      painel</b> (olhe também o spam). A sua secretária já está atendendo: mande uma mensagem de outro celular para testar.</li>
+  </ol>
+
+  <h2>Dúvidas comuns</h2>
+  <details><summary>A janela da Meta não abriu</summary><p>Libere pop-ups para auryx.digital (ícone na barra de endereço) ou abra
+    auryx.digital/cadastro no Chrome ou no Safari, fora do Facebook e do Instagram.</p></details>
+  <details><summary>Uso o WhatsApp comum, não o Business</summary><p>Baixe o WhatsApp Business (grátis) e passe o número do negócio
+    para ele: o próprio app transfere as conversas. Depois volte ao cadastro.</p></details>
+  <details><summary>Não apareceu o QR code</summary><p>Se o número já foi conectado antes, a Meta pode pular essa etapa. Se a janela
+    disser que está conectado, está tudo certo.</p></details>
+  <details><summary>Fechei a janela no meio</summary><p>Sem problema: volte ao cadastro e clique de novo em "Conectar meu WhatsApp".
+    Os seus dados continuam preenchidos.</p></details>
+  <details><summary>Preciso pagar alguma coisa para testar?</summary><p>Não. São 7 dias grátis, sem cartão. No fim do teste você
+    escolhe um plano no painel, se quiser continuar.</p></details>
+  <details><summary>Ainda tenho dúvida</summary><p>Fale com a gente: <a href="mailto:hello@auryx.digital">hello@auryx.digital</a>.</p></details>
+
+  <a class="voltar" href="/cadastro">← Voltar para o cadastro</a>
+</div>
+
+<!-- ======================= ENGLISH ======================= -->
+<div data-lang="en">
+  <p class="eyebrow">Step by step · 3 to 5 minutes</p>
+  <h1>How to connect your business WhatsApp</h1>
+  <p class="sub">After filling in the sign-up form, the last step is connecting your WhatsApp. It happens in an official Meta window
+    (the company behind Facebook and WhatsApp). Here's what you'll see, screen by screen.</p>
+
+  <h2>Before you start</h2>
+  <div class="box"><ul>
+    <li>The number must be on the <b>WhatsApp Business</b> app (icon with a "B"). Regular WhatsApp can't be connected.</li>
+    <li>Keep the <b>phone with WhatsApp Business</b> nearby: you'll scan a QR code.</li>
+    <li>Have your <b>Facebook login</b> ready.</li>
+    <li>Use a <b>computer</b> or <b>Chrome/Safari</b> on your phone. If you opened the link inside Facebook or Instagram, open
+      <b>auryx.digital/cadastro</b> in your browser.</li>
+  </ul></div>
+
+  <h2>The Meta screens</h2>
+  <ol class="passos">
+    <li><b class="t">Click "Connect my WhatsApp"</b>The Meta window opens. If it doesn't, allow pop-ups for auryx.digital.</li>
+    <li><b class="t">Log in with Facebook</b>Confirm you want to continue with Auryx.</li>
+    <li><b class="t">Choose your business</b>Pick your business portfolio or create a new one with your business name.
+      <span class="muted">It's just a Meta record to organize the account: no cost.</span></li>
+    <li><b class="t">Connect your WhatsApp Business app</b>Choose the option to connect the WhatsApp Business app you already use.
+      A <b>QR code</b> appears.</li>
+    <li><b class="t">Scan the QR code with your phone</b>Open <b>WhatsApp Business</b> on your phone and follow the prompt to scan the code.
+      If it asks to share chat history, you can accept or skip.
+      <span class="muted">You keep using the app as usual: messages show up on your phone and the assistant replies alongside you.</span></li>
+    <li class="pagamento"><b class="t">Payment method: you can skip it <span class="tag">FREE DURING TRIAL</span></b>
+      Meta may ask for a card. <b>This is not Auryx charging you</b> and it's <b>not required</b>: click <b>skip</b> and continue.
+      Your 7-day free trial doesn't depend on it.
+      <span class="muted">You can add it later at Meta: it charges cents only for automatic notices sent outside a conversation
+      (for example, the reminder the day before an appointment). The assistant's replies to customers don't depend on the card.</span></li>
+    <li><b class="t">"Your account is connected"</b>Click to <b>finish</b>. The Meta window closes by itself.</li>
+    <li><b class="t">Done!</b>The sign-up page shows <b>"Your free trial has started"</b> and you get an <b>email with access to your
+      dashboard</b> (check spam too). Your assistant is already answering: send a message from another phone to test it.</li>
+  </ol>
+
+  <h2>Common questions</h2>
+  <details><summary>The Meta window didn't open</summary><p>Allow pop-ups for auryx.digital (icon in the address bar) or open
+    auryx.digital/cadastro in Chrome or Safari, outside Facebook and Instagram.</p></details>
+  <details><summary>I use regular WhatsApp, not Business</summary><p>Download WhatsApp Business (free) and move your business number to it:
+    the app transfers your chats. Then come back to sign-up.</p></details>
+  <details><summary>The QR code didn't show up</summary><p>If the number was connected before, Meta may skip that step. If the window says
+    it's connected, you're all set.</p></details>
+  <details><summary>I closed the window halfway</summary><p>No problem: go back to sign-up and click "Connect my WhatsApp" again.
+    Your details are still filled in.</p></details>
+  <details><summary>Do I need to pay anything to try it?</summary><p>No. 7 days free, no card. At the end of the trial you pick a plan
+    in the dashboard if you want to continue.</p></details>
+  <details><summary>Still have questions?</summary><p>Contact us: <a href="mailto:hello@auryx.digital">hello@auryx.digital</a>.</p></details>
+
+  <a class="voltar" href="/cadastro?lang=en">← Back to sign-up</a>
+</div>
+</main>
+<script>
+  var lang = new URLSearchParams(location.search).get("lang") === "en" ? "en" : "pt";
+  document.documentElement.setAttribute("lang", lang === "en" ? "en" : "pt-BR");
+  document.getElementById(lang === "en" ? "len" : "lpt").classList.add("active");
+</script>
+</body>
+</html>

@@ -126,3 +126,18 @@ Razão social + CNPJ + endereço/contato, além de Privacidade · Termos · Excl
 1. Você aprova (ou ajusta) item por item.
 2. Eu aplico só o aprovado, mostro as imagens antes/depois e abro o pedido de publicação — publica só com o seu merge.
 3. Etapa 2 (copywriting e conversão: headline, oferta, objeções, provas, CTAs) começa depois, com a página publicada em **https://auryx.digital**.
+
+---
+
+## Aplicado (versão para revisão visual) — textos aprovados pela dona
+
+Aplicados exatamente como aprovados: itens 1 a 15 e 18 (rodapé). Headline, CTAs, preços e estrutura mantidos.
+
+Três pontos aplicados com ajuste, para não prometer algo que o sistema não faz (aguardando confirmação):
+- **16 Pagamento:** saiu "Os custos da Meta já estão incluídos no seu plano". Ficou: "…paga uma mensalidade com segurança pelo Stripe, sem taxas extras ou cobranças inesperadas."
+- **17 Taxas da Meta:** saiu "A Auryx assume todos os custos da Meta". Ficou: "Não. Para usar sua Secretária de IA, você paga apenas a mensalidade do plano escolhido e não precisa cadastrar nenhuma forma de pagamento na Meta. Tudo isso respeitando os limites de uso do seu plano."
+  Motivo: hoje a Auryx não paga mensagens da Meta pelos clientes (só seria possível com um parceiro oficial da Meta, pendência A7), e os Termos de uso dizem que a Meta pode cobrar o cliente se ele cadastrar cartão. A versão ajustada é verdadeira: sem cartão na Meta, o cliente não paga nada a ela.
+- **Itens fora da lista que ainda prometiam demais (ajuste mínimo):** "Antes e depois" → "Agenda organizada sozinha, sem sua intervenção" virou "Pedidos de horário organizados, prontos para você confirmar"; Confiança → o cartão "Ela não inventa respostas" virou "Usa as informações do seu negócio · Atende com o que você cadastrou e passa para você o que precisa da sua atenção".
+
+Pendente antes de publicar: endereço comercial no rodapé.
+Para decidir (etapa 2): o site usa "AI Secretária" (topo, CTAs) e os textos novos usam "Secretária de IA".

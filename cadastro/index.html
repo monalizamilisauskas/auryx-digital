@@ -670,7 +670,11 @@ window.fbAsyncInit = function(){
 };
 
 // A janela da Meta avisa o fim do fluxo por mensagem: número, conta WhatsApp e empresa escolhidos.
+// Pode chegar mais de uma mensagem; fica a de conclusão (FINISH...) e os ids que vierem em qualquer uma.
 let signupInfo = null;
+let eventosMeta = [];        // diagnóstico: só o nome do evento e os nomes dos campos, sem valores
+let respostaMeta = null;     // a resposta do FB.login (null = ainda não voltou)
+let relogioSemRetorno = null;
 window.addEventListener("message", (event)=>{
   let host = "";
   try{ host = new URL(event.origin).hostname; }catch(e){ return; }
@@ -678,12 +682,34 @@ window.addEventListener("message", (event)=>{
   let msg;
   try{ msg = typeof event.data === "string" ? JSON.parse(event.data) : event.data; }catch(e){ return; }
   if (!msg || msg.type !== "WA_EMBEDDED_SIGNUP") return;
-  signupInfo = { evento: msg.event || "", dados: msg.data || {} };
+  const evento = msg.event || "";
+  const dados = msg.data || {};
+  // Em cancelamento ou erro, a Meta diz em que passo parou (current_step) e o erro: ajudam no diagnóstico e não são dados pessoais.
+  const passo = dados.current_step || dados.error_message || dados.error_code || "";
+  eventosMeta.push(evento + "[" + Object.keys(dados).join(",") + "]" + (passo ? "=" + String(passo).slice(0, 80) : ""));
+  console.log("[cadastro] mensagem da Meta:", evento, Object.keys(dados));
+  const antes = signupInfo ? signupInfo.dados : {};
+  const concluido = /^FINISH/.test(evento);
+  if (!signupInfo || concluido || !/^FINISH/.test(signupInfo.evento)){
+    signupInfo = { evento: evento, dados: Object.assign({}, antes, dados) };
+  } else {
+    signupInfo.dados = Object.assign({}, dados, antes);
+  }
+  // A Meta concluiu, mas a resposta do FB.login não voltou: em 60 s envia o que tem, para não perder o cadastro.
+  if (concluido && aguardandoMeta && !relogioSemRetorno){
+    relogioSemRetorno = setTimeout(()=>{ if (!respostaMeta) concluirConexao(null, "sem_retorno_login"); }, 60000);
+  }
 });
 
-function showFatal(key){
+function showFatal(key, detalhe){
   const el = document.getElementById("fatalMsg");
   el.textContent = I18N[lang][key] || I18N[lang]["err.fatal"];
+  if (detalhe){
+    const d = document.createElement("small");
+    d.style.cssText = "display:block;margin-top:6px;opacity:.7;font-size:12px";
+    d.textContent = (lang === "en" ? "Detail: " : "Detalhe: ") + detalhe;
+    el.appendChild(d);
+  }
   el.classList.add("show");
   btnNext.disabled = false;
   updateNavLabels();
@@ -717,24 +743,39 @@ function pararEspera(){ aguardandoMeta = false; if (relogioMeta){ clearTimeout(r
 function semRespostaDaMeta(){ if (!aguardandoMeta) return; pararEspera(); if (NAVEGADOR_INTERNO) document.getElementById("inappAviso").classList.add("show"); showFatal("err.timeout"); }
 document.addEventListener("visibilitychange", ()=>{
   if (document.visibilityState === "hidden" && aguardandoMeta) saiuDaPagina = true;
-  if (document.visibilityState === "visible" && aguardandoMeta) setTimeout(()=>{ if (aguardandoMeta) semRespostaDaMeta(); }, 8000);
+  // Voltou para esta página sem a Meta ter mandado nada: a janela foi fechada. Se a Meta já mandou algo, o fluxo segue.
+  if (document.visibilityState === "visible" && aguardandoMeta) setTimeout(()=>{ if (aguardandoMeta && !eventosMeta.length) semRespostaDaMeta(); }, 8000);
 });
 
-async function concluirConexao(response){
+let enviando = false;
+async function concluirConexao(response, motivo){
+    if (enviando) return;
+    enviando = true;
     pararEspera();
-    const code = response && response.authResponse && response.authResponse.code;
-    if (!code){ showFatal("err.cancel"); return; }
-    const info = await waitForSignupInfo(10000);
+    if (relogioSemRetorno){ clearTimeout(relogioSemRetorno); relogioSemRetorno = null; }
+    const code = (response && response.authResponse && response.authResponse.code) || "";
+    console.log("[cadastro] resposta do login:", response ? response.status : "(não voltou)", code ? "com code" : "sem code");
+    const info = await waitForSignupInfo(code ? 10000 : 3000);
     const evento = info ? info.evento : "";
-    if (!info || evento === "CANCEL" || evento === "ERROR"){ showFatal("err.cancel"); return; }
-    const d = info.dados;
+    const d = info ? info.dados : {};
+    const diagnostico = [
+      motivo || "login_voltou",
+      "status=" + (response ? response.status : "-"),
+      code ? "code=sim" : "code=nao",
+      "eventos=" + (eventosMeta.join(" ") || "nenhum")
+    ].join(" | ");
+    console.log("[cadastro] diagnóstico:", diagnostico);
+    // Cancelou de verdade (sem code e sem conclusão da Meta): não envia nada.
+    if (!code && !/^FINISH/.test(evento)){ enviando = false; showFatal("err.cancel", diagnostico); return; }
+    // Envia mesmo sem todos os dados: o servidor registra o passo que faltou (e recusa o cadastro incompleto).
     const data = Object.assign(collectData(), {
       faq_extra: faqExtraPreenchido(),
       code: code,
       evento: evento,
       phone_number_id: d.phone_number_id || "",
       waba_id: d.waba_id || "",
-      meta_business_id: d.business_id || ""
+      meta_business_id: d.business_id || "",
+      diagnostico: diagnostico
     });
     try{
       const res = await fetch(CADASTRO_WEBHOOK, {
@@ -742,11 +783,18 @@ async function concluirConexao(response){
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify(data)
       });
+      console.log("[cadastro] servidor respondeu:", res.status);
       if (res.status === 409){ showFatal("err.used"); return; }
-      if (!res.ok) throw new Error("bad status");
+      if (!res.ok){
+        let r = {};
+        try{ r = await res.json(); }catch(e){}
+        throw new Error("servidor " + res.status + (r.faltando ? " faltando=" + r.faltando.join(",") : (r.motivo ? " " + r.motivo : "")));
+      }
       showStep("success");
     }catch(e){
-      showFatal("err.fatal");
+      showFatal("err.fatal", diagnostico + " | " + (e && e.message ? e.message : "falha de rede"));
+    }finally{
+      enviando = false;
     }
 }
 
@@ -755,14 +803,18 @@ async function submitForm(){
   if (typeof FB === "undefined"){ showFatal("err.popup"); return; }
   btnNext.disabled = true; btnNext.textContent = I18N[lang]["nav.sending"];
   signupInfo = null;
+  eventosMeta = [];
+  respostaMeta = null;
+  if (relogioSemRetorno){ clearTimeout(relogioSemRetorno); relogioSemRetorno = null; }
   aguardandoMeta = true;
   saiuDaPagina = false;
-  relogioMeta = setTimeout(semRespostaDaMeta, 5 * 60 * 1000);
+  // O fluxo com QR code (WhatsApp Business no celular) pode demorar: espera até 20 minutos.
+  relogioMeta = setTimeout(semRespostaDaMeta, 20 * 60 * 1000);
   // A janela não abriu (bloqueador de pop-up, navegador do app): em 15 s sem sair desta página, avisa na hora.
   setTimeout(()=>{ if (aguardandoMeta && !saiuDaPagina){ pararEspera(); showFatal("err.naoabriu"); } }, 15000);
   // A Meta só aceita função comum no FB.login (função async é recusada: "Expression is of type asyncfunction, not function"
   // e a janela nem abre). A parte que espera (await) fica numa função separada.
-  FB.login(function(response){ concluirConexao(response); }, {
+  FB.login(function(response){ respostaMeta = response || {}; concluirConexao(response); }, {
     config_id: META_CONFIG_ID,
     response_type: "code",
     override_default_response_type: true,

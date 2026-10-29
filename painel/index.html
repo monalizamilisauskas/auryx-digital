@@ -349,6 +349,7 @@
   .hist-texto{ white-space:pre-wrap; word-wrap:break-word; } .hist-hora{ font-size:10.5px; color:var(--muted); text-align:right; margin-top:2px; }
   .hist-vazio{ color:var(--muted); font-size:14px; text-align:center; margin:auto; }
   .hist-rodape{ font-size:12px; color:var(--muted); padding:10px 16px; border-top:1px solid var(--line); }
+  .fu-vence{ border-left:3px solid var(--amber); padding-left:12px; }
   .ag-topo{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
   .ag-topo .sub b{ color:var(--parchment); font-weight:600; }
   .ag-info{ display:flex; gap:14px; align-items:center; min-width:0; }
@@ -482,7 +483,8 @@ let faqEdicao = [];
 // O que está aberto na tela continua aberto quando o painel atualiza.
 // Conta Google da Auryx (a mesma da credencial do Google Agenda no n8n): o dono compartilha a agenda dele com ela.
 const AGENDA_AURYX = "";
-// Envio do follow-up: liga quando a Meta aprovar o modelo de mensagem e o n8n estiver enviando.
+// Envio automático do follow-up pelo n8n (depende de cartão na conta da Meta do cliente: pendente). Desligado, vale o modo
+// "Eu mesma envio": no dia, o painel mostra a mensagem pronta e o dono envia pelo próprio WhatsApp, sem custo.
 const FOLLOWUP_ATIVO = false;
 // Confirmação e lembrete de horário pelo WhatsApp: muda para true quando o envio estiver ligado no n8n (modelos aprovados na Meta).
 const AVISOS_ATIVO = true;
@@ -569,7 +571,7 @@ function render(d){
   ];
   menu.push(["agenda", "Agendamentos", hoje]);   // sempre no menu; vazio, explica como começar
   if (usaPedidos) menu.push(["pedidos", "Pedidos", pend]);
-  menu.push(["followup", "Follow-up", 0]);
+  menu.push(["followup", "Follow-up", followupsParaEnviar().length]);
   menu.push(["respostas", "Respostas rápidas", 0]);
   menu.push(
     ["personalizar", "Personalizar" + (d.pode_personalizar ? "" : " 🔒"), 0],
@@ -586,7 +588,7 @@ function render(d){
     conversas: ["Clientes esperando", "Conversas que a secretária pausou para alguém da equipe responder"],
     pedidos: ["Pedidos", "Orçamentos e pedidos que a secretária coletou para a sua equipe"],
     respostas: ["Respostas rápidas", "Textos prontos para a sua equipe responder os clientes pelo WhatsApp"],
-    followup: ["Follow-up", "Escolha o dia e a secretária manda uma mensagem para saber como foi"],
+    followup: ["Follow-up", FOLLOWUP_ATIVO ? "Escolha o dia e a secretária manda uma mensagem para saber como foi" : "Escolha o dia e o painel te lembra com a mensagem pronta para enviar"],
     personalizar: ["Personalizar", "Perguntas, respostas e serviços que a secretária usa"],
     dados: ["Seus dados", "Nome do negócio, seu nome e WhatsApp de avisos"],
     plano: [emTeste ? "Escolher plano" : "Plano", emTeste ? "Continue com a sua secretária depois do teste grátis" : "Seu plano atual"],
@@ -599,6 +601,11 @@ function render(d){
   if (convs.length && tela.view !== "conversas"){
     avisos += '<div class="aviso atencao">' + icone("alerta") + '<div class="txt"><b>' + (convs.length === 1 ? '1 cliente esperando atendimento' : convs.length + ' clientes esperando atendimento') + '</b>'
       + 'A secretária pausou essas conversas para alguém da sua equipe responder.</div><button class="btn btn-primary" type="button" data-ir="conversas">Ver clientes</button></div>';
+  }
+  const fuHoje = followupsParaEnviar();
+  if (fuHoje.length && tela.view !== "followup"){
+    avisos += '<div class="aviso info">' + icone("followup") + '<div class="txt"><b>' + (fuHoje.length === 1 ? '1 follow-up para enviar hoje' : fuHoje.length + ' follow-ups para enviar hoje') + '</b>'
+      + 'A mensagem já está pronta: é só tocar em Enviar no WhatsApp.</div><button class="btn btn-primary" type="button" data-ir="followup">Ver follow-ups</button></div>';
   }
   if (emTeste && trialTxt && tela.view === "inicio"){
     avisos += '<div class="aviso info">' + icone("info") + '<div class="txt"><b>' + esc(trialTxt) + '</b>'
@@ -821,6 +828,15 @@ function textoFollowup(nome, assunto, tipo){
 function tiposDoPlano(){ const t = (dadosPainel && dadosPainel.followup_tipos) || []; return t.length ? t : ["como_foi"]; }
 function tipoInicial(){ return tiposDoPlano()[0]; }
 function limiteAtingido(){ const d = dadosPainel; return d.followup_limite_mes != null && Number(d.followups_mes || 0) >= Number(d.followup_limite_mes); }
+// Follow-ups do modo "Eu mesma envio" que já chegaram no dia (ou passaram) e ainda não foram enviados.
+function followupsParaEnviar(){
+  if (FOLLOWUP_ATIVO || !dadosPainel) return [];
+  const hoje = hojeNegocio(0);
+  return (dadosPainel.followups || []).filter(f => f.status === "agendado" && String(f.data_envio).slice(0, 10) <= hoje);
+}
+function linkFollowup(f){
+  return "https://wa.me/" + String(f.remetente || "").replace(/\D/g, "") + "?text=" + encodeURIComponent(textoFollowup(f.nome, f.assunto, f.tipo));
+}
 function hojeNegocio(dias){
   const tz = dadosPainel.timezone || "America/Sao_Paulo";
   return new Date(Date.now() + (dias || 0) * 86400000).toLocaleDateString("en-CA", { timeZone: tz });
@@ -841,11 +857,10 @@ function renderFollowup(){
     html += '<div class="aviso info" style="margin-bottom:16px;">' + icone("info") + '<div class="txt"><b>O follow-up não está no seu plano</b>'
       + 'Com ele, você escolhe o dia e a secretária pergunta ao cliente como foi o serviço. Assim você cuida de cada cliente e fica sabendo de qualquer problema antes de virar reclamação. Faz parte de todos os planos.</div>'
       + '<button class="btn" type="button" data-ir="plano">Ver planos</button></div>';
-  } else if (!FOLLOWUP_ATIVO){
-    html += '<div class="aviso info" style="margin-bottom:16px;">' + icone("info") + '<div class="txt"><b>Os envios começam em breve</b>'
-      + 'Estamos finalizando a aprovação da mensagem no WhatsApp. Você já pode agendar: os follow-ups ficam guardados e saem nas datas marcadas assim que a aprovação sair.</div></div>';
   }
-  html += '<p class="sub">No dia que você escolher, a secretária manda uma mensagem para o cliente perguntando como foi. Se ele responder, a conversa continua com ela normalmente.</p>'
+  html += '<p class="sub">' + (FOLLOWUP_ATIVO
+      ? 'No dia que você escolher, a secretária manda uma mensagem para o cliente perguntando como foi. Se ele responder, a conversa continua com ela normalmente.'
+      : 'Você escolhe o dia. Nesse dia, o follow-up aparece aqui (e no Início) com a mensagem pronta: toque em <b>Enviar no WhatsApp</b> e mande pelo seu WhatsApp. Sem custo. Se o cliente responder, a secretária continua a conversa.') + '</p>'
     + '<details class="ajuda"><summary>Exemplos</summary><p>São três tipos de mensagem: <b>Como foi</b>, <b>Lembrete de retorno</b> e <b>Agradecimento</b>. Você completa a parte do meio:</p><ul>'
     + '<li>Agência: "Como foi <b>a sua viagem para Miami</b>?" no dia seguinte à volta.</li>'
     + '<li>Salão: "Como foi <b>o seu corte e escova</b>?" dois dias depois.</li>'
@@ -868,8 +883,8 @@ function renderFollowup(){
         + '<div class="campo"><label for="fuFone">WhatsApp do cliente</label><input id="fuFone" list="fuClientes" inputmode="tel" placeholder="Escolha um cliente ou digite o número com DDI e DDD" value="' + esc(f.remetente) + '"><datalist id="fuClientes">' + opcoes + '</datalist></div>'
         + '<div class="campo"><label for="fuNome">Nome do cliente</label><input id="fuNome" maxlength="60" placeholder="Ex.: Helena" value="' + esc(f.nome) + '"></div>'
         + '<div class="campo"><label for="fuAssunto">' + esc(T.rotulo) + '</label><input id="fuAssunto" maxlength="80" placeholder="Ex.: ' + esc(exemploAssunto(d.tipo_negocio, f.tipo)) + '" value="' + esc(f.assunto) + '"></div>'
-        + '<div class="campo"><label for="fuData">Dia do envio</label><input id="fuData" type="date" min="' + hojeNegocio(0) + '" value="' + esc(f.data_envio) + '"><small>A mensagem sai de manhã, no dia escolhido.</small></div>'
-        + '<div class="fu-previa"><span>Como o cliente vai receber:</span><p id="fuPrevia">' + esc(textoFollowup(f.nome, f.assunto, f.tipo)) + '</p></div>'
+        + '<div class="campo"><label for="fuData">Dia do envio</label><input id="fuData" type="date" min="' + hojeNegocio(0) + '" value="' + esc(f.data_envio) + '"><small>' + (FOLLOWUP_ATIVO ? 'A mensagem sai de manhã, no dia escolhido.' : 'Nesse dia, o painel te lembra com a mensagem pronta para você enviar.') + '</small></div>'
+        + '<div class="fu-previa"><span>' + (FOLLOWUP_ATIVO ? 'Como o cliente vai receber:' : 'Mensagem que fica pronta para você enviar:') + '</span><p id="fuPrevia">' + esc(textoFollowup(f.nome, f.assunto, f.tipo)) + '</p></div>'
         + '<div class="acoes"><button class="btn btn-primary" type="button" id="fuSalvar">' + (f.id ? 'Salvar alteração' : 'Agendar follow-up') + '</button>'
         + '<button class="btn" type="button" id="fuCancelarForm">Cancelar</button><span class="msg" id="fuMsg"></span></div></div>';
     } else {
@@ -884,19 +899,27 @@ function renderFollowup(){
     const conta = (s) => todos.filter(f => f.status === s || (s === "enviado" && f.status === "falhou")).length;
     html += '<div class="sec-corpo"><div class="abas">';
     [["agendado", "Agendados"], ["enviado", "Enviados"], ["cancelado", "Cancelados"]].forEach(([s, n]) => {
-      html += '<button type="button" class="aba' + (tela.abaFu === s ? ' ativa' : '') + '" data-abafu="' + s + '">' + n + ' (' + conta(s) + ')</button>';
+      html += '<button type="button" class="aba' + (tela.abaFu === s ? ' ativa' : '') + '" data-abafu="' + s + '">' + n + ' (' + conta(s) + ')'
+        + (s === "agendado" && followupsParaEnviar().length ? ' <span class="ponto" title="Para enviar hoje"></span>' : '') + '</button>';
     });
     html += '</div>';
     let lista = todos.filter(f => f.status === tela.abaFu || (tela.abaFu === "enviado" && f.status === "falhou"));
     if (tela.abaFu === "agendado") lista = lista.slice().sort((a, b) => String(a.data_envio).localeCompare(String(b.data_envio)));
+    else lista = lista.slice().sort((a, b) => String(b.enviado_em || b.data_envio).localeCompare(String(a.enviado_em || a.data_envio)));
     if (!lista.length) html += '<p class="sub" style="margin:0;">Nenhum follow-up aqui.</p>';
     lista.forEach(f => {
-      const dia = new Date(f.data_envio + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" });
-      html += '<div class="pedido"><div class="ped-linha" style="cursor:default;"><span><b>' + esc(dia) + '</b> · ' + esc(f.nome || ("+" + f.remetente))
-        + ' <span class="quem">· ' + esc((TIPOS_FU[f.tipo] || TIPOS_FU.como_foi).nome) + ': ' + esc(f.assunto) + '</span></span><span class="lado"><span class="status ' + esc(f.status) + '">' + esc(STATUS_FU[f.status] || f.status) + '</span></span></div>';
+      const dia = new Date(String(f.data_envio).slice(0, 10) + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" });
+      const vence = !FOLLOWUP_ATIVO && f.status === "agendado" && String(f.data_envio).slice(0, 10) <= hojeNegocio(0);
+      const selo = vence ? '<span class="chip alerta">Enviar hoje</span>' : '<span class="status ' + esc(f.status) + '">' + esc(STATUS_FU[f.status] || f.status) + '</span>';
+      html += '<div class="pedido' + (vence ? ' fu-vence' : '') + '"><div class="ped-linha" style="cursor:default;"><span><b>' + esc(dia) + '</b> · ' + esc(f.nome || foneBR(f.remetente))
+        + ' <span class="quem">· ' + esc((TIPOS_FU[f.tipo] || TIPOS_FU.como_foi).nome) + ': ' + esc(f.assunto) + '</span></span><span class="lado">' + selo + '</span></div>';
+      if (vence) html += '<div class="fu-previa" style="margin-top:8px;"><p>' + esc(textoFollowup(f.nome, f.assunto, f.tipo)) + '</p></div>';
       if (f.status === "agendado"){
-        html += '<div class="ped-acoes"><button class="btn" type="button" data-fu-editar="' + f.id + '">Alterar</button>'
-          + '<button class="btn" type="button" data-fu-cancelar="' + f.id + '">Cancelar envio</button><span class="msg" id="fuMsg' + f.id + '"></span></div>';
+        html += '<div class="ped-acoes">'
+          + (FOLLOWUP_ATIVO ? '' : '<a class="btn' + (vence ? ' btn-primary' : '') + '" href="' + esc(linkFollowup(f)) + '" target="_blank" rel="noopener" data-fu-enviar="' + f.id + '">'
+              + (vence ? 'Enviar no WhatsApp' : 'Enviar agora') + '</a>')
+          + '<button class="btn" type="button" data-fu-editar="' + f.id + '">Alterar</button>'
+          + '<button class="btn-link" type="button" data-fu-cancelar="' + f.id + '">Cancelar</button><span class="msg" id="fuMsg' + f.id + '"></span></div>';
       }
       html += '</div>';
     });
@@ -926,6 +949,17 @@ function renderFollowup(){
     if (f) { tela.fuForm = { id: f.id, tipo: f.tipo || "como_foi", remetente: f.remetente, nome: f.nome || "", assunto: f.assunto, data_envio: String(f.data_envio).slice(0, 10) }; renderFollowup(); window.scrollTo({ top: 0 }); }
   }));
   box.querySelectorAll("[data-fu-cancelar]").forEach(b => b.addEventListener("click", () => cancelarFollowup(b)));
+  // O link abre o WhatsApp com a mensagem pronta (nova aba); o painel marca como enviado.
+  box.querySelectorAll("[data-fu-enviar]").forEach(b => b.addEventListener("click", () => marcarFollowupEnviado(Number(b.getAttribute("data-fu-enviar")))));
+}
+async function marcarFollowupEnviado(id){
+  const { data, error } = await supa.rpc("marcar_followup_enviado", { p_id: id });
+  const m = $("fuMsg" + id);
+  if (error || !data || !data.ok){ if (m){ m.className = "msg erro"; m.textContent = "Não foi possível marcar como enviado. Tente de novo."; } return; }
+  const f = (dadosPainel.followups || []).find(x => x.id === id);
+  if (f){ f.status = "enviado"; f.enviado_em = new Date().toISOString(); }
+  dadosPainel.followups_agendados = Math.max(0, Number(dadosPainel.followups_agendados || 0) - 1);
+  render(dadosPainel);
 }
 function atualizarPrevia(){ if ($("fuPrevia")) $("fuPrevia").textContent = textoFollowup($("fuNome").value, $("fuAssunto").value.trim(), (tela.fuForm || {}).tipo); }
 

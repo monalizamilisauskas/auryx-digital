@@ -165,6 +165,11 @@
   .faq-remove{ position:absolute; top:10px; right:10px; background:none; border:none; color:var(--muted); font-size:18px; cursor:pointer; line-height:1; padding:4px; }
   .faq-remove:hover{ color:var(--error); }
   .btn-small{ padding:9px 18px; font-size:13.5px; }
+  .inapp{ display:none; margin:14px 0 26px; padding:14px 16px; border:1px solid rgba(245,158,11,0.5); border-radius:var(--radius); background:rgba(245,158,11,0.08); }
+  .inapp.show{ display:block; }
+  .inapp p{ margin:0 0 10px; font-size:13.5px; line-height:1.55; color:var(--parchment); }
+  .inapp strong{ display:block; margin-bottom:4px; color:#F59E0B; }
+  .inapp button{ cursor:pointer; }
   .fatal{ display:none; }
   .fatal.show{ display:block; color:var(--error); font-size:13.5px; margin-top:16px; }
 
@@ -211,6 +216,10 @@
   <form class="stage" id="onboardForm" novalidate>
 
     <!-- STEP 1 -->
+      <div class="inapp" id="inappAviso">
+        <p><strong data-i18n="inapp.titulo">Abra no navegador para conectar o WhatsApp</strong><span data-i18n="inapp.texto">Você está no navegador do Facebook, Instagram ou WhatsApp, e a janela da Meta pode não abrir aqui. Toque nos três pontinhos (⋯) e escolha "Abrir no navegador", ou copie o link e cole no Chrome ou no Safari.</span></p>
+        <button type="button" class="btn btn-ghost" id="btnCopiarLink" data-i18n="inapp.copiar">Copiar link</button>
+      </div>
     <section class="step active" data-step="1">
       <p class="eyebrow" data-i18n="s1.eyebrow">01 — O negócio</p>
       <h1 data-i18n="s1.title">Vamos conhecer o seu negócio</h1>
@@ -410,6 +419,10 @@ const I18N = {
     "err.cancel":"A conexão com o WhatsApp não foi concluída. Clique em \u201cConectar meu WhatsApp\u201d para tentar de novo.",
     "err.used":"Este número ou esta empresa já usou o teste grátis. Para contratar um plano, fale com a gente: hello@auryx.digital",
     "err.popup":"Não conseguimos abrir a janela da Meta. Libere pop-ups para auryx.digital e tente de novo.",
+    "err.timeout":"A janela da Meta não respondeu. Se ela não abriu, abra auryx.digital/cadastro no Chrome ou no Safari (fora do Facebook e do Instagram) e tente de novo.",
+    "inapp.titulo":"Abra no navegador para conectar o WhatsApp",
+    "inapp.texto":"Você está no navegador do Facebook, Instagram ou WhatsApp, e a janela da Meta pode não abrir aqui. Toque nos três pontinhos (⋯) e escolha \u201cAbrir no navegador\u201d, ou copie o link e cole no Chrome ou no Safari.",
+    "inapp.copiar":"Copiar link","inapp.copiado":"Link copiado! Cole no Chrome ou no Safari.",
     "step.1":"Sobre o negócio","step.2":"Perguntas frequentes","step.3":"Preferências","step.4":"Contato","step.5":"Revisão",
     "review.nome_negocio":"Negócio","review.tipo_negocio":"Tipo","review.servicos_oferecidos":"Serviços",
     "review.faq_horario":"Horário","review.faq_area":"Área","review.faq_pagamento":"Pagamento","review.faq_adicional":"Extra",
@@ -460,6 +473,10 @@ const I18N = {
     "err.cancel":"The WhatsApp connection wasn't completed. Click \u201cConnect my WhatsApp\u201d to try again.",
     "err.used":"This number or business has already used the free trial. To subscribe to a plan, contact us: hello@auryx.digital",
     "err.popup":"We couldn't open the Meta window. Allow pop-ups for auryx.digital and try again.",
+    "err.timeout":"The Meta window didn't respond. If it didn't open, open auryx.digital/cadastro in Chrome or Safari (outside Facebook and Instagram) and try again.",
+    "inapp.titulo":"Open in your browser to connect WhatsApp",
+    "inapp.texto":"You are in the Facebook, Instagram or WhatsApp browser, and the Meta window may not open here. Tap the three dots (⋯) and choose \u201cOpen in browser\u201d, or copy the link and paste it into Chrome or Safari.",
+    "inapp.copiar":"Copy link","inapp.copiado":"Link copied! Paste it into Chrome or Safari.",
     "step.1":"Your business","step.2":"Frequent questions","step.3":"Preferences","step.4":"Contact","step.5":"Review",
     "review.nome_negocio":"Business","review.tipo_negocio":"Type","review.servicos_oferecidos":"Services",
     "review.faq_horario":"Hours","review.faq_area":"Area","review.faq_pagamento":"Payment","review.faq_adicional":"Extra",
@@ -680,12 +697,33 @@ function waitForSignupInfo(ms){
   });
 }
 
+// Navegador interno do Facebook/Instagram/WhatsApp (quem vem do anúncio): a janela da Meta costuma não abrir ali.
+const NAVEGADOR_INTERNO = /FBAN|FBAV|FB_IAB|FBIOS|Instagram|WhatsApp|Messenger|Line\//i.test(navigator.userAgent || "");
+if (NAVEGADOR_INTERNO) document.getElementById("inappAviso").classList.add("show");
+document.getElementById("btnCopiarLink").addEventListener("click", async ()=>{
+  const link = location.origin + "/cadastro" + (lang === "en" ? "?lang=en" : "");
+  try{ await navigator.clipboard.writeText(link); }catch(e){ window.prompt("", link); }
+  document.getElementById("btnCopiarLink").textContent = I18N[lang]["inapp.copiado"];
+});
+// A janela da Meta não voltou (não abriu, foi fechada ou ficou em outra aba): libera o botão com uma explicação,
+// em vez de ficar "Conectando..." para sempre. Se a resposta chegar depois, o cadastro segue normalmente.
+let aguardandoMeta = false;
+let relogioMeta = null;
+function pararEspera(){ aguardandoMeta = false; if (relogioMeta){ clearTimeout(relogioMeta); relogioMeta = null; } }
+function semRespostaDaMeta(){ if (!aguardandoMeta) return; pararEspera(); if (NAVEGADOR_INTERNO) document.getElementById("inappAviso").classList.add("show"); showFatal("err.timeout"); }
+document.addEventListener("visibilitychange", ()=>{
+  if (document.visibilityState === "visible" && aguardandoMeta) setTimeout(()=>{ if (aguardandoMeta) semRespostaDaMeta(); }, 8000);
+});
+
 async function submitForm(){
   document.getElementById("fatalMsg").classList.remove("show");
   if (typeof FB === "undefined"){ showFatal("err.popup"); return; }
   btnNext.disabled = true; btnNext.textContent = I18N[lang]["nav.sending"];
   signupInfo = null;
+  aguardandoMeta = true;
+  relogioMeta = setTimeout(semRespostaDaMeta, 5 * 60 * 1000);
   FB.login(async (response)=>{
+    pararEspera();
     const code = response && response.authResponse && response.authResponse.code;
     if (!code){ showFatal("err.cancel"); return; }
     const info = await waitForSignupInfo(10000);

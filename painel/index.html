@@ -333,7 +333,28 @@
   .lembrete-cfg select{ width:100%; max-width:420px; background:var(--panel-3); border:1px solid var(--line); color:var(--parchment); border-radius:8px; padding:9px 10px; font-size:14px; font-family:'Inter',sans-serif; margin-top:8px; }
   .lembrete-cfg .msg{ display:block; font-size:13px; margin-top:6px; color:var(--good); } .lembrete-cfg .msg.erro{ color:var(--bad); }
   .lembrete-cfg small{ display:block; color:var(--muted); font-size:12.5px; margin-top:8px; line-height:1.5; }
-  @media (max-width:560px){ .ag-linha .chip{ display:none; } .dois-campos{ grid-template-columns:1fr; } }
+  .ag-topo{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+  .ag-topo .sub b{ color:var(--parchment); font-weight:600; }
+  .ag-info{ display:flex; gap:14px; align-items:center; min-width:0; }
+  .ag-linha .seta{ color:var(--muted); font-size:11px; }
+  .aba .ponto{ display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--amber); margin-left:4px; vertical-align:1px; }
+  .como-foi{ font-size:13px; font-weight:600; color:var(--parchment); margin-right:4px; }
+  .btn-link{ background:none; border:none; color:var(--muted); text-decoration:underline; text-underline-offset:3px; font-size:12.5px;
+    padding:7px 6px; cursor:pointer; font-family:'Inter',sans-serif; margin-left:auto; }
+  .btn-link:hover{ color:var(--parchment); }
+  .cfg-agenda{ margin-top:22px; border:1px solid var(--line); border-radius:12px; padding:0; }
+  .cfg-agenda > summary{ list-style:none; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:12px;
+    flex-wrap:wrap; padding:14px 16px; font-size:14px; font-weight:500; }
+  .cfg-agenda > summary::-webkit-details-marker{ display:none; }
+  .cfg-agenda > summary > span:first-child{ display:flex; align-items:center; gap:8px; }
+  .cfg-agenda > summary::after{ content:"▾"; color:var(--muted); font-size:11px; }
+  .cfg-agenda[open] > summary::after{ content:"▴"; }
+  .cfg-resumo{ font-size:12.5px; color:var(--muted); font-weight:400; margin-left:auto; }
+  .cfg-resumo .ok{ color:var(--good); font-weight:500; } .cfg-resumo .alerta{ color:#FCD34D; font-weight:500; }
+  .cfg-corpo{ padding:0 16px 16px; }
+  .cfg-corpo .aviso.info{ margin-top:0 !important; }
+  @media (max-width:560px){ .ag-linha .ped-linha{ align-items:flex-start; } .ag-linha .lado{ flex-direction:column-reverse; align-items:flex-end; gap:6px; }
+    .ag-info{ gap:10px; } .dois-campos{ grid-template-columns:1fr; } .btn-link{ margin-left:0; } }
   .agenda-ok{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:16px; padding:12px 14px; border:1px solid rgba(52,211,153,0.35);
     background:rgba(52,211,153,0.07); border-radius:10px; font-size:13.5px; color:var(--muted); }
   .agenda-ok svg{ color:var(--good); flex:none; }
@@ -448,7 +469,7 @@ const AGENDA_AURYX = "";
 // Envio do follow-up: liga quando a Meta aprovar o modelo de mensagem e o n8n estiver enviando.
 const FOLLOWUP_ATIVO = false;
 // Confirmação e lembrete de horário pelo WhatsApp: muda para true quando o envio estiver ligado no n8n (modelos aprovados na Meta).
-const AVISOS_ATIVO = false;
+const AVISOS_ATIVO = true;
 let respostasRapidas = { meus: [], favoritos: [], ocultos: [] };
 // Tipos de follow-up: cada um é um modelo aprovado na Meta; a dona só escreve a parte do meio ({{3}}).
 const TIPOS_FU = {
@@ -929,7 +950,14 @@ async function cancelarFollowup(btn){
   render(dadosPainel);
 }
 
-/* ---------- Agendamentos: horários marcados pela secretária, por dia, e o dono muda o status ---------- */
+/* ---------- Agendamentos: horários marcados pela secretária, por dia, e o dono muda o status ----------
+   Lista limpa: a linha só mostra o que pede atenção (cliente confirmou, pediu para remarcar, falta marcar como foi).
+   As ações mudam conforme o momento (antes do horário: falar e remarcar; depois: como foi). Configurações ficam recolhidas. */
+function foneBR(r){
+  const n = String(r || "").replace(/\D/g, "");
+  if (/^55\d{10,11}$/.test(n)) return "+55 (" + n.slice(2, 4) + ") " + n.slice(4, n.length - 4) + "-" + n.slice(-4);
+  return n ? "+" + n : "";
+}
 function renderAgenda(){
   const d = dadosPainel;
   const box = $("agendaPainel");
@@ -938,28 +966,35 @@ function renderAgenda(){
   const diaDe = (iso) => new Date(iso).toLocaleDateString("en-CA", { timeZone: tz });
   const hojeStr = diaDe(new Date().toISOString());
   const amanhaStr = diaDe(new Date(Date.now() + 86400000).toISOString());
+  const passou = (a) => new Date(a.data_hora).getTime() < Date.now();
+  const faltaResultado = (a) => a.status === "confirmado" && passou(a);
   const filtros = {
     proximos: (a) => diaDe(a.data_hora) >= hojeStr && a.status !== "cancelado",
     anteriores: (a) => diaDe(a.data_hora) < hojeStr && a.status !== "cancelado",
     cancelados: (a) => a.status === "cancelado",
-    todos: () => true,
   };
+  if (!filtros[tela.abaAg]) tela.abaAg = "proximos";
   const nHoje = Number(d.agendamentos_hoje || 0);
-  let html = '<p class="sub">' + (nHoje ? (nHoje === 1 ? '1 agendamento hoje.' : nHoje + ' agendamentos hoje.') : 'Nenhum agendamento para hoje.')
-    + (Number(d.agendamentos_semana || 0) ? ' ' + d.agendamentos_semana + ' nos próximos 7 dias.' : '') + '</p>'
-    + '<details class="ajuda"><summary>Como funciona?</summary>'
-    + '<p>Quando um cliente marca um horário pelo WhatsApp, a secretária confere a sua agenda, confirma com ele e o agendamento aparece aqui (e no seu Google Agenda).</p>'
-    + '<p>Depois do horário, marque como <b>Realizado</b> ou <b>Não compareceu</b>. Se o cliente desmarcar, marque <b>Cancelado</b> e lembre de tirar também do Google Agenda.</p>'
-    + '</details>';
+  const nSemana = Number(d.agendamentos_semana || 0);
+  let html = '<div class="ag-topo"><p class="sub" style="margin:0;">' + (nHoje ? '<b>' + nHoje + '</b> ' + (nHoje === 1 ? 'agendamento hoje' : 'agendamentos hoje') : 'Nenhum agendamento hoje')
+    + (nSemana ? ' · <b>' + nSemana + '</b> nos próximos 7 dias' : '') + '</p>'
+    + '<details class="ajuda" style="margin:0;"><summary>Como funciona?</summary>'
+    + '<p>Quando um cliente marca um horário pelo WhatsApp, a secretária confirma com ele e o agendamento aparece aqui'
+    + (d.agenda_conectada ? ' e no seu Google Agenda' : '') + '.</p>'
+    + '<p>Depois do horário, marque <b>como foi</b>: Realizado ou Não compareceu. Se o cliente desmarcar, abra o agendamento e clique em <b>Cancelar agendamento</b>.</p>'
+    + '</details></div>';
   if (todos.length){
     html += '<div class="sec-corpo"><div class="abas">';
-    [["proximos", "Próximos"], ["anteriores", "Anteriores"], ["cancelados", "Cancelados"], ["todos", "Todos"]].forEach(([s, n]) => {
-      html += '<button type="button" class="aba' + (tela.abaAg === s ? ' ativa' : '') + '" data-abaag="' + s + '">' + n + ' (' + todos.filter(filtros[s]).length + ')</button>';
+    [["proximos", "Próximos"], ["anteriores", "Anteriores"], ["cancelados", "Cancelados"]].forEach(([s, n]) => {
+      const qtd = todos.filter(filtros[s]).length;
+      const pend = s === "anteriores" ? todos.filter(a => filtros.anteriores(a) && faltaResultado(a)).length : 0;
+      html += '<button type="button" class="aba' + (tela.abaAg === s ? ' ativa' : '') + '" data-abaag="' + s + '">' + n + ' (' + qtd + ')'
+        + (pend ? ' <span class="ponto" title="' + pend + ' sem marcar como foi"></span>' : '') + '</button>';
     });
     html += '</div>';
     let lista = todos.filter(filtros[tela.abaAg]);
     lista = lista.slice().sort((a, b) => tela.abaAg === "proximos" ? new Date(a.data_hora) - new Date(b.data_hora) : new Date(b.data_hora) - new Date(a.data_hora));
-    if (!lista.length) html += '<p class="sub" style="margin:0;">Nenhum agendamento aqui.</p>';
+    if (!lista.length) html += '<p class="sub" style="margin:0;">' + (tela.abaAg === "proximos" ? 'Nenhum horário marcado daqui para frente.' : 'Nenhum agendamento aqui.') + '</p>';
     let diaAtual = "";
     lista.forEach(a => {
       const dia = diaDe(a.data_hora);
@@ -971,22 +1006,33 @@ function renderAgenda(){
       }
       const hora = new Date(a.data_hora).toLocaleTimeString("pt-BR", { timeZone: tz, hour: "2-digit", minute: "2-digit" });
       const aberto = tela.agendamento === a.id;
-      html += '<div class="pedido ag-linha"><button type="button" class="ped-linha" data-ag="' + a.id + '">'
-        + '<span style="display:flex;gap:12px;align-items:center;"><span class="hora">' + hora + '</span><span>' + esc(a.servico || "Agendamento")
-        + ' <span class="quem">· ' + esc(a.nome || ("+" + a.remetente)) + '</span></span></span>'
-        + '<span class="lado">' + chipAviso(a) + '<span class="status ' + esc(a.status) + '">' + esc(STATUS_AG[a.status] || a.status) + '</span>' + (aberto ? '▴' : '▾') + '</span></button>';
+      // Do lado direito, só o que pede atenção: o status aparece quando não é mais "confirmado".
+      const lado = a.status !== "confirmado" ? '<span class="status ' + esc(a.status) + '">' + esc(STATUS_AG[a.status] || a.status) + '</span>'
+        : faltaResultado(a) ? '<span class="chip alerta">Marcar como foi</span>' : chipAviso(a);
+      html += '<div class="pedido ag-linha"><button type="button" class="ped-linha" data-ag="' + a.id + '" aria-expanded="' + aberto + '">'
+        + '<span class="ag-info"><span class="hora">' + hora + '</span><span>' + esc(a.servico || "Agendamento")
+        + ' <span class="quem">· ' + esc(a.nome || foneBR(a.remetente)) + '</span></span></span>'
+        + '<span class="lado">' + lado + '<span class="seta">' + (aberto ? '▴' : '▾') + '</span></span></button>';
       if (aberto){
         const remarcavel = a.pedido_id && a.status === "confirmado" && (d.pedidos || []).some(p => p.id === a.pedido_id);
-        html += '<div class="ped-detalhe"><div class="d">'
-          + (a.endereco ? '<b>Endereço:</b> ' + esc(a.endereco) + '<br>' : '')
-          + '<b>Data:</b> ' + esc(new Date(a.data_hora).toLocaleString("pt-BR", { timeZone: tz, weekday: "long", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }))
-          + '<br><b>Contato:</b> +' + esc(a.remetente) + linhaLembrete(a) + '</div><div class="ped-acoes">'
-          + '<button class="btn btn-primary" type="button" data-resp="a' + a.id + '">Falar no WhatsApp</button>'
-          + (remarcavel ? '<button class="btn" type="button" data-conf="' + a.pedido_id + '">Remarcar horário</button>' : '')
-          + '<button class="btn" type="button" data-fu-ag="' + a.id + '">Agendar follow-up</button>';
-        Object.keys(STATUS_AG).filter(s => s !== a.status).forEach(s => {
-          html += '<button class="btn" type="button" data-statusag="' + s + '" data-id="' + a.id + '">' + (s === "confirmado" ? "Voltar para confirmado" : STATUS_AG[s]) + '</button>';
-        });
+        const quando = new Date(a.data_hora).toLocaleString("pt-BR", { timeZone: tz, weekday: "long", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+        html += '<div class="ped-detalhe"><div class="d">' + esc(quando)
+          + (a.endereco ? ' · ' + esc(a.endereco) : '') + ' · ' + esc(foneBR(a.remetente)) + linhaLembrete(a) + '</div>'
+          + '<div class="ped-acoes">';
+        const falar = '<button class="btn btn-primary" type="button" data-resp="a' + a.id + '">Falar no WhatsApp</button>';
+        const status = (s, rotulo, cls) => '<button class="' + (cls || 'btn') + '" type="button" data-statusag="' + s + '" data-id="' + a.id + '">' + rotulo + '</button>';
+        if (a.status === "confirmado" && passou(a)){
+          html += '<span class="como-foi">Como foi?</span>' + status("realizado", "Realizado") + status("nao_compareceu", "Não compareceu")
+            + falar + status("cancelado", "Foi cancelado", "btn-link");
+        } else if (a.status === "confirmado"){
+          html += falar + (remarcavel ? '<button class="btn" type="button" data-conf="' + a.pedido_id + '">Remarcar horário</button>' : '')
+            + status("cancelado", "Cancelar agendamento", "btn-link");
+        } else if (a.status === "realizado"){
+          html += falar + '<button class="btn" type="button" data-fu-ag="' + a.id + '">Agendar follow-up</button>'
+            + status("confirmado", "Desfazer", "btn-link");
+        } else {
+          html += falar + status("confirmado", a.status === "cancelado" ? "Reativar agendamento" : "Desfazer", "btn-link");
+        }
         html += '<span class="msg" id="agMsg' + a.id + '"></span></div>' + (tela.resp === "a" + a.id ? formResposta("a" + a.id) : '')
           + (remarcavel && tela.confHorario === a.pedido_id ? formHorario(a.pedido_id) : '') + '</div>';
       }
@@ -996,17 +1042,28 @@ function renderAgenda(){
   } else if (d.agenda_conectada){
     html += '<p class="sub" style="margin-top:14px;">Ainda não há agendamentos. Quando a secretária marcar o primeiro horário com um cliente, ele aparece aqui.</p>';
   }
-  html += blocoLembrete(d) + blocoAgenda(d);
+  // Configurações (lembrete e Google Agenda) recolhidas no fim; abertas só quando ainda não há nada configurado.
+  const cfgAberta = tela.cfgAgenda != null ? tela.cfgAgenda : (!todos.length && !d.agenda_conectada) || !!tela.editarAgenda;
+  html += '<details class="cfg-agenda" id="cfgAgenda"' + (cfgAberta ? ' open' : '') + '><summary><span>' + icone("personalizar") + 'Configurações da agenda</span>'
+    + '<span class="cfg-resumo">Google Agenda: ' + (d.agenda_conectada ? '<b class="ok">conectada</b>' : '<b class="alerta">não conectada</b>') + '</span></summary>'
+    + '<div class="cfg-corpo">' + blocoAgenda(d) + blocoLembrete(d) + '</div></details>';
   box.innerHTML = html;
   ligarAgenda();
   ligarHorario(box, renderAgenda);
   ligarResposta(box, renderAgenda);
   if ($("lembreteDias")) $("lembreteDias").addEventListener("change", (e) => salvarLembrete(e.target.value));
+  $("cfgAgenda").addEventListener("toggle", (e) => { tela.cfgAgenda = e.target.open; });
   box.querySelectorAll("[data-abaag]").forEach(b => b.addEventListener("click", () => { tela.abaAg = b.getAttribute("data-abaag"); tela.agendamento = null; renderAgenda(); }));
   box.querySelectorAll("[data-ag]").forEach(b => b.addEventListener("click", () => {
     const id = Number(b.getAttribute("data-ag")); tela.agendamento = tela.agendamento === id ? null : id; renderAgenda();
   }));
-  box.querySelectorAll("[data-statusag]").forEach(b => b.addEventListener("click", () => mudarAgendamento(b)));
+  box.querySelectorAll("[data-statusag]").forEach(b => b.addEventListener("click", () => {
+    if (b.getAttribute("data-statusag") === "cancelado" && !b.textContent.startsWith("Foi")){
+      const a = (dadosPainel.agendamentos || []).find(x => x.id === Number(b.getAttribute("data-id")));
+      if (!confirm("Cancelar o agendamento" + (a && a.nome ? " de " + a.nome : "") + "? Avise o cliente pelo WhatsApp" + (dadosPainel.agenda_conectada ? " e tire também do Google Agenda." : "."))) return;
+    }
+    mudarAgendamento(b);
+  }));
   box.querySelectorAll("[data-fu-ag]").forEach(b => b.addEventListener("click", () => {
     const a = (dadosPainel.agendamentos || []).find(x => x.id === Number(b.getAttribute("data-fu-ag")));
     if (a) novoFollowup({ remetente: a.remetente, nome: a.nome || "", assunto: a.servico ? "o seu " + a.servico.charAt(0).toLowerCase() + a.servico.slice(1) : "", agendamento_id: a.id });

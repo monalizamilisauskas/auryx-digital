@@ -249,6 +249,12 @@
   .status.fechado{ color:var(--good); border-color:rgba(124,184,143,0.4); }
   .status.nao_fechou{ color:var(--muted); }
   .ped-detalhe{ margin-top:10px; }
+  /* Pagamento registrado: selo verde preenchido (diferente do contorno dos status) para ser visto de relance. */
+  .pago{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.04em; text-transform:uppercase; padding:3px 8px; border-radius:6px;
+    color:#052e1c; background:var(--good); font-weight:600; }
+  .pago-box{ display:flex; align-items:center; gap:8px; margin-top:10px; padding:9px 12px; border-radius:8px; font-size:13.5px;
+    color:var(--good); background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.45); }
+  .pago-box b{ color:var(--good); }
   .ped-acoes{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; align-items:center; }
   .ped-acoes .btn{ font-size:12.5px; padding:7px 12px; }
   .mais{ margin-top:14px; }
@@ -713,13 +719,15 @@ function renderPedidos(){
       const aberto = tela.pedido === p.id;
       html += '<div class="pedido"><button type="button" class="ped-linha" data-pedido="' + p.id + '">'
         + '<span>' + esc(titulo) + ' <span class="quem">· ' + esc(nome) + '</span></span>'
-        + '<span class="lado">' + dataHoraBR(p.created_at) + '<span class="status ' + esc(p.status) + '">' + esc(STATUS[p.status] || p.status) + '</span>' + (aberto ? '▴' : '▾') + '</span></button>';
+        + '<span class="lado">' + dataHoraBR(p.created_at) + '<span class="status ' + esc(p.status) + '">' + esc(STATUS[p.status] || p.status) + '</span>'
+        + (p.pago_em ? '<span class="pago" title="Pagamento registrado em ' + esc(new Date(p.pago_em).toLocaleDateString("pt-BR")) + '">✓ Pago</span>' : '') + (aberto ? '▴' : '▾') + '</span></button>';
       if (aberto){
         const campos = Object.entries(p.dados || {}).map(([k, v]) => '<b>' + esc(ROTULOS[k] || (k.charAt(0).toUpperCase() + k.slice(1))) + ':</b> ' + esc(v)).join(' · ');
         const agP = agendamentoDoPedido(p.id);
         html += '<div class="ped-detalhe"><div class="d">' + campos + '<br><b>Contato:</b> +' + esc(p.remetente)
           + (agP ? '<br><b>Horário confirmado:</b> ' + esc(quandoBR(agP.data_hora)) : '')
-          + (p.pago_em ? '<br><b>Pagamento:</b> registrado em ' + esc(new Date(p.pago_em).toLocaleDateString("pt-BR")) : '') + '</div><div class="ped-acoes">'
+          + '</div>' + (p.pago_em ? '<div class="pago-box">✓ <span><b>Pagamento registrado</b> em ' + esc(new Date(p.pago_em).toLocaleDateString("pt-BR")) + '</span></div>' : '')
+          + '<div class="ped-acoes">'
           + '<button class="btn btn-primary" type="button" data-resp="p' + p.id + '">Responder no WhatsApp</button>';
         html += '<button class="btn" type="button" data-conf="' + p.id + '">' + (agP ? 'Remarcar horário' : 'Confirmar horário') + '</button>';
         html += '<button class="btn" type="button" data-fu-ped="' + p.id + '">Agendar follow-up</button>';

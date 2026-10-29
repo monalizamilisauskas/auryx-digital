@@ -182,6 +182,8 @@
   .usage-fill.alto{ background:linear-gradient(90deg, #c98a27, var(--bad)); }
   .usage-row{ display:flex; justify-content:space-between; font-size:13.5px; color:var(--muted); }
   .usage-row strong{ color:var(--parchment); font-size:15px; }
+  .pers-lista{ margin:6px 0 0; padding-left:20px; color:var(--parchment); line-height:1.6; font-size:14px; }
+  .pers-lista li{ margin-bottom:6px; }
   .planos{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-top:14px; }
   @media (max-width:700px){ .planos{ grid-template-columns:1fr; } }
   .plano{ border:1px solid var(--line); border-radius:10px; padding:16px; background:var(--panel-2); }
@@ -1709,7 +1711,12 @@ function renderPersonalizar(d){
   const box = $("personalizar");
   if (!d.pode_personalizar){
     box.innerHTML = '<h2>Personalizar sua secretária 🔒</h2>'
-      + '<p class="bloqueado">Disponível depois de assinar um plano: você edita as perguntas e respostas da secretária e escolhe quais serviços ela oferece aos seus clientes.</p>';
+      + '<p class="sub">Aqui você ajusta o que a secretária sabe sobre o seu negócio:</p>'
+      + '<ul class="pers-lista"><li><b>Perguntas frequentes:</b> as dúvidas que seus clientes sempre fazem e a resposta exata que ela deve dar (ex.: horário, preços, formas de pagamento).</li>'
+      + '<li><b>Serviços:</b> você escolhe quais serviços ela oferece aos clientes.</li></ul>'
+      + '<div class="aviso info" style="margin-top:14px;"><div class="txt"><b>No teste grátis, a secretária já usa as respostas que você preencheu no cadastro.</b>'
+      + 'Para mudar ou acrescentar perguntas, escolha um plano: Light até 5 perguntas, Básico até 10, Premium e Completo até 30.</div>'
+      + '<button class="btn btn-primary" type="button" data-ir="plano">Ver planos</button></div>';
     return;
   }
   faqEdicao = (Array.isArray(d.faq) ? d.faq : []).map(f => ({ pergunta: f.pergunta || "", resposta: f.resposta || "" }));

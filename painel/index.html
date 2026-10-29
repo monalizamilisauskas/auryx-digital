@@ -333,6 +333,22 @@
   .lembrete-cfg select{ width:100%; max-width:420px; background:var(--panel-3); border:1px solid var(--line); color:var(--parchment); border-radius:8px; padding:9px 10px; font-size:14px; font-family:'Inter',sans-serif; margin-top:8px; }
   .lembrete-cfg .msg{ display:block; font-size:13px; margin-top:6px; color:var(--good); } .lembrete-cfg .msg.erro{ color:var(--bad); }
   .lembrete-cfg small{ display:block; color:var(--muted); font-size:12.5px; margin-top:8px; line-height:1.5; }
+  .hist-overlay{ position:fixed; inset:0; background:rgba(2,6,23,0.66); z-index:60; display:none; justify-content:flex-end; }
+  .hist-overlay.show{ display:flex; }
+  .hist-caixa{ width:min(460px,100%); height:100%; background:var(--panel); border-left:1px solid var(--line); display:flex; flex-direction:column; }
+  .hist-topo{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; padding:18px 18px 14px; border-bottom:1px solid var(--line); }
+  .hist-titulo{ font-size:16px; font-weight:600; } .hist-sub{ font-size:12.5px; color:var(--muted); margin-top:2px; }
+  .hist-fechar{ background:none; border:1px solid var(--line); color:var(--parchment); border-radius:8px; width:34px; height:34px; cursor:pointer; font-size:14px; }
+  .hist-fechar:hover{ border-color:var(--gold); }
+  .hist-lista{ flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:8px; background:var(--ink); }
+  .hist-dia{ text-align:center; margin:8px 0 4px; } .hist-dia span{ font-size:11.5px; color:var(--muted); border:1px solid var(--line); border-radius:999px; padding:3px 10px; text-transform:capitalize; }
+  .hist-msg{ max-width:82%; padding:8px 12px 6px; border-radius:12px; font-size:14px; line-height:1.45; }
+  .hist-msg.cliente{ align-self:flex-start; background:var(--panel-3); border-top-left-radius:4px; }
+  .hist-msg.secretaria{ align-self:flex-end; background:rgba(37,99,235,0.22); border:1px solid rgba(96,165,250,0.25); border-top-right-radius:4px; }
+  .hist-quem{ font-size:11px; color:var(--muted); margin-bottom:2px; } .hist-msg.secretaria .hist-quem{ color:var(--gold-bright); }
+  .hist-texto{ white-space:pre-wrap; word-wrap:break-word; } .hist-hora{ font-size:10.5px; color:var(--muted); text-align:right; margin-top:2px; }
+  .hist-vazio{ color:var(--muted); font-size:14px; text-align:center; margin:auto; }
+  .hist-rodape{ font-size:12px; color:var(--muted); padding:10px 16px; border-top:1px solid var(--line); }
   .ag-topo{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
   .ag-topo .sub b{ color:var(--parchment); font-weight:600; }
   .ag-info{ display:flex; gap:14px; align-items:center; min-width:0; }
@@ -631,6 +647,7 @@ function render(d){
         html += '<div class="conv"><div class="info">+' + esc(c.remetente) + ' · desde ' + dataHoraBR(c.desde)
           + (c.ultima_mensagem ? '<span>“' + esc(c.ultima_mensagem) + '”</span>' : '') + '</div>'
           + '<div class="botoes"><button class="btn btn-primary" type="button" data-resp="c' + esc(c.remetente) + '">Responder no WhatsApp</button>'
+          + botaoConversa(c.remetente, c.nome)
           + '<button class="btn" type="button" data-devolver="' + esc(c.remetente) + '">Devolver para a secretária</button></div></div>'
           + (tela.resp === "c" + c.remetente ? formResposta("c" + c.remetente) : '');
       });
@@ -749,7 +766,8 @@ function renderPedidos(){
           + (agP ? '<br><b>Horário confirmado:</b> ' + esc(quandoBR(agP.data_hora)) : '')
           + '</div>' + (p.pago_em ? '<div class="pago-box">✓ <span><b>Pagamento registrado</b> em ' + esc(new Date(p.pago_em).toLocaleDateString("pt-BR")) + '</span></div>' : '')
           + '<div class="ped-acoes">'
-          + '<button class="btn btn-primary" type="button" data-resp="p' + p.id + '">Responder no WhatsApp</button>';
+          + '<button class="btn btn-primary" type="button" data-resp="p' + p.id + '">Responder no WhatsApp</button>'
+          + botaoConversa(p.remetente, nome);
         html += '<button class="btn" type="button" data-conf="' + p.id + '">' + (agP ? 'Remarcar horário' : 'Confirmar horário') + '</button>';
         html += '<button class="btn" type="button" data-fu-ped="' + p.id + '">Agendar follow-up</button>';
         Object.keys(STATUS).filter(s => s !== p.status).forEach(s => {
@@ -1019,7 +1037,7 @@ function renderAgenda(){
         html += '<div class="ped-detalhe"><div class="d">' + esc(quando)
           + (a.endereco ? ' · ' + esc(a.endereco) : '') + ' · ' + esc(foneBR(a.remetente)) + linhaLembrete(a) + '</div>'
           + '<div class="ped-acoes">';
-        const falar = '<button class="btn btn-primary" type="button" data-resp="a' + a.id + '">Falar no WhatsApp</button>';
+        const falar = '<button class="btn btn-primary" type="button" data-resp="a' + a.id + '">Falar no WhatsApp</button>' + botaoConversa(a.remetente, a.nome);
         const status = (s, rotulo, cls) => '<button class="' + (cls || 'btn') + '" type="button" data-statusag="' + s + '" data-id="' + a.id + '">' + rotulo + '</button>';
         if (a.status === "confirmado" && passou(a)){
           html += '<span class="como-foi">Como foi?</span>' + status("realizado", "Realizado") + status("nao_compareceu", "Não compareceu")
@@ -1069,6 +1087,64 @@ function renderAgenda(){
     if (a) novoFollowup({ remetente: a.remetente, nome: a.nome || "", assunto: a.servico ? "o seu " + a.servico.charAt(0).toLowerCase() + a.servico.slice(1) : "", agendamento_id: a.id });
   }));
 }
+
+/* ---------- Histórico da conversa: o que o cliente e a secretária escreveram, sem abrir o WhatsApp ----------
+   Lido sob demanda (historico_cliente), só da empresa logada. Mensagens que a equipe manda pelo app WhatsApp Business não chegam aqui. */
+function botaoConversa(remetente, nome){
+  return remetente ? '<button class="btn" type="button" data-hist="' + esc(remetente) + '" data-nome="' + esc(nome || "") + '">Ver conversa</button>' : '';
+}
+let histUltimoFoco = null;
+function fecharHistorico(){
+  const o = $("histOverlay"); if (!o) return;
+  o.classList.remove("show"); document.body.style.overflow = "";
+  if (histUltimoFoco) try { histUltimoFoco.focus(); } catch (e) {}
+}
+async function abrirHistorico(remetente, nome){
+  histUltimoFoco = document.activeElement;
+  let o = $("histOverlay");
+  if (!o){
+    o = document.createElement("div");
+    o.id = "histOverlay"; o.className = "hist-overlay";
+    o.innerHTML = '<div class="hist-caixa" role="dialog" aria-modal="true" aria-labelledby="histTitulo">'
+      + '<div class="hist-topo"><div><div class="hist-titulo" id="histTitulo"></div><div class="hist-sub" id="histSub"></div></div>'
+      + '<button type="button" class="hist-fechar" id="histFechar" aria-label="Fechar">✕</button></div>'
+      + '<div class="hist-lista" id="histLista"></div>'
+      + '<div class="hist-rodape">Mensagens que a sua equipe manda pelo app WhatsApp Business não aparecem aqui.</div></div>';
+    document.body.appendChild(o);
+    o.addEventListener("click", (e) => { if (e.target === o) fecharHistorico(); });
+    $("histFechar").addEventListener("click", fecharHistorico);
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("histOverlay") && $("histOverlay").classList.contains("show")) fecharHistorico(); });
+  }
+  $("histTitulo").textContent = nome || foneBR(remetente);
+  $("histSub").textContent = nome ? foneBR(remetente) : "";
+  const lista = $("histLista");
+  lista.innerHTML = '<p class="hist-vazio"><span class="spinner"></span>Carregando a conversa...</p>';
+  o.classList.add("show"); document.body.style.overflow = "hidden";
+  $("histFechar").focus();
+  const { data, error } = await supa.rpc("historico_cliente", { p_remetente: remetente });
+  if (error || !data || !data.ok){
+    lista.innerHTML = '<p class="hist-vazio">Não foi possível carregar a conversa agora. Tente de novo em alguns instantes.</p>';
+    return;
+  }
+  const msgs = data.mensagens || [];
+  if (!msgs.length){ lista.innerHTML = '<p class="hist-vazio">Ainda não há mensagens com este cliente.</p>'; return; }
+  const tz = dadosPainel.timezone || "America/Sao_Paulo";
+  let html = "", diaAtual = "";
+  msgs.forEach(m => {
+    const dia = new Date(m.em).toLocaleDateString("pt-BR", { timeZone: tz, weekday: "short", day: "2-digit", month: "2-digit" });
+    if (dia !== diaAtual){ diaAtual = dia; html += '<div class="hist-dia"><span>' + esc(dia) + '</span></div>'; }
+    const hora = new Date(m.em).toLocaleTimeString("pt-BR", { timeZone: tz, hour: "2-digit", minute: "2-digit" });
+    const cliente = m.quem === "user";
+    html += '<div class="hist-msg ' + (cliente ? "cliente" : "secretaria") + '"><div class="hist-quem">' + (cliente ? "Cliente" : "Secretária") + '</div>'
+      + '<div class="hist-texto">' + esc(m.texto) + '</div><div class="hist-hora">' + hora + '</div></div>';
+  });
+  lista.innerHTML = html;
+  lista.scrollTop = lista.scrollHeight;
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest && e.target.closest("[data-hist]");
+  if (b){ e.preventDefault(); abrirHistorico(b.getAttribute("data-hist"), b.getAttribute("data-nome")); }
+});
 
 /* ---------- Central de Respostas Rápidas: biblioteca de textos para a equipe responder pelo WhatsApp ----------
    Biblioteca padrão em painel/respostas.js; o que a dona muda (minhas, editadas, favoritas, escondidas) fica em

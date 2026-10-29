@@ -157,6 +157,11 @@
   .success .sub{ margin:0 auto; }
 
   .connect-box{ margin-top:26px; padding:18px 18px 16px; border:1px solid var(--line); border-radius:var(--radius); background:var(--panel); }
+  .guia-alerta{ display:flex; gap:12px; margin-top:14px; padding:16px 18px; border:1px solid rgba(251,191,36,0.55);
+    border-radius:var(--radius); background:rgba(251,191,36,0.08); }
+  .guia-icone{ font-size:20px; line-height:1.2; }
+  .guia-titulo{ margin:0 0 4px; font-weight:600; color:#FBBF24; font-size:14.5px; line-height:1.4; }
+  .guia-texto{ margin:0; font-size:13px; color:var(--parchment); line-height:1.5; opacity:.9; }
   .guia-link{ display:inline-block; margin-top:10px; font-size:13.5px; font-weight:600; color:var(--gold-bright); text-decoration:none; }
   .guia-link:hover{ text-decoration:underline; }
   .connect-title{ margin:0 0 6px; font-weight:600; color:var(--parchment); font-size:14.5px; }
@@ -353,7 +358,14 @@
       <div class="connect-box">
         <p class="connect-title" data-i18n="s5.connect.title">Último passo: conectar o WhatsApp do negócio</p>
         <p class="help" data-i18n="s5.connect.help">Ao clicar no botão abaixo, abre uma janela da Meta (Facebook). Entre com seu Facebook, escolha a empresa e o número do WhatsApp do negócio. Se você usa o app WhatsApp Business, vai escanear um QR code e continua usando o app normalmente no celular.</p>
-        <a class="guia-link" id="guiaLink" href="/cadastro/passo-a-passo" target="_blank" rel="noopener" data-i18n="s5.connect.guia">Veja o passo a passo das telas da Meta (abre em outra aba) →</a>
+      </div>
+      <div class="guia-alerta" role="note">
+        <span class="guia-icone" aria-hidden="true">⚠️</span>
+        <div>
+          <p class="guia-titulo" data-i18n="s5.guia.titulo">Antes de clicar em "Conectar meu WhatsApp", veja o passo a passo</p>
+          <p class="guia-texto" data-i18n="s5.guia.texto">A Meta vai mostrar algumas telas, inclusive um pedido de forma de pagamento. Não é a Auryx cobrando e você pode pular: o teste grátis não depende disso.</p>
+          <a class="guia-link" id="guiaLink" href="/cadastro/passo-a-passo" target="_blank" rel="noopener" data-i18n="s5.connect.guia">Ver o passo a passo (2 minutos, abre em outra aba) →</a>
+        </div>
       </div>
       <p class="fatal" id="fatalMsg" data-i18n="err.fatal">Não foi possível concluir agora. Tente novamente em instantes.</p>
     </section>
@@ -412,7 +424,9 @@ const I18N = {
     "s5.eyebrow":"05 — Revisão","s5.title":"Tudo certo?",
     "s5.sub":"Confira antes de enviar. Você ainda pode voltar e ajustar qualquer campo.",
     "s5.connect.title":"Último passo: conectar o WhatsApp do negócio",
-    "s5.connect.guia":"Veja o passo a passo das telas da Meta (abre em outra aba) →",
+    "s5.connect.guia":"Ver o passo a passo (2 minutos, abre em outra aba) →",
+    "s5.guia.titulo":"Antes de clicar em \u201cConectar meu WhatsApp\u201d, veja o passo a passo",
+    "s5.guia.texto":"A Meta vai mostrar algumas telas, inclusive um pedido de forma de pagamento. Não é a Auryx cobrando e você pode pular: o teste grátis não depende disso.",
     "s5.connect.help":"Ao clicar no botão abaixo, abre uma janela da Meta (Facebook). Entre com seu Facebook, escolha a empresa e o número do WhatsApp do negócio. Se você usa o app WhatsApp Business, vai escanear um QR code e continua usando o app normalmente no celular.",
     "success.title":"Pronto! Seu teste grátis começou",
     "success.sub":"Sua AI Secretária já está atendendo pelo WhatsApp do seu negócio. São 7 dias grátis, com até 200 mensagens. Faça um teste: mande uma mensagem para o número do negócio de outro celular.",
@@ -468,7 +482,9 @@ const I18N = {
     "s5.eyebrow":"05 — Review","s5.title":"Everything look right?",
     "s5.sub":"Check everything before sending. You can still go back and adjust any field.",
     "s5.connect.title":"Last step: connect your business WhatsApp",
-    "s5.connect.guia":"See the step-by-step of the Meta screens (opens in a new tab) →",
+    "s5.connect.guia":"See the step-by-step (2 minutes, opens in a new tab) →",
+    "s5.guia.titulo":"Before clicking \u201cConnect my WhatsApp\u201d, see the step-by-step",
+    "s5.guia.texto":"Meta will show a few screens, including a request for a payment method. It's not Auryx charging you and you can skip it: your free trial doesn't depend on it.",
     "s5.connect.help":"Clicking the button below opens a Meta (Facebook) window. Log in with Facebook, choose your business and its WhatsApp number. If you use the WhatsApp Business app, you'll scan a QR code and keep using the app on your phone as usual.",
     "success.title":"Done! Your free trial has started",
     "success.sub":"Your AI Receptionist is now answering your business WhatsApp. You get 7 free days with up to 200 messages. Try it: message your business number from another phone.",

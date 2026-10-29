@@ -195,7 +195,9 @@
     border:1px solid var(--line-strong); border-radius:24px; padding:11px 24px; font-size:13.5px; color:var(--gold-bright);
     font-family:'IBM Plex Mono',monospace; letter-spacing:0.02em;
   }
-  .pricing-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-top:52px; }
+  .pricing-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-top:52px; }
+  @media (max-width:1100px){ .pricing-grid{ grid-template-columns:repeat(2,1fr); max-width:860px; margin-left:auto; margin-right:auto; } }
+  .pricing-note{ text-align:center; color:var(--muted); font-size:13px; margin-top:22px; }
   @media (max-width:840px){ .pricing-grid{ grid-template-columns:1fr; max-width:420px; margin-left:auto; margin-right:auto; } }
   .plan{ border:1px solid var(--line); border-radius:10px; padding:30px 26px; display:flex; flex-direction:column; background:var(--panel); position:relative; }
   .plan.featured{ border-color:var(--line-strong); background:linear-gradient(180deg, rgba(59,130,246,0.06), var(--panel)); }
@@ -561,11 +563,24 @@
   <div class="wrap">
     <div class="price-hero">
       <p class="eyebrow" style="justify-content:center;">Preço</p>
-      <div class="big">A partir de <span class="gold">R$497/mês</span></div>
+      <div class="big">A partir de <span class="gold">R$149/mês</span></div>
       <p class="fine">Sem taxa de setup. Cancele quando quiser.</p>
       <div class="trial-callout">✦ Teste grátis por 7 dias, sem cartão de crédito</div>
     </div>
     <div class="pricing-grid">
+      <div class="plan">
+        <div class="plan-name">Light</div>
+        <div class="plan-price">R$149<sup>/mês</sup></div>
+        <div class="plan-cycle">sem taxa de setup</div>
+        <ul class="plan-features">
+          <li>Atende 24h no seu WhatsApp: tira dúvidas e anota os pedidos</li>
+          <li>Avisa você quando um cliente precisa de atenção</li>
+          <li>Painel com seus clientes e pedidos</li>
+          <li>Você cadastra até 5 perguntas frequentes e as respostas</li>
+          <li>Até 150 mensagens/mês</li>
+        </ul>
+        <a href="/cadastro" class="btn btn-ghost">Começar</a>
+      </div>
       <div class="plan">
         <div class="plan-name">Básico</div>
         <div class="plan-price">R$497<sup>/mês</sup></div>
@@ -574,7 +589,7 @@
           <li>Atende 24h no seu WhatsApp: tira dúvidas e anota os pedidos</li>
           <li>Avisa você quando um cliente precisa de atenção</li>
           <li>Painel com seus clientes e pedidos</li>
-          <li>Personalize as respostas: até 10 perguntas</li>
+          <li>Você cadastra até 10 perguntas frequentes e as respostas (ex.: horário, preços, pagamento)</li>
           <li>Follow-up “Como foi”: até 20 por mês (em breve)</li>
           <li>Até 500 mensagens/mês</li>
         </ul>
@@ -589,7 +604,7 @@
           <li>Tudo do Básico</li>
           <li>Marca horários direto na sua agenda do Google</li>
           <li>Reconhece quem já é cliente e chama pelo nome</li>
-          <li>Personalize as respostas: até 30 perguntas</li>
+          <li>Você cadastra até 30 perguntas frequentes e as respostas</li>
           <li>Follow-up “Como foi”: até 50 por mês (em breve)</li>
           <li>Até 1.500 mensagens/mês</li>
         </ul>
@@ -608,6 +623,7 @@
         <a href="/cadastro" class="btn btn-ghost">Começar</a>
       </div>
     </div>
+    <p class="pricing-note">Contam só as mensagens que os seus clientes enviam. As respostas da secretária não contam.</p>
   </div>
 </section>
 

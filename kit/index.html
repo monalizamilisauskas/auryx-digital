@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kit grátis: respostas prontas para o WhatsApp do seu negócio | Auryx</title>
+<meta name="description" content="Baixe grátis mensagens prontas para responder clientes no WhatsApp: primeiro atendimento, agendamento, pagamentos e pós-atendimento. Feito para o seu tipo de negócio.">
+<meta property="og:title" content="Kit grátis: respostas prontas para o WhatsApp do seu negócio">
+<meta property="og:description" content="Mensagens prontas para copiar, colar e responder seus clientes mais rápido.">
+<meta property="og:image" content="https://auryx.digital/img/kit-previa-capa.jpg">
+<link rel="icon" type="image/png" href="/img/favicon.png">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#050A16; --panel:#0B1222; --panel-2:#101A30; --panel-3:#16213A;
+    --line:rgba(148,163,184,0.13); --line-strong:rgba(96,165,250,0.38);
+    --gold:#2563EB; --gold-bright:#60A5FA; --parchment:#EEF2FF; --muted:#94A3B8; --bad:#F87171;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; color:var(--parchment); font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased;
+    background: radial-gradient(1200px 700px at 12% -8%, rgba(59,130,246,0.13), transparent 60%),
+                radial-gradient(900px 600px at 105% 15%, rgba(59,130,246,0.07), transparent 55%), var(--ink); }
+  a{ color:inherit; } img{ display:block; max-width:100%; }
+  .wrap{ max-width:1180px; margin:0 auto; padding:0 clamp(20px,5vw,64px); }
+  h1,h2,h3{ font-family:'Fraunces',serif; margin:0; color:var(--parchment); }
+  .eyebrow{ font-family:'IBM Plex Mono',monospace; font-size:12.5px; letter-spacing:0.16em; text-transform:uppercase; color:var(--gold-bright); margin:0 0 18px; }
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; font-family:'Inter',sans-serif; font-weight:600; font-size:15px;
+    padding:15px 26px; border-radius:10px; border:1px solid transparent; cursor:pointer; text-decoration:none; transition:transform .15s, background .15s; }
+  .btn:hover{ transform:translateY(-1px); }
+  .btn-primary{ background:var(--gold); color:#fff; } .btn-primary:hover{ background:#1D4ED8; }
+  .btn-ghost{ background:transparent; color:var(--parchment); border-color:rgba(238,242,255,0.28); }
+  .btn[disabled]{ opacity:.6; cursor:wait; transform:none; }
+
+  nav.topbar{ display:flex; justify-content:space-between; align-items:center; padding:22px clamp(20px,5vw,64px); max-width:1180px; margin:0 auto; }
+  nav .brand-mark{ height:30px; width:auto; }
+  nav a.link{ font-size:14px; color:var(--muted); text-decoration:none; } nav a.link:hover{ color:var(--parchment); }
+
+  .hero{ padding:36px 0 80px; }
+  .hero-grid{ display:grid; grid-template-columns:1.05fr 0.95fr; gap:clamp(32px,5vw,72px); align-items:center; }
+  h1{ font-weight:600; font-size:clamp(34px,4.4vw,54px); line-height:1.06; letter-spacing:-0.01em; margin-bottom:20px; }
+  h1 em{ font-style:italic; font-weight:500; color:var(--gold-bright); }
+  .sub{ font-size:17px; line-height:1.65; color:var(--muted); max-width:52ch; margin:0 0 28px; }
+  .lista{ list-style:none; padding:0; margin:0 0 30px; display:grid; gap:10px; }
+  .lista li{ display:flex; gap:12px; font-size:15.5px; line-height:1.5; }
+  .lista li::before{ content:"✓"; flex:none; width:22px; height:22px; border-radius:50%; background:rgba(37,99,235,0.18); color:var(--gold-bright);
+    display:grid; place-items:center; font-size:12px; font-weight:700; margin-top:1px; }
+
+  .form-card{ background:linear-gradient(180deg, var(--panel-2), var(--panel)); border:1px solid var(--line-strong); border-radius:18px; padding:clamp(22px,3vw,32px);
+    box-shadow:0 30px 80px -30px rgba(37,99,235,0.45); }
+  .form-card h2{ font-size:24px; margin-bottom:6px; }
+  .form-card .nota{ font-size:13.5px; color:var(--muted); margin:0 0 20px; }
+  .campo{ margin-bottom:14px; }
+  .campo label{ display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:#CBD5E1; }
+  .campo label span{ font-weight:400; color:var(--muted); }
+  .campo input, .campo select{ width:100%; font:inherit; font-size:15px; color:var(--parchment); background:var(--ink); border:1px solid rgba(148,163,184,0.28);
+    border-radius:10px; padding:13px 14px; outline:none; }
+  .campo select{ appearance:none; background-image:linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position:calc(100% - 20px) 50%, calc(100% - 15px) 50%; background-size:5px 5px; background-repeat:no-repeat; }
+  .campo input:focus, .campo select:focus{ border-color:var(--gold-bright); box-shadow:0 0 0 3px rgba(96,165,250,0.18); }
+  .campo.erro input, .campo.erro select{ border-color:var(--bad); }
+  .isca{ position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
+  .aceite{ display:flex; gap:10px; align-items:flex-start; font-size:12.5px; line-height:1.5; color:var(--muted); margin:6px 0 18px; }
+  .aceite input{ margin-top:3px; accent-color:var(--gold); width:16px; height:16px; flex:none; }
+  .aceite a{ color:var(--gold-bright); }
+  .form-card .btn{ width:100%; font-size:16px; padding:16px; }
+  .msg-erro{ color:var(--bad); font-size:13.5px; margin:10px 0 0; min-height:1px; }
+  .seguro{ font-size:12px; color:var(--muted); text-align:center; margin:12px 0 0; }
+
+  .sucesso{ display:none; text-align:center; }
+  .sucesso .ok{ width:56px; height:56px; border-radius:50%; background:rgba(37,211,102,0.15); color:#25D366; display:grid; place-items:center; font-size:28px; margin:0 auto 14px; }
+  .sucesso h2{ margin-bottom:8px; }
+  .sucesso p{ color:var(--muted); font-size:15px; line-height:1.6; margin:0 0 20px; }
+  .sucesso .btn{ margin-bottom:12px; }
+  .sucesso .ou{ font-size:13px; color:var(--muted); margin:18px 0 12px; border-top:1px solid var(--line); padding-top:18px; }
+  .btn-whats{ background:#25D366; color:#062E16; }
+
+  .previa{ position:relative; height:clamp(420px,48vw,560px); }
+  .previa img{ position:absolute; border-radius:10px; box-shadow:0 30px 70px -20px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.06); }
+  .previa .p1{ width:62%; left:4%; top:2%; transform:rotate(-4deg); z-index:2; }
+  .previa .p2{ width:58%; right:2%; top:12%; transform:rotate(5deg); z-index:1; }
+  .previa .tag{ position:absolute; z-index:3; left:46%; bottom:6%; background:var(--gold); color:#fff; font-weight:700; font-size:14px; padding:10px 16px; border-radius:999px; white-space:nowrap;
+    box-shadow:0 12px 30px -10px rgba(37,99,235,0.8); }
+
+  .faixa{ border-top:1px solid var(--line); padding:72px 0; }
+  .faixa h2{ font-size:clamp(26px,3vw,36px); margin-bottom:34px; max-width:24ch; }
+  .tres{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+  .item{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:24px; }
+  .item .ic{ font-size:26px; margin-bottom:12px; }
+  .item h3{ font-family:'Inter',sans-serif; font-size:16.5px; font-weight:600; margin-bottom:8px; }
+  .item p{ margin:0; font-size:14.5px; line-height:1.6; color:var(--muted); }
+  .tipos{ display:flex; flex-wrap:wrap; gap:10px; margin-top:28px; }
+  .tipos span{ font-size:13.5px; padding:8px 14px; border-radius:999px; border:1px solid var(--line); background:var(--panel); color:#CBD5E1; }
+
+  footer{ border-top:1px solid var(--line); padding:36px 0 44px; font-size:13px; color:var(--muted); }
+  footer .wrap{ display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; }
+  footer a{ color:var(--muted); text-decoration:none; } footer a:hover{ color:var(--parchment); }
+
+  @media (max-width:900px){
+    .hero-grid{ grid-template-columns:1fr; }
+    .previa{ height:320px; width:100%; max-width:460px; margin:0 auto; order:-1; }
+    .tres{ grid-template-columns:1fr; }
+    .previa .p1{ width:auto; height:86%; left:10%; top:4%; }
+    .previa .p2{ width:auto; height:76%; right:8%; top:12%; }
+  }
+  @media (max-width:520px){ .previa{ height:250px; } .previa .tag{ font-size:12.5px; left:auto; right:4%; } h1{ font-size:32px; } }
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <a href="/"><img class="brand-mark" alt="Auryx" src="/img/logo-auryx-branca.png"></a>
+  <a class="link" href="/">Conheça a AI Secretária →</a>
+</nav>
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <p class="eyebrow">Kit gratuito · PDF</p>
+      <h1>Respostas prontas para o <em>WhatsApp</em> do seu negócio</h1>
+      <p class="sub">Pare de digitar a mesma coisa o dia inteiro. Receba mensagens prontas para copiar, colar e responder seus clientes mais rápido, feitas para o seu tipo de negócio.</p>
+      <ul class="lista">
+        <li>Mais de 20 mensagens do primeiro "oi" ao pós-atendimento</li>
+        <li>Agendamento, valores, Pix, lembretes, reclamações e avaliação</li>
+        <li>Bônus: como transformar cada mensagem em atalho no WhatsApp Business</li>
+      </ul>
+
+      <div class="form-card" id="cartao">
+        <form id="formKit" novalidate>
+          <h2>Receba o kit grátis</h2>
+          <p class="nota">Escolha seu tipo de negócio e baixe na hora.</p>
+          <div class="campo" id="c_tipo">
+            <label for="tipo">Tipo de negócio</label>
+            <select id="tipo" required>
+              <option value="">Selecione…</option>
+              <option value="salao">Salão de beleza / estética</option>
+              <option value="clinica">Clínica / consultório</option>
+              <option value="clinica_odontologica">Clínica odontológica</option>
+              <option value="academia">Academia / estúdio</option>
+              <option value="restaurante">Restaurante / delivery</option>
+              <option value="mecanico">Oficina mecânica</option>
+              <option value="eletricista">Eletricista</option>
+              <option value="encanador">Encanador</option>
+              <option value="agencia_viagens">Agência de viagens</option>
+              <option value="suporte">Atendimento e suporte</option>
+              <option value="geral">Outro tipo de negócio</option>
+            </select>
+          </div>
+          <div class="campo" id="c_nome"><label for="nome">Seu nome</label><input id="nome" autocomplete="given-name" maxlength="80" required></div>
+          <div class="campo" id="c_email"><label for="email">Seu melhor e-mail</label><input id="email" type="email" autocomplete="email" maxlength="120" required></div>
+          <div class="campo"><label for="whats">WhatsApp <span>(opcional)</span></label><input id="whats" type="tel" autocomplete="tel" inputmode="tel" placeholder="(00) 00000-0000" maxlength="20"></div>
+          <div class="isca" aria-hidden="true"><label for="site">Site</label><input id="site" tabindex="-1" autocomplete="off"></div>
+          <label class="aceite"><input type="checkbox" id="aceite"> <span>Quero receber o kit e dicas da Auryx por e-mail. Posso cancelar quando quiser. Veja a <a href="/privacidade.html" target="_blank">Política de Privacidade</a>.</span></label>
+          <button class="btn btn-primary" type="submit" id="enviar">Quero o kit grátis →</button>
+          <p class="msg-erro" id="erro" role="alert"></p>
+          <p class="seguro">🔒 Sem spam. Seus dados não são compartilhados.</p>
+        </form>
+
+        <div class="sucesso" id="sucesso">
+          <div class="ok">✓</div>
+          <h2>Seu kit está pronto!</h2>
+          <p id="sucessoTxt">O download começa em instantes. Se não começar, toque no botão abaixo.</p>
+          <a class="btn btn-primary" id="baixar" href="#" download>⬇ Baixar o kit (PDF)</a>
+          <div class="ou">Quer ver uma secretária de IA respondendo de verdade?</div>
+          <a class="btn btn-whats" target="_blank" rel="noopener"
+             href="https://wa.me/5585992824164?text=Ol%C3%A1!%20Baixei%20o%20kit%20de%20respostas%20e%20quero%20conhecer%20a%20AI%20Secret%C3%A1ria.">💬 Conversar com a secretária agora</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="previa" aria-hidden="true">
+      <img class="p2" src="/img/kit-previa-miolo.jpg" alt="">
+      <img class="p1" src="/img/kit-previa-capa.jpg" alt="">
+      <div class="tag">📄 Grátis · PDF</div>
+    </div>
+  </div>
+</section>
+
+<section class="faixa">
+  <div class="wrap">
+    <p class="eyebrow">O que tem no kit</p>
+    <h2>Tudo o que você mais responde no WhatsApp, já escrito</h2>
+    <div class="tres">
+      <div class="item"><div class="ic">💬</div><h3>Mensagens para cada momento</h3><p>Boas-vindas, fora do horário, horários disponíveis, confirmação, valores, Pix, lembrete, reclamação e pedido de avaliação.</p></div>
+      <div class="item"><div class="ic">✏️</div><h3>É só completar e enviar</h3><p>O que você precisa trocar vem destacado, como nome do cliente, valor e horário. O resto já está pronto e no tom certo.</p></div>
+      <div class="item"><div class="ic">⚡</div><h3>Vira atalho no seu celular</h3><p>Passo a passo para salvar cada mensagem nas Respostas rápidas do WhatsApp Business e responder digitando só "/".</p></div>
+    </div>
+    <div class="tipos">
+      <span>💇 Salão de beleza</span><span>🩺 Clínica</span><span>🦷 Odontologia</span><span>🏋️ Academia</span><span>🍽️ Restaurante</span>
+      <span>🚗 Oficina</span><span>⚡ Eletricista</span><span>🔧 Encanador</span><span>✈️ Agência de viagens</span><span>💬 Atendimento</span><span>💼 Outros</span>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>© Auryx · CNPJ 65.440.779/0001-01</span>
+    <span><a href="/">Início</a> &nbsp;·&nbsp; <a href="/privacidade.html">Privacidade</a> &nbsp;·&nbsp; <a href="/termos.html">Termos de Uso</a></span>
+  </div>
+</footer>
+
+<script>
+const SUPABASE_URL = "https://ypqmrjvuotctiyydfpgb.supabase.co";
+const SUPABASE_KEY = "sb_publishable_V87H9FaZ0gHFm1krAnpZRg_an0puUit"; // chave pública: só registra o lead (função registrar_lead)
+const ARQUIVOS = { salao: "salao", clinica: "clinica", clinica_odontologica: "odontologia", academia: "academia", restaurante: "restaurante",
+  mecanico: "oficina", eletricista: "eletricista", encanador: "encanador", agencia_viagens: "agencia-viagens", suporte: "atendimento", geral: "negocio" };
+const $ = id => document.getElementById(id);
+
+// Origem da visita (ex.: ?utm_source=instagram no link da bio)
+const params = new URLSearchParams(location.search);
+const utm = {};
+["utm_source", "utm_medium", "utm_campaign", "utm_content"].forEach(k => { const v = params.get(k); if (v) utm[k] = v.slice(0, 80); });
+if (!utm.utm_source && document.referrer) { try { utm.referrer = new URL(document.referrer).hostname; } catch (e) {} }
+// ?tipo=salao já deixa o tipo escolhido (para anúncios por nicho)
+if (params.get("tipo") && ARQUIVOS[params.get("tipo")]) $("tipo").value = params.get("tipo");
+
+function marcar(id, ruim){ $(id).classList.toggle("erro", ruim); return ruim; }
+
+$("formKit").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const tipo = $("tipo").value, nome = $("nome").value.trim(), email = $("email").value.trim();
+  let falta = false;
+  falta = marcar("c_tipo", !tipo) || falta;
+  falta = marcar("c_nome", nome.length < 2) || falta;
+  falta = marcar("c_email", !/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(email)) || falta;
+  if (falta) { $("erro").textContent = "Preencha os campos destacados."; return; }
+  if (!$("aceite").checked) { $("erro").textContent = "Marque a caixa para receber o kit por e-mail."; return; }
+  $("erro").textContent = ""; $("enviar").disabled = true; $("enviar").textContent = "Preparando seu kit…";
+  try {
+    const r = await fetch(SUPABASE_URL + "/rest/v1/rpc/registrar_lead", {
+      method: "POST",
+      headers: { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_nome: nome, p_email: email, p_tipo: tipo, p_whatsapp: $("whats").value, p_utm: utm,
+                             p_consentimento: true, p_isca: $("site").value })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.ok === false) {
+      $("erro").textContent = d.erro === "email" ? "Confira o e-mail digitado." : "Não foi possível agora. Tente de novo em instantes.";
+      if (d.erro === "email") marcar("c_email", true);
+      $("enviar").disabled = false; $("enviar").textContent = "Quero o kit grátis →"; return;
+    }
+  } catch (e) {
+    // sem conexão com o banco: entrega o kit mesmo assim, para não perder a pessoa
+  }
+  const url = "/kit/kit-respostas-" + ARQUIVOS[tipo] + ".pdf";
+  $("baixar").href = url;
+  $("sucessoTxt").textContent = "Obrigado, " + nome.split(" ")[0] + "! O download começa em instantes. Se não começar, toque no botão abaixo.";
+  $("formKit").style.display = "none"; $("sucesso").style.display = "block";
+  $("cartao").scrollIntoView({ behavior: "smooth", block: "center" });
+  setTimeout(() => { $("baixar").click(); }, 600);
+});
+</script>
+</body>
+</html>

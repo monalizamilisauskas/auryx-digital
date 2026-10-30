@@ -353,6 +353,11 @@
   .adm-extra{ font-size:12.5px; color:var(--muted); margin-top:8px; line-height:1.45; }
   .adm-limite{ display:flex; justify-content:space-between; gap:12px; font-size:14px; margin-top:14px; }
   .adm-limite span{ color:var(--muted); font-variant-numeric:tabular-nums; }
+  .adm-leads{ border-top:1px solid var(--line); }
+  .adm-lead{ display:flex; justify-content:space-between; gap:14px; padding:12px 0; border-bottom:1px solid var(--line); font-size:14px; }
+  .adm-lead-dir{ display:flex; flex-direction:column; align-items:flex-end; gap:4px; font-size:12.5px; color:var(--muted); white-space:nowrap; }
+  .adm-lead-dir a{ color:var(--gold-bright); }
+  .adm-tag{ font-size:11px; font-weight:600; padding:2px 8px; border-radius:999px; background:rgba(124,184,143,0.16); color:var(--good, #7CB88F); }
   @media (max-width:560px){ #adminPainel .metric-grid{ grid-template-columns:1fr; } #adminPainel .metric-card{ padding:18px; } #adminPainel .adm-limite{ font-size:13px; } }
   .ag-topo{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
   .ag-topo .sub b{ color:var(--parchment); font-weight:600; }
@@ -507,6 +512,7 @@ const STATUS_AG = { confirmado: "Confirmado", realizado: "Realizado", cancelado:
 const tela = { abaFu: "agendado", fuForm: null, abaAg: "proximos", agendamento: null, view: (() => { try { return localStorage.getItem("painelView") || "inicio"; } catch (e) { return "inicio"; } })(), aba: "pendente", pedido: null, limite: 20 };
 let dadosPainel = null;
 let adminDados = null;
+let adminLeads = null;
 const STATUS = { pendente: "Pendente", respondido: "Respondido", fechado: "Venda fechada", nao_fechou: "Não fechou" };
 
 const $ = (id) => document.getElementById(id);
@@ -544,6 +550,7 @@ async function carregarPainel(){
   emailLogado = (u && u.user && u.user.email) || "";
   // Administração Auryx: só volta dados para os e-mails de administração (os outros nem veem o menu).
   try { const a = await supa.rpc("admin_resumo"); adminDados = (!a.error && a.data) ? a.data : null; } catch (e) { adminDados = null; }
+  if (adminDados) { try { const l = await supa.rpc("admin_leads"); adminLeads = (!l.error && l.data) ? l.data : null; } catch (e) { adminLeads = null; } }
   render(data);
 }
 
@@ -1021,6 +1028,30 @@ function barra(pct){
   const p = Math.max(0, Math.min(100, Number(pct || 0)));
   return '<div class="usage-bar"><div class="usage-fill' + (p >= 80 ? ' alto' : '') + '" style="width:' + p + '%"></div></div>';
 }
+const TIPO_LEAD = { salao: "Salão", clinica: "Clínica", clinica_odontologica: "Odontologia", academia: "Academia", restaurante: "Restaurante",
+  mecanico: "Oficina", eletricista: "Eletricista", encanador: "Encanador", agencia_viagens: "Agência de viagens", suporte: "Atendimento", geral: "Outro" };
+// Leads da página auryx.digital/kit (Kit de respostas prontas): quem baixou e quem já virou cliente
+function renderLeads(){
+  const L = adminLeads; if (!L) return '';
+  const tipos = Object.entries(L.por_tipo || {}).map(([t, q]) => esc(TIPO_LEAD[t] || t) + ': ' + q).join(' · ') || 'nenhum ainda';
+  let h = '<div class="panel"><h2>Leads do kit</h2><p class="sub">Quem baixou o kit de respostas em auryx.digital/kit. Você recebe um aviso no WhatsApp a cada lead novo.</p>'
+    + '<div class="metric-grid" style="margin:0 0 14px;">'
+    + '<div class="metric-card"><div class="label">Leads (7 dias)</div><div class="value neutral">' + (L.ultimos_7d || 0) + '</div><div class="adm-extra">' + (L.total || 0) + ' no total</div></div>'
+    + '<div class="metric-card"><div class="label">Viraram cliente</div><div class="value">' + (L.viraram_cliente || 0) + '</div><div class="adm-extra">'
+    + (L.total ? Math.round(100 * (L.viraram_cliente || 0) / L.total) + '% dos leads' : '') + '</div></div>'
+    + '<div class="metric-card"><div class="label">Por tipo de negócio</div><div class="adm-extra" style="margin-top:6px;">' + tipos + '</div></div>'
+    + '<div class="metric-card"><div class="label">Link para divulgar</div><div class="adm-extra" style="margin-top:6px;"><a href="https://auryx.digital/kit?utm_source=instagram" target="_blank" rel="noopener" style="color:var(--gold-bright);">auryx.digital/kit?utm_source=instagram</a><br>Troque "instagram" pela origem (ex.: whatsapp, anuncio) para saber de onde veio cada lead.</div></div>'
+    + '</div>';
+  const rec = L.recentes || [];
+  if (!rec.length) return h + '<p class="sub" style="margin:0;">Nenhum lead ainda. Divulgue o link auryx.digital/kit no Instagram.</p></div>';
+  h += '<div class="adm-leads">' + rec.map(x => {
+    const wa = x.whatsapp ? '<a href="https://wa.me/' + esc(x.whatsapp) + '" target="_blank" rel="noopener">WhatsApp</a>' : '';
+    return '<div class="adm-lead"><div><b>' + esc(x.nome) + '</b>' + (x.cliente ? ' <span class="adm-tag">cliente</span>' : '')
+      + '<div class="adm-extra">' + esc(x.email) + ' · ' + esc(TIPO_LEAD[x.tipo_negocio] || x.tipo_negocio || '—') + (x.origem ? ' · ' + esc(x.origem) : '') + '</div></div>'
+      + '<div class="adm-lead-dir"><span>' + esc(dataHoraBR(x.criado_em)) + '</span>' + wa + '</div></div>';
+  }).join('') + '</div></div>';
+  return h;
+}
 function renderAdmin(){
   const a = adminDados; const box = $("adminPainel");
   if (!a){ box.innerHTML = ''; return; }
@@ -1049,6 +1080,7 @@ function renderAdmin(){
   html += perto.length ? perto.map(x => '<div class="adm-limite"><div>' + esc(x.nome) + ' · ' + esc(x.plano) + ' · ' + x.usadas + ' de ' + x.limite + ' mensagens</div><span>' + x.pct + '%</span></div>' + barra(x.pct)).join('')
     : '<p class="sub" style="margin:6px 0 0;">Nenhum cliente perto do limite.</p>';
   html += '</div>';
+  html += renderLeads();
   const cf = a.config || {};
   const campo = (id, rotulo, valor, passo) => '<div class="campo"><label for="cfg_' + id + '">' + rotulo + '</label><input id="cfg_' + id + '" type="number" step="' + (passo || '1') + '" min="0" value="' + esc(valor) + '"></div>';
   html += '<details class="cfg-agenda"><summary><span>' + icone("personalizar") + 'Valores usados no cálculo</span><span class="cfg-resumo">n8n ' + brl(cf.custo_n8n_brl) + ' · Stripe ' + cf.stripe_pct + '% + ' + brl(cf.stripe_fixo) + '</span></summary>'

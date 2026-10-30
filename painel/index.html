@@ -1965,11 +1965,9 @@ function renderDados(d){
     + '<div class="campo"><label for="dContato">Seu nome</label><input id="dContato" maxlength="80" value="' + esc(d.contato_nome || "") + '">'
     + '<small>Para o painel te cumprimentar pelo nome.</small></div>'
     + '<div class="campo"><label for="dWhats">WhatsApp para receber os avisos</label><input id="dWhats" inputmode="tel" maxlength="20" value="' + esc(d.whatsapp_avisos || "") + '">'
-    + '<small>Com DDD, ex.: (11) 99999-8888. O +55 entra sozinho; de outro país, comece com o código (ex.: +351). Use um número diferente do WhatsApp do negócio. '
-    + 'É para onde vão os avisos de pedidos e de clientes esperando.</small>'
-    + (d.whatsapp_avisos ? '<small style="display:block;margin-top:6px;color:var(--parchment);">Avisos vão para: <b>' + esc(foneBR(d.whatsapp_avisos)) + '</b>' + (tela.dadosSalvos ? ' · <span style="color:var(--good);">Salvo ✓</span>' : '') + '</small>' : '')
-    + '</div>'
-    + '<div class="acoes"><button class="btn btn-primary" type="button" id="salvarDados">Salvar</button><span class="msg" id="dadosMsg"></span></div>'
+    + '<small>Com DDD. Ex.: (11) 99999-8888.</small></div>'
+    + '<div class="acoes"><button class="btn btn-primary" type="button" id="salvarDados">Salvar</button><span class="msg ok" id="dadosMsg">'
+    + (tela.dadosSalvos && d.whatsapp_avisos ? 'Salvo ✓ Avisos para ' + esc(foneBR(d.whatsapp_avisos)) : '') + '</span></div>'
     + '</div>';
   $("salvarDados").addEventListener("click", salvarDados);
 }

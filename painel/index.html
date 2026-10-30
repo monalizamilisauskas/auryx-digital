@@ -1036,7 +1036,8 @@ function renderLeads(){
   const tipos = Object.entries(L.por_tipo || {}).map(([t, q]) => esc(TIPO_LEAD[t] || t) + ': ' + q).join(' · ') || 'nenhum ainda';
   let h = '<div class="panel"><h2>Leads do kit</h2><p class="sub">Quem baixou o kit de respostas em auryx.digital/kit. Você recebe um aviso no WhatsApp a cada lead novo.</p>'
     + '<div class="metric-grid" style="margin:0 0 14px;">'
-    + '<div class="metric-card"><div class="label">Leads (7 dias)</div><div class="value neutral">' + (L.ultimos_7d || 0) + '</div><div class="adm-extra">' + (L.total || 0) + ' no total</div></div>'
+    + '<div class="metric-card"><div class="label">Leads (7 dias)</div><div class="value neutral">' + (L.ultimos_7d || 0) + '</div><div class="adm-extra">' + (L.total || 0) + ' no total · ' + (L.emails_7d || 0) + ' e-mails enviados'
+    + (L.emails_falhas_7d ? ' · ' + L.emails_falhas_7d + ' falha(s)' : '') + (L.descadastrados ? ' · ' + L.descadastrados + ' cancelaram' : '') + '</div></div>'
     + '<div class="metric-card"><div class="label">Viraram cliente</div><div class="value">' + (L.viraram_cliente || 0) + '</div><div class="adm-extra">'
     + (L.total ? Math.round(100 * (L.viraram_cliente || 0) / L.total) + '% dos leads' : '') + '</div></div>'
     + '<div class="metric-card"><div class="label">Por tipo de negócio</div><div class="adm-extra" style="margin-top:6px;">' + tipos + '</div></div>'
@@ -1047,7 +1048,8 @@ function renderLeads(){
   h += '<div class="adm-leads">' + rec.map(x => {
     const wa = x.whatsapp ? '<a href="https://wa.me/' + esc(x.whatsapp) + '" target="_blank" rel="noopener">WhatsApp</a>' : '';
     return '<div class="adm-lead"><div><b>' + esc(x.nome) + '</b>' + (x.cliente ? ' <span class="adm-tag">cliente</span>' : '')
-      + '<div class="adm-extra">' + esc(x.email) + ' · ' + esc(TIPO_LEAD[x.tipo_negocio] || x.tipo_negocio || '—') + (x.origem ? ' · ' + esc(x.origem) : '') + '</div></div>'
+      + '<div class="adm-extra">' + esc(x.email) + ' · ' + esc(TIPO_LEAD[x.tipo_negocio] || x.tipo_negocio || '—') + (x.origem ? ' · ' + esc(x.origem) : '')
+      + ' · ' + (x.descadastrado ? 'cancelou os e-mails' : 'e-mail ' + (x.email_etapa || 0) + ' de 5') + '</div></div>'
       + '<div class="adm-lead-dir"><span>' + esc(dataHoraBR(x.criado_em)) + '</span>' + wa + '</div></div>';
   }).join('') + '</div></div>';
   return h;

@@ -461,7 +461,7 @@
   </div>
 </main>
 
-<script src="respostas.js?v=7"></script>
+<script src="respostas.js?v=8"></script>
 <script>
 const SUPABASE_URL = "https://ypqmrjvuotctiyydfpgb.supabase.co";
 const SUPABASE_KEY = "sb_publishable_V87H9FaZ0gHFm1krAnpZRg_an0puUit"; // chave pública; os dados são protegidos pelo login
@@ -1195,7 +1195,7 @@ function tipoBiblioteca(){
   if (B[t]) return t;
   const regras = [[/viage|turis/, "agencia_viagens"], [/odont|dentist/, "clinica_odontologica"], [/clinic|consult|medic|psic|fisio|saude|nutri/, "clinica"],
     [/salao|beleza|barb|estetic|unha|cabel|manicure/, "salao"], [/academ|fitness|crossfit|pilates|muscula/, "academia"], [/eletric/, "eletricista"],
-    [/encan|hidraul|desentup/, "encanador"], [/mecan|oficina|auto ?center|funilar/, "mecanico"], [/restaur|lanch|pizz|hamburg|comida|delivery|bar\b|cafeteria/, "restaurante"]];
+    [/encan|hidraul|desentup/, "encanador"], [/mecan|oficina|auto ?center|funilar/, "mecanico"], [/suporte|marketing|tecnolog|software|sistema|consultor|curso|escola|treinament/, "suporte"], [/restaur|lanch|pizz|hamburg|comida|delivery|bar\b|cafeteria/, "restaurante"]];
   const r = regras.find(([re]) => re.test(t));
   return r && B[r[1]] ? r[1] : "geral";
 }

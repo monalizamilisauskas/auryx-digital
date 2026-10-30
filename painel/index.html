@@ -722,6 +722,7 @@ function icone(nome){
 function irPara(view){
   fecharMenu();
   tela.view = view;
+  tela.dadosSalvos = false;
   tela.pedido = null;
   tela.confHorario = null;
   tela.resp = null;
@@ -1964,8 +1965,9 @@ function renderDados(d){
     + '<div class="campo"><label for="dContato">Seu nome</label><input id="dContato" maxlength="80" value="' + esc(d.contato_nome || "") + '">'
     + '<small>Para o painel te cumprimentar pelo nome.</small></div>'
     + '<div class="campo"><label for="dWhats">WhatsApp para receber os avisos</label><input id="dWhats" inputmode="tel" maxlength="20" value="' + esc(d.whatsapp_avisos || "") + '">'
-    + '<small>Com código do país e DDD, só números. Ex.: 5511999998888. É para onde vão os avisos de pedidos e de clientes esperando.</small></div>'
-    + '<div class="acoes"><button class="btn btn-primary" type="button" id="salvarDados">Salvar</button><span class="msg" id="dadosMsg"></span></div>'
+    + '<small>Com DDD. Ex.: (11) 99999-8888.</small></div>'
+    + '<div class="acoes"><button class="btn btn-primary" type="button" id="salvarDados">Salvar</button><span class="msg ok" id="dadosMsg">'
+    + (tela.dadosSalvos && d.whatsapp_avisos ? 'Salvo ✓ Avisos para ' + esc(foneBR(d.whatsapp_avisos)) : '') + '</span></div>'
     + '</div>';
   $("salvarDados").addEventListener("click", salvarDados);
 }
@@ -1974,14 +1976,19 @@ async function salvarDados(){
   const msg = $("dadosMsg"); const btn = $("salvarDados");
   const nome = $("dNome").value.trim();
   const contato = $("dContato").value.trim();
-  const whats = $("dWhats").value.replace(/\D/g, "");
+  const whats = $("dWhats").value.replace(/\D/g, "").replace(/^0+/, "");
   msg.className = "msg"; msg.textContent = "";
-  if (nome.length < 2){ msg.className = "msg erro"; msg.textContent = "Escreva o nome da sua agência."; return; }
-  if (whats && (whats.length < 10 || whats.length > 15)){ msg.className = "msg erro"; msg.textContent = "Confira o WhatsApp: código do país + DDD + número, só números."; return; }
+  if (nome.length < 2){ msg.className = "msg erro"; msg.textContent = "Escreva o nome do seu negócio."; return; }
+  if (whats && (whats.length < 10 || whats.length > 15)){ msg.className = "msg erro"; msg.textContent = "Confira o WhatsApp: DDD + número, ex.: (11) 99999-8888."; return; }
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Salvando...';
   const { error } = await supa.rpc("salvar_dados", { p_nome: nome, p_contato_nome: contato, p_whatsapp: whats });
   btn.disabled = false; btn.textContent = "Salvar";
-  if (error){ msg.className = "msg erro"; msg.textContent = "Não foi possível salvar agora. Tente de novo em alguns instantes."; return; }
+  if (error){
+    msg.className = "msg erro";
+    msg.textContent = /whatsapp/i.test(error.message || "") ? "Confira o WhatsApp: DDD + número, ex.: (11) 99999-8888." : "Não foi possível salvar agora. Tente de novo em alguns instantes.";
+    return;
+  }
+  tela.dadosSalvos = true;   // mostra "Salvo ✓" ao lado do número como ficou gravado
   await carregarPainel();
 }
 

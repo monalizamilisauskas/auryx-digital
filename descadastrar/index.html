@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Cancelar e-mails | Auryx</title>
+<link rel="icon" type="image/png" href="/img/favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#050A16; --panel:#0B1222; --line:rgba(148,163,184,0.18); --gold:#2563EB; --gold-bright:#60A5FA; --parchment:#EEF2FF; --muted:#94A3B8; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; min-height:100vh; display:grid; place-items:center; padding:24px 16px; font-family:'Inter',sans-serif; color:var(--parchment);
+    background:radial-gradient(900px 600px at 15% -10%, rgba(59,130,246,0.12), transparent 60%), var(--ink); }
+  .card{ width:100%; max-width:440px; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:32px 28px; text-align:center; }
+  .card img{ height:30px; margin:0 auto 24px; display:block; }
+  h1{ font-family:'Fraunces',serif; font-size:24px; margin:0 0 10px; }
+  p{ color:var(--muted); line-height:1.6; font-size:15px; margin:0 0 20px; }
+  .btn{ display:inline-block; font-weight:600; font-size:15px; padding:13px 22px; border-radius:10px; border:0; cursor:pointer; text-decoration:none; background:var(--gold); color:#fff; }
+  .btn[disabled]{ opacity:.6; cursor:wait; }
+  a.link{ color:var(--gold-bright); font-size:14px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <img src="/img/logo-auryx-branca.png" alt="Auryx">
+  <div id="pedir">
+    <h1>Cancelar os e-mails?</h1>
+    <p>Você vai parar de receber os e-mails da Auryx sobre o kit de respostas. O kit continua sendo seu.</p>
+    <button class="btn" id="sair">Sim, não quero mais receber</button>
+  </div>
+  <div id="pronto" style="display:none">
+    <h1>Pronto ✓</h1>
+    <p>Você não vai mais receber estes e-mails. Se mudar de ideia, é só baixar o kit de novo.</p>
+    <a class="link" href="/">Voltar para o site</a>
+  </div>
+  <div id="erro" style="display:none">
+    <h1>Link inválido</h1>
+    <p>Não encontramos este cadastro. Se quiser parar de receber, responda qualquer e-mail nosso com a palavra "descadastrar".</p>
+    <a class="link" href="/">Voltar para o site</a>
+  </div>
+</div>
+<script>
+const SUPABASE_URL = "https://ypqmrjvuotctiyydfpgb.supabase.co";
+const SUPABASE_KEY = "sb_publishable_V87H9FaZ0gHFm1krAnpZRg_an0puUit"; // chave pública: só cancela pelo link do e-mail (função descadastrar_lead)
+const token = new URLSearchParams(location.search).get("t") || "";
+const ver = id => { ["pedir", "pronto", "erro"].forEach(x => document.getElementById(x).style.display = x === id ? "block" : "none"); };
+if (!/^[0-9a-f-]{36}$/.test(token)) ver("erro");
+document.getElementById("sair").addEventListener("click", async ev => {
+  ev.target.disabled = true; ev.target.textContent = "Cancelando…";
+  try {
+    const r = await fetch(SUPABASE_URL + "/rest/v1/rpc/descadastrar_lead", { method: "POST",
+      headers: { apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_token: token }) });
+    const d = await r.json();
+    ver(r.ok && d.ok ? "pronto" : "erro");
+  } catch (e) { ev.target.disabled = false; ev.target.textContent = "Tentar de novo"; }
+});
+</script>
+</body>
+</html>

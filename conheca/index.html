@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conheça a AI Secretária | Auryx</title>
+<meta name="description" content="Uma Secretária de IA que atende o WhatsApp do seu negócio 24 horas por dia. Teste grátis por 7 dias, sem cartão.">
+<meta property="og:title" content="Conheça a AI Secretária da Auryx">
+<meta property="og:description" content="Seu WhatsApp respondido na hora, 24 horas por dia. Teste grátis por 7 dias.">
+<meta property="og:image" content="https://auryx.digital/img/kit-previa-capa.jpg">
+<link rel="icon" type="image/png" href="/img/favicon.png">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#050A16; --panel:#0B1222; --panel-2:#101A30; --line:rgba(148,163,184,0.14); --line-strong:rgba(96,165,250,0.38);
+    --gold:#2563EB; --gold-bright:#60A5FA; --parchment:#EEF2FF; --muted:#94A3B8; --wa:#25D366;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; color:var(--parchment); font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased;
+    background: radial-gradient(900px 600px at 10% -10%, rgba(59,130,246,0.14), transparent 60%), var(--ink); }
+  a{ color:inherit; } img{ display:block; max-width:100%; }
+  .wrap{ max-width:620px; margin:0 auto; padding:0 20px; }
+  h1,h2{ font-family:'Fraunces',serif; margin:0; }
+  .eyebrow{ font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:0.16em; text-transform:uppercase; color:var(--gold-bright); margin:0 0 14px; }
+  .btn{ display:flex; align-items:center; justify-content:center; gap:8px; width:100%; font-weight:600; font-size:16px; padding:16px 20px; border-radius:12px;
+    text-decoration:none; transition:transform .15s, background .15s; }
+  .btn:hover{ transform:translateY(-1px); }
+  .btn-primary{ background:var(--gold); color:#fff; } .btn-primary:hover{ background:#1D4ED8; }
+  .btn-ghost{ border:1px solid rgba(238,242,255,0.26); color:var(--parchment); }
+  .nota{ text-align:center; font-size:13px; color:var(--muted); margin:10px 0 0; }
+
+  header{ padding:20px 0 6px; } header img{ height:28px; width:auto; }
+  .hero{ padding:28px 0 36px; }
+  h1{ font-size:clamp(32px,8.5vw,44px); line-height:1.08; font-weight:600; letter-spacing:-0.01em; margin-bottom:16px; }
+  h1 em{ font-style:italic; font-weight:500; color:var(--gold-bright); }
+  .sub{ font-size:16.5px; line-height:1.6; color:var(--muted); margin:0 0 24px; }
+  .acoes{ display:grid; gap:10px; }
+
+  .chat{ margin:30px 0 0; background:#0B141A; border:1px solid var(--line); border-radius:18px; padding:16px; display:flex; flex-direction:column; gap:8px; }
+  .chat .topo{ display:flex; align-items:center; gap:10px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:4px; font-size:14px; font-weight:600; }
+  .chat .topo span{ font-weight:400; font-size:12px; color:#7CB88F; display:block; }
+  .chat .av{ width:34px; height:34px; border-radius:50%; background:var(--gold); display:grid; place-items:center; font-weight:700; font-size:14px; }
+  .m{ max-width:84%; padding:9px 12px; border-radius:12px; font-size:14px; line-height:1.45; }
+  .m small{ display:block; text-align:right; font-size:10.5px; opacity:.6; margin-top:3px; }
+  .m.cli{ background:#202C33; align-self:flex-start; border-top-left-radius:3px; }
+  .m.ia{ background:#005C4B; align-self:flex-end; border-top-right-radius:3px; }
+
+  section.bloco{ border-top:1px solid var(--line); padding:40px 0; }
+  h2{ font-size:clamp(25px,6.5vw,32px); line-height:1.15; font-weight:600; margin-bottom:22px; }
+  .lista{ display:grid; gap:12px; }
+  .item{ display:flex; gap:14px; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; }
+  .item .ic{ flex:none; font-size:22px; line-height:1; margin-top:2px; }
+  .item b{ display:block; font-size:15.5px; margin-bottom:4px; }
+  .item p{ margin:0; font-size:14px; line-height:1.55; color:var(--muted); }
+
+  .passos{ display:grid; gap:14px; counter-reset:p; }
+  .passo{ display:flex; gap:14px; align-items:flex-start; }
+  .passo::before{ counter-increment:p; content:counter(p); flex:none; width:32px; height:32px; border-radius:50%; background:rgba(37,99,235,0.18);
+    color:var(--gold-bright); display:grid; place-items:center; font-weight:700; font-size:14px; }
+  .passo b{ display:block; font-size:15.5px; margin-bottom:3px; }
+  .passo p{ margin:0; font-size:14px; line-height:1.55; color:var(--muted); }
+
+  .preco{ background:linear-gradient(180deg, var(--panel-2), var(--panel)); border:1px solid var(--line-strong); border-radius:18px; padding:24px 20px;
+    box-shadow:0 30px 70px -30px rgba(37,99,235,0.5); }
+  .preco .de{ font-size:13px; color:var(--muted); }
+  .preco .valor{ font-family:'Fraunces',serif; font-size:42px; font-weight:600; margin:2px 0 14px; }
+  .preco .valor span{ font-family:'Inter',sans-serif; font-size:16px; color:var(--muted); font-weight:500; }
+  .preco ul{ list-style:none; padding:0; margin:0 0 20px; display:grid; gap:9px; }
+  .preco li{ display:flex; gap:10px; font-size:14.5px; line-height:1.45; }
+  .preco li::before{ content:"✓"; color:var(--wa); font-weight:700; }
+  .preco .todos{ display:block; text-align:center; margin-top:14px; font-size:14px; color:var(--gold-bright); }
+
+  details{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:10px; }
+  summary{ cursor:pointer; font-weight:600; font-size:15px; list-style:none; display:flex; justify-content:space-between; gap:12px; }
+  summary::-webkit-details-marker{ display:none; }
+  summary::after{ content:"+"; color:var(--gold-bright); font-size:20px; line-height:1; }
+  details[open] summary::after{ content:"−"; }
+  details p{ margin:10px 0 0; font-size:14px; line-height:1.6; color:var(--muted); }
+
+  .fim{ text-align:center; padding:44px 0 30px; border-top:1px solid var(--line); }
+  .fim h2{ margin-bottom:12px; } .fim p.sub{ margin-bottom:22px; }
+  .kit{ display:block; margin-top:18px; font-size:14px; color:var(--muted); }
+  .kit a{ color:var(--gold-bright); }
+  footer{ text-align:center; font-size:12.5px; color:var(--muted); padding:20px 0 90px; }
+  footer a{ color:var(--muted); }
+  .whats-flutuante{ position:fixed; right:14px; bottom:14px; z-index:50; width:52px; height:52px; border-radius:50%; background:var(--wa); color:#fff;
+    display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px rgba(0,0,0,0.35); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><a href="/"><img src="/img/logo-auryx-branca.png" alt="Auryx"></a></header>
+
+  <section class="hero">
+    <p class="eyebrow">AI Secretária · WhatsApp</p>
+    <h1>Seu WhatsApp respondido <em>na hora</em>, 24 horas por dia</h1>
+    <p class="sub">Uma Secretária de IA que atende seus clientes no WhatsApp do seu negócio: tira dúvidas, organiza pedidos de horário e orçamento, e chama você quando precisa.</p>
+    <div class="acoes">
+      <a class="btn btn-primary" href="/cadastro/?utm_source=instagram&utm_medium=conheca">Testar grátis por 7 dias →</a>
+      <a class="btn btn-ghost" target="_blank" rel="noopener" href="https://wa.me/5585992824164?text=Ol%C3%A1!%20Quero%20ver%20a%20secret%C3%A1ria%20funcionando.">💬 Conversar com a secretária agora</a>
+    </div>
+    <p class="nota">Sem cartão de crédito. Sem taxa de implantação.</p>
+
+    <div class="chat" aria-hidden="true">
+      <div class="topo"><div class="av">A</div><div>Seu negócio<span>online</span></div></div>
+      <div class="m cli">Oi! Tem horário amanhã à tarde?<small>22:41</small></div>
+      <div class="m ia">Olá! 😊 Claro! Qual serviço você quer e qual horário fica melhor para você?<small>22:41</small></div>
+      <div class="m cli">Corte, umas 16h30</div>
+      <div class="m ia">Anotado! Deixei seu pedido de corte amanhã às 16h30 para a equipe confirmar, e te aviso por aqui. ✅<small>22:42</small></div>
+    </div>
+  </section>
+
+  <section class="bloco">
+    <p class="eyebrow">O que ela faz</p>
+    <h2>Uma funcionária no seu WhatsApp, não um menu de robô</h2>
+    <div class="lista">
+      <div class="item"><div class="ic">⚡</div><div><b>Responde na hora</b><p>Inclusive à noite, nos fins de semana e feriados.</p></div></div>
+      <div class="item"><div class="ic">❓</div><div><b>Tira dúvidas</b><p>Horário, endereço, serviços e formas de pagamento, com as respostas que você definiu.</p></div></div>
+      <div class="item"><div class="ic">📅</div><div><b>Organiza pedidos de horário</b><p>Coleta as informações e deixa tudo pronto para você confirmar com um toque.</p></div></div>
+      <div class="item"><div class="ic">📝</div><div><b>Recolhe dados para orçamento</b><p>Reúne o que o cliente precisa e avisa que alguém vai retornar.</p></div></div>
+      <div class="item"><div class="ic">🙋</div><div><b>Chama você quando precisa</b><p>Urgências, reclamações e o que foge do que ela sabe vão direto para você, com aviso no celular.</p></div></div>
+      <div class="item"><div class="ic">📊</div><div><b>Tudo num painel</b><p>Clientes, pedidos, agendamentos e o histórico das conversas em um só lugar.</p></div></div>
+    </div>
+  </section>
+
+  <section class="bloco">
+    <p class="eyebrow">Como começar</p>
+    <h2>Pronta para atender em poucos passos</h2>
+    <div class="passos">
+      <div class="passo"><div><b>Conte sobre o seu negócio</b><p>Serviços, horários e as dúvidas mais comuns dos seus clientes.</p></div></div>
+      <div class="passo"><div><b>Conecte seu WhatsApp Business</b><p>Pela plataforma oficial da Meta, seguindo as instruções na tela. Você continua usando o seu número.</p></div></div>
+      <div class="passo"><div><b>Pronto, ela começa a atender</b><p>Você acompanha tudo pelo painel e assume a conversa quando quiser.</p></div></div>
+    </div>
+  </section>
+
+  <section class="bloco">
+    <div class="preco">
+      <div class="de">A partir de</div>
+      <div class="valor">R$149<span>/mês</span></div>
+      <ul>
+        <li>7 dias grátis, sem cartão de crédito</li>
+        <li>WhatsApp oficial da Meta, sem risco de bloqueio</li>
+        <li>Você continua usando o seu WhatsApp no celular</li>
+        <li>Sem taxa de implantação. Cancele quando quiser</li>
+      </ul>
+      <a class="btn btn-primary" href="/cadastro/?utm_source=instagram&utm_medium=conheca">Começar meu teste grátis →</a>
+      <a class="todos" href="/?utm_source=instagram&utm_medium=conheca#planos">Ver todos os planos e detalhes</a>
+    </div>
+  </section>
+
+  <section class="bloco">
+    <p class="eyebrow">Dúvidas rápidas</p>
+    <details><summary>Preciso trocar meu número de WhatsApp?</summary><p>Não. Você conecta o seu número atual do WhatsApp Business, desde que ele seja compatível com a integração oficial da Meta. Seus clientes continuam falando pelo número que já conhecem.</p></details>
+    <details><summary>Posso assumir a conversa?</summary><p>Sim, a qualquer momento. E ela mesma te chama quando percebe que a situação precisa de uma pessoa.</p></details>
+    <details><summary>Preciso saber programar?</summary><p>Não. Você só informa os dados do seu negócio. Precisa de um WhatsApp Business compatível e de uma conta no Facebook para a conexão oficial com a Meta.</p></details>
+    <details><summary>O que acontece quando o teste termina?</summary><p>Você decide se quer continuar. A secretária pausa os atendimentos até você escolher um plano, e suas configurações continuam salvas.</p></details>
+  </section>
+
+  <section class="fim">
+    <h2>Você cuida do seu negócio. Ela cuida das conversas.</h2>
+    <p class="sub">Comece hoje e pare de perder cliente por demora no WhatsApp.</p>
+    <a class="btn btn-primary" href="/cadastro/?utm_source=instagram&utm_medium=conheca">Testar grátis por 7 dias →</a>
+    <span class="kit">Ainda não é a hora? <a href="/kit?utm_source=instagram&utm_medium=conheca">Baixe grátis o kit de respostas prontas</a>.</span>
+  </section>
+
+  <footer>Auryx LTDA · CNPJ 65.440.779/0001-01 · <a href="/privacidade.html">Privacidade</a> · <a href="/termos.html">Termos</a></footer>
+</div>
+
+<a href="https://wa.me/5585992824164?text=Ol%C3%A1%21%20Quero%20saber%20mais%20sobre%20a%20Auryx." class="whats-flutuante" target="_blank" rel="noopener" aria-label="Falar com a Auryx no WhatsApp"><svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 2s.8 2.3.9 2.5c.1.2 1.6 2.5 4 3.5 1.5.6 2.1.7 2.8.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg></a>
+</body>
+</html>

@@ -135,7 +135,10 @@
             <label for="tipo">Tipo de negócio</label>
             <select id="tipo" required>
               <option value="">Selecione…</option>
-              <option value="salao">Salão de beleza / estética</option>
+              <option value="salao">Salão de beleza</option>
+              <option value="barbearia">Barbearia</option>
+              <option value="estetica">Estética</option>
+              <option value="pet_shop">Pet shop / banho e tosa</option>
               <option value="clinica">Clínica / consultório</option>
               <option value="clinica_odontologica">Clínica odontológica</option>
               <option value="academia">Academia / estúdio</option>
@@ -188,7 +191,7 @@
       <div class="item"><div class="ic">⚡</div><h3>Vira atalho no seu celular</h3><p>Passo a passo para salvar cada mensagem nas Respostas rápidas do WhatsApp Business e responder digitando só "/".</p></div>
     </div>
     <div class="tipos">
-      <span>💇 Salão de beleza</span><span>🩺 Clínica</span><span>🦷 Odontologia</span><span>🏋️ Academia</span><span>🍽️ Restaurante</span>
+      <span>💇 Salão de beleza</span><span>💈 Barbearia</span><span>✨ Estética</span><span>🐾 Pet shop</span><span>🩺 Clínica</span><span>🦷 Odontologia</span><span>🏋️ Academia</span><span>🍽️ Restaurante</span>
       <span>🚗 Oficina</span><span>⚡ Eletricista</span><span>🔧 Encanador</span><span>✈️ Agência de viagens</span><span>💬 Atendimento</span><span>💼 Outros</span>
     </div>
   </div>
@@ -205,7 +208,7 @@
 const SUPABASE_URL = "https://ypqmrjvuotctiyydfpgb.supabase.co";
 const SUPABASE_KEY = "sb_publishable_V87H9FaZ0gHFm1krAnpZRg_an0puUit"; // chave pública: só registra o lead (função registrar_lead)
 const ARQUIVOS = { salao: "salao", clinica: "clinica", clinica_odontologica: "odontologia", academia: "academia", restaurante: "restaurante",
-  mecanico: "oficina", eletricista: "eletricista", encanador: "encanador", agencia_viagens: "agencia-viagens", suporte: "atendimento", geral: "negocio" };
+  mecanico: "oficina", barbearia: "barbearia", estetica: "estetica", pet_shop: "pet-shop", eletricista: "eletricista", encanador: "encanador", agencia_viagens: "agencia-viagens", suporte: "atendimento", geral: "negocio" };
 const $ = id => document.getElementById(id);
 
 // Origem da visita (ex.: ?utm_source=instagram no link da bio)

@@ -1029,7 +1029,7 @@ function barra(pct){
   return '<div class="usage-bar"><div class="usage-fill' + (p >= 80 ? ' alto' : '') + '" style="width:' + p + '%"></div></div>';
 }
 const TIPO_LEAD = { salao: "Salão", clinica: "Clínica", clinica_odontologica: "Odontologia", academia: "Academia", restaurante: "Restaurante",
-  mecanico: "Oficina", eletricista: "Eletricista", encanador: "Encanador", agencia_viagens: "Agência de viagens", suporte: "Atendimento", geral: "Outro" };
+  mecanico: "Oficina", eletricista: "Eletricista", encanador: "Encanador", agencia_viagens: "Agência de viagens", suporte: "Atendimento", barbearia: "Barbearia", estetica: "Estética", pet_shop: "Pet shop", geral: "Outro" };
 // Leads da página auryx.digital/kit (Kit de respostas prontas): quem baixou e quem já virou cliente
 function renderLeads(){
   const L = adminLeads; if (!L) return '';

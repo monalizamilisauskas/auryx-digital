@@ -257,6 +257,8 @@
   .ind-passos b{ color:var(--parchment); font-weight:500; }
   .ind-item{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px 0; border-top:1px solid var(--line); font-size:14px; }
   .ind-item:first-child{ border-top:none; }
+  .ind-item .ped-selos{ justify-content:flex-end; align-items:center; flex-wrap:nowrap; flex-shrink:0; }
+  @media (max-width:560px){ .ind-item{ flex-wrap:wrap; } .ind-item .ped-selos{ flex-wrap:wrap; justify-content:flex-start; } }
   .ind-item small{ display:block; color:var(--muted); font-size:12.5px; margin-top:2px; }
   /* Pedido em cartão: ícone do tipo, destino (ou serviço) em destaque, resumo e selo de status. */
   .ped-card{ align-items:flex-start; }
@@ -2264,11 +2266,12 @@ async function salvarSilencio(){
 }
 
 /* ---------- Indique e ganhe: link do cliente e as indicações dele ---------- */
-const STATUS_IND = { cadastro: ["Cadastro em andamento", ""], teste: ["No teste grátis", ""], assinou: ["Assinou · desconto a caminho", "conf"], desconto_aplicado: ["Desconto aplicado ✓", "conf"] };
+const STATUS_IND = { cadastro: ["Cadastro em andamento", ""], teste: ["No teste grátis", ""], assinou: ["Assinou · desconto na fila", "conf"],
+  desconto_aplicado: ["10% na próxima fatura", "conf"], desconto_usado: ["Desconto usado ✓", "conf"] };
 function renderIndicar(d){
   const box = $("indicarPainel"); const x = indicDados; if (!box || !x) return;
   const lista = x.indicacoes || [];
-  const ganhos = lista.filter(i => i.status === "assinou" || i.status === "desconto_aplicado").length;
+  const ganhos = lista.filter(i => ["assinou", "desconto_aplicado", "desconto_usado"].includes(i.status)).length;
   const msgWhats = "Oi! Uso a AI Secretária da Auryx para atender meus clientes no WhatsApp e tem me ajudado muito. "
     + "Dá para testar grátis por 7 dias: " + x.link;
   let html = '<h2>Indique e ganhe</h2>'
@@ -2280,7 +2283,7 @@ function renderIndicar(d){
     + '<span class="msg ok" id="indMsg"></span></div>'
     + '<ol class="ind-passos"><li>Mande o link para quem pode gostar da secretária.</li>'
     + '<li>A pessoa se cadastra pelo link e faz o <b>teste grátis</b>. Ela paga o valor normal do plano.</li>'
-    + '<li>Quando ela <b>assinar</b>, você ganha 10% de desconto na sua próxima mensalidade. Indicou mais de um? Um desconto por mês.</li></ol>'
+    + '<li>Quando ela <b>assinar</b>, o desconto de 10% entra <b>sozinho</b> na sua próxima mensalidade. Indicou mais de um? Um desconto por mês, em sequência.</li></ol>'
     + '<div class="subtitulo" style="margin-top:22px;">Suas indicações' + (lista.length ? ' (' + lista.length + ')' : '') + (ganhos ? ' · ' + ganhos + (ganhos === 1 ? ' desconto' : ' descontos') : '') + '</div>';
   if (!lista.length){
     html += '<p class="sub" style="margin:6px 0 0;">Ainda ninguém se cadastrou pelo seu link. Assim que alguém se cadastrar, aparece aqui.</p>';
@@ -2298,27 +2301,42 @@ function renderIndicar(d){
   });
 }
 
-/* Administração → Indicações: quem indicou quem, e marcar o desconto aplicado no Stripe. */
+/* Administração → Indicações: o desconto é aplicado sozinho no Stripe; aqui dá para acompanhar, tentar de novo ou marcar à mão. */
 function renderIndicacoesAdmin(){
   const a = adminIndic; if (!a) return '';
   const lista = a.lista || [];
+  const data = (v) => esc(new Date(v).toLocaleDateString("pt-BR"));
   let html = '<div class="panel" id="admIndic"><h2>Indicações</h2><p class="sub">' + (a.total || 0) + ' indicações · ' + (a.convertidas || 0) + ' viraram cliente · '
-    + '<b>' + (a.para_aplicar || 0) + ' desconto(s) para aplicar</b>. No Stripe: Clientes → quem indicou → assinatura → Aplicar cupom <b>INDICACAO</b> (10%, 1 mês). Um por mês para cada cliente.</p>';
-  html += lista.length ? lista.map(i => '<div class="ind-item"><div><b>' + esc(i.indicador) + '</b> indicou ' + esc(i.indicado || 'um cliente')
-      + '<small>' + esc(i.indicador_email || '') + ' · assinou em ' + esc(new Date(i.convertida_em).toLocaleDateString("pt-BR")) + '</small></div>'
-      + (i.desconto_aplicado_em
-        ? '<span class="tipo-ped conf">Aplicado em ' + esc(new Date(i.desconto_aplicado_em).toLocaleDateString("pt-BR")) + '</span>'
-        : '<button class="btn btn-primary" type="button" data-ind-aplicar="' + i.id + '">Marcar desconto aplicado</button>') + '</div>').join("")
+    + (a.na_fila || 0) + ' desconto(s) na fila' + (a.com_erro ? ' · <b style="color:var(--bad);">' + a.com_erro + ' com erro</b>' : '') + '. '
+    + 'O cupom <b>INDICACAO</b> (10%, 1 mês) é aplicado sozinho na assinatura de quem indicou, um por fatura.</p>';
+  if (!a.chave_stripe) html += '<div class="aviso atencao" style="margin:0 0 12px;"><div class="txt"><b>Falta a chave do Stripe no cofre.</b> Sem ela os descontos ficam na fila. '
+    + 'No SQL Editor: <code>select vault.create_secret(\'CHAVE_RESTRITA\', \'stripe_api_key\');</code></div></div>';
+  html += lista.length ? lista.map(i => {
+      let lado;
+      if (i.desconto_usado_em) lado = '<span class="tipo-ped conf">Usado na fatura de ' + data(i.desconto_usado_em) + '</span>';
+      else if (i.desconto_aplicado_em) lado = '<span class="tipo-ped conf">Aplicado em ' + data(i.desconto_aplicado_em) + ' · próxima fatura</span>';
+      else lado = '<span class="ped-selos" style="margin:0;"><span class="tipo-ped">' + (i.desconto_erro ? 'Erro' : 'Na fila') + '</span>'
+        + '<button class="btn" type="button" data-ind-acao="tentar" data-id="' + i.id + '">Tentar de novo</button>'
+        + '<button class="btn" type="button" data-ind-acao="manual" data-id="' + i.id + '">Já apliquei à mão</button></span>';
+      return '<div class="ind-item"><div><b>' + esc(i.indicador) + '</b> indicou ' + esc(i.indicado || 'um cliente')
+        + '<small>' + esc(i.indicador_email || '') + ' · assinou em ' + data(i.convertida_em)
+        + (i.desconto_erro && !i.desconto_aplicado_em ? ' · ' + esc(String(i.desconto_erro).slice(0, 120)) : '') + '</small></div>' + lado + '</div>'; }).join("")
     : '<p class="sub" style="margin:6px 0 0;">Nenhuma indicação virou cliente ainda.</p>';
   return html + '<span class="msg" id="admIndMsg"></span></div>';
 }
 function ligarIndicacoesAdmin(){
-  document.querySelectorAll("[data-ind-aplicar]").forEach(b => b.addEventListener("click", async () => {
+  document.querySelectorAll("[data-ind-acao]").forEach(b => b.addEventListener("click", async () => {
+    const acao = b.getAttribute("data-ind-acao"); const msg = $("admIndMsg");
     b.disabled = true; b.textContent = "Salvando...";
-    const { data, error } = await supa.rpc("admin_marcar_desconto", { p_id: Number(b.getAttribute("data-ind-aplicar")) });
-    if (error || !data || !data.ok){ b.disabled = false; b.textContent = "Marcar desconto aplicado"; $("admIndMsg").className = "msg erro"; $("admIndMsg").textContent = "Não foi possível salvar. Tente de novo."; return; }
+    const { data, error } = await supa.rpc("admin_desconto_indicacao", { p_id: Number(b.getAttribute("data-id")), p_acao: acao });
     const r = await supa.rpc("admin_indicacoes"); if (!r.error && r.data) adminIndic = r.data;
     renderAdmin();
+    const m = $("admIndMsg"); if (!m) return;
+    if (error){ m.className = "msg erro"; m.textContent = "Não foi possível salvar. Tente de novo."; return; }
+    const res = data && data.resultado;
+    m.className = "msg " + (data && data.ok ? "ok" : "erro");
+    m.textContent = { aplicado: "Desconto aplicado no Stripe ✓", manual: "Marcado como aplicado ✓", aguardando: "Já tem um desconto esperando a próxima fatura; este entra depois.",
+      sem_assinatura: "Quem indicou ainda não tem assinatura ativa; entra quando assinar.", sem_chave: "Falta a chave do Stripe no cofre.", falhou: "O Stripe recusou. Veja o erro na linha." }[res] || "Feito.";
   }));
 }
 

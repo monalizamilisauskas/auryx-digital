@@ -260,6 +260,7 @@
   .ped-card .ped-selos{ display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; }
   .ped-card .lado{ padding-top:3px; }
   /* Etiqueta do tipo (Passagem, Hotel, Cruzeiro...): o dono entende o ícone sem precisar decorar. */
+  .tipo-ped.conf{ color:var(--good); background:rgba(52,211,153,0.1); border-color:rgba(52,211,153,0.45); }
   .tipo-ped{ font-size:11.5px; font-weight:600; padding:3px 8px; border-radius:6px; color:#BFDBFE; background:rgba(37,99,235,0.18); border:1px solid rgba(96,165,250,0.35); white-space:nowrap; }
   @media (max-width:560px){ .ped-card .ped-tit{ white-space:normal; } .ped-card .ped-tit .quem{ display:block; font-size:12.5px; max-width:none; } .ped-card .ped-tit .ponto{ display:none; } .ped-card .lado .hr{ display:none; } .ped-card{ gap:8px; } .ped-card .ped-selos .tipo-ped, .ped-card .ped-selos .status, .ped-card .ped-selos .pago{ font-size:10.5px; padding:2px 6px; } .ped-card .ped-selos{ gap:5px; } }
   /* Pagamento registrado: selo verde preenchido (diferente do contorno dos status) para ser visto de relance. */
@@ -781,7 +782,28 @@ const ICONES_PEDIDO = { planejar: "🌴", cruzeiros: "🚢", passeios: "🗺️"
   conhecer: "✨", delivery: "🛵", eventos: "🎉", documentos: "📄" };
 const ehAgencia = (d) => /viage/i.test(String((d && d.tipo_negocio) || ""));
 // Para agência, "pendente" é "Aguardando proposta"; os outros negócios continuam com "Pendente".
-function nomeStatus(s){ return s === "pendente" && ehAgencia(dadosPainel) ? "Aguardando proposta" : (STATUS[s] || s); }
+// Nos outros negócios, depende do pedido: orçamento → "Aguardando orçamento"; horário/visita/reserva → "Aguardando confirmação".
+function nomeStatus(s, p){
+  if (s !== "pendente") return STATUS[s] || s;
+  if (ehAgencia(dadosPainel)) return "Aguardando proposta";
+  const k = p ? tipoServico(p).espera : "";
+  return k || STATUS[s] || s;
+}
+// Tipo do pedido nos negócios de serviço: etiqueta e o que o pedido pendente espera.
+const TIPOS_SERVICO = {
+  orc: { nome: "Orçamento", espera: "Aguardando orçamento" }, agenda: { nome: "Agendamento", espera: "Aguardando confirmação" },
+  remarcar: { nome: "Remarcação", espera: "Aguardando confirmação" }, visita: { nome: "Visita", espera: "Aguardando confirmação" },
+  reserva: { nome: "Reserva", espera: "Aguardando confirmação" }, evento: { nome: "Evento", espera: "Aguardando orçamento" },
+  delivery: { nome: "Delivery", espera: "" }, experimental: { nome: "Aula experimental", espera: "Aguardando confirmação" },
+  matricula: { nome: "Matrícula", espera: "Aguardando confirmação" }, atendimento: { nome: "Atendimento", espera: "" } };
+function tipoServico(p){
+  const dd = p.dados || {};
+  const porItem = { orcamento: "orc", remarcar: "remarcar", visita: "visita", agendar: "agenda", consulta: "agenda", primeira: "agenda",
+    retorno: "agenda", reserva: "reserva", eventos: "evento", delivery: "delivery", experimental: "experimental", matricula: "matricula",
+    andamento: "atendimento", aluno: "atendimento", documentos: "atendimento" };
+  const k = porItem[p.item] || (dd.descricao || dd.problema ? "orc" : (dd.quando || dd.horario) ? "agenda" : "");
+  return k ? TIPOS_SERVICO[k] : { nome: "", espera: "" };
+}
 function iconePedido(p, agencia){
   const dd = p.dados || {};
   if (p.item === "passagens_hoteis"){ const sv = String(dd.servico || ""); return /dois/i.test(sv) ? "✈️🏨" : /hotel/i.test(sv) ? "🏨" : "✈️"; }
@@ -795,7 +817,7 @@ function tipoPedido(p){
   return { planejar: "Pacote", cruzeiros: "Cruzeiro", passeios: "Passeio", seguro: "Seguro viagem", reserva: "Reserva existente" }[p.item] || "";
 }
 // "pular", "não", "nenhuma"... não entram no resumo (o cliente disse que não tem preferência).
-const semValor = (v) => /^\s*(pular|pode pular|n[aã]o( tenho| precisa)?|nenhuma?|sem prefer[eê]ncias?|nada|tanto faz|-)\s*[.!]*\s*$/i.test(String(v || ""));
+const semValor = (v) => /^\s*(pular|pode pular|n[aã]o( tenho| precisa)?|nenhuma?|sem prefer[eê]ncias?|nada|tanto faz|indiferente|qualquer( um| uma)?|-)\s*[.!]*\s*$/i.test(String(v || ""));
 const curto = (v, n) => { const t = String(v || "").replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n - 1) + "…" : t; };
 function resumoPedido(p, d){
   const dd = p.dados || {}; const agencia = ehAgencia(d);
@@ -807,11 +829,25 @@ function resumoPedido(p, d){
   } else if (agencia){
     titulo = dd.viagem || tituloItem; partes = [dd.assunto];
   } else {
-    titulo = tituloItem;
-    partes = Object.entries(dd).filter(([k]) => k !== "nome").map(([, v]) => v);
+    // Título: o que o cliente pediu (carro na oficina, mesa no restaurante, serviço/problema nos outros).
+    const pess = dd.pessoas ? String(dd.pessoas).replace(/\s*pessoas?\b/i, "").trim() : "";
+    if (dd.carro) titulo = dd.carro;
+    else if (p.item === "reserva") titulo = pess ? "Mesa para " + pess : "Reserva de mesa";
+    else if (p.item === "eventos") titulo = pess ? "Evento para " + pess + " pessoas" : (dd.descricao || tituloItem);
+    else if (p.item === "delivery") titulo = dd.itens || tituloItem;
+    else titulo = dd.servico || dd.descricao || dd.problema || dd.modalidade || dd.assunto || dd.objetivo || tituloItem;
+    const usado = String(titulo);
+    const ordem = p.item === "remarcar"
+      ? [dd.atual ? "era " + dd.atual : "", dd.pedido]
+      : [dd.problema, dd.servico, dd.descricao, dd.modalidade, dd.objetivo, dd.datas, dd.quando, dd.horario,
+         dd.profissional && !semValor(dd.profissional) ? "com " + dd.profissional : "", dd.convenio, dd.endereco, dd.ocasiao, p.item === "eventos" ? "" : dd.itens];
+    partes = ordem.filter(v => v && String(v) !== usado);
   }
   const linha = partes.filter(v => v && !semValor(v)).slice(0, 4).map(v => curto(v, 40)).join(" · ");
-  return { icone: iconePedido(p, agencia), tipo: agencia ? tipoPedido(p) : "", titulo: curto(titulo, 60), linha: linha || (titulo === tituloItem ? "" : tituloItem) };
+  let icone = iconePedido(p, agencia);
+  if (!agencia && dd.carro && icone === "📝") icone = "🚗";
+  const tit = String(titulo || ""); titulo = tit.charAt(0).toUpperCase() + tit.slice(1);
+  return { icone, tipo: agencia ? tipoPedido(p) : tipoServico(p).nome, titulo: curto(titulo, 60), linha: linha || (titulo === tituloItem ? "" : tituloItem) };
 }
 
 /* ---------- Pedidos: abre a lista, separa por status e o dono muda o status ---------- */
@@ -848,7 +884,8 @@ function renderPedidos(){
         + '<span class="ped-ico' + (r.icone === "✈️🏨" ? ' duplo' : '') + '" aria-hidden="true">' + r.icone + '</span>'
         + '<span class="ped-txt"><span class="ped-tit">' + esc(r.titulo) + ' <span class="quem"><span class="ponto">· </span>' + esc(nome) + '</span></span>'
         + (r.linha ? '<span class="ped-res">' + esc(r.linha) + '</span>' : '')
-        + '<span class="ped-selos">' + (r.tipo ? '<span class="tipo-ped">' + esc(r.tipo) + '</span>' : '') + '<span class="status ' + esc(p.status) + '">' + esc(nomeStatus(p.status)) + '</span>'
+        + '<span class="ped-selos">' + (r.tipo ? '<span class="tipo-ped">' + esc(r.tipo) + '</span>' : '') + '<span class="status ' + esc(p.status) + '">' + esc(nomeStatus(p.status, p)) + '</span>'
+        + (agendamentoDoPedido(p.id) ? '<span class="tipo-ped conf">📅 Confirmado: ' + esc(quandoCurto(agendamentoDoPedido(p.id).data_hora)) + '</span>' : '')
         + (p.pago_em ? '<span class="pago" title="Pagamento registrado em ' + esc(new Date(p.pago_em).toLocaleDateString("pt-BR")) + '">✓ Pago</span>' : '') + '</span></span>'
         + '<span class="lado">' + (() => { const dh = String(dataHoraBR(p.created_at)); const i = dh.indexOf(', ');
             return i > 0 ? esc(dh.slice(0, i)) + '<span class="hr">' + esc(dh.slice(i)) + '</span>' : esc(dh); })() + (aberto ? ' ▴' : ' ▾') + '</span></button>';
@@ -1814,6 +1851,11 @@ function ligarRespostas(){
 /* ---------- Confirmação e lembrete: a dona confirma o horário de um pedido e o cliente recebe a confirmação ---------- */
 function agendamentoDoPedido(id){
   return (dadosPainel.agendamentos || []).find(a => a.pedido_id === id && a.status === "confirmado") || null;
+}
+function quandoCurto(iso){   // "sex 06/11 14:00"
+  const tz = dadosPainel.timezone || "America/Sao_Paulo"; const dt = new Date(iso);
+  return dt.toLocaleDateString("pt-BR", { timeZone: tz, weekday: "short", day: "2-digit", month: "2-digit" }).replace(/\.,?/g, "").replace(",", "")
+    + " " + dt.toLocaleTimeString("pt-BR", { timeZone: tz, hour: "2-digit", minute: "2-digit" });
 }
 function quandoBR(iso){
   const tz = dadosPainel.timezone || "America/Sao_Paulo";

@@ -249,6 +249,48 @@
   .status.fechado{ color:var(--good); border-color:rgba(124,184,143,0.4); }
   .status.nao_fechou{ color:var(--muted); }
   .ped-detalhe{ margin-top:10px; }
+  /* Tabela de pedidos (computador) */
+  .tab-ped{ border:1px solid var(--line); border-radius:12px; overflow-x:auto; }
+  .tab-ped td, .tab-ped th{ padding-left:10px; padding-right:10px; }
+  .tab-ped table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  .tab-ped th{ text-align:left; font-size:11.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--muted);
+    background:var(--panel-2); padding:11px 12px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  .tab-ped td{ padding:11px 12px; border-bottom:1px solid var(--line); vertical-align:middle; color:var(--parchment); }
+  .tab-ped tr:last-child td{ border-bottom:none; }
+  .tab-ped tr.lin{ cursor:pointer; }
+  .tab-ped tr.lin:hover td{ background:rgba(37,99,235,0.06); }
+  .tab-ped tr.lin.sel td{ background:rgba(37,99,235,0.12); }
+  .tab-ped tr.lin.aberta td{ background:rgba(37,99,235,0.09); border-bottom-color:transparent; }
+  .tab-ped tr.lin-det td{ background:rgba(37,99,235,0.05); padding-top:0; }
+  .tab-ped .c-sel{ width:36px; text-align:center; }
+  .tab-ped .c-sel input{ width:16px; height:16px; cursor:pointer; accent-color:var(--gold); }
+  .tab-ped .t-ped{ display:flex; align-items:center; gap:10px; min-width:170px; }
+  .tab-ped .t-ped .ped-ico{ font-size:20px; width:30px; flex:0 0 30px; text-align:center; white-space:nowrap; }
+  .tab-ped .t-ped .ped-ico.duplo{ font-size:14px; letter-spacing:-2px; }
+  .tab-ped .t-ped b{ display:block; font-weight:600; font-size:14.5px; }
+  .tab-ped .t-ped small{ display:block; color:var(--muted); font-size:12.5px; margin-top:1px; }
+  .tab-ped .c-res{ color:var(--muted); min-width:180px; line-height:1.45; }
+  .tab-ped td .tipo-ped{ white-space:nowrap; }
+  .tab-ped .c-data{ color:var(--muted); white-space:nowrap; font-size:12.5px; }
+  .tab-ped .c-acoes{ white-space:nowrap; text-align:right; }
+  .sel-status{ display:inline-flex; padding:0; position:relative; }
+  .sel-status select{ appearance:none; -webkit-appearance:none; background:transparent; border:none; color:inherit; font:inherit;
+    padding:4px 24px 4px 9px; cursor:pointer; }
+  .sel-status::after{ content:"▾"; position:absolute; right:8px; top:50%; transform:translateY(-50%); pointer-events:none; font-size:10px; }
+  .sel-status select option{ color:#111; }
+  .ico-btn{ display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:8px; margin-left:4px;
+    background:transparent; border:1px solid var(--line); color:var(--muted); cursor:pointer; }
+  .ico-btn:hover{ color:var(--parchment); border-color:var(--line-strong); }
+  .ico-btn.verde{ color:#34D399; border-color:rgba(52,211,153,0.4); }
+  .lote-barra{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:0 0 12px; padding:10px 12px; border-radius:10px;
+    background:rgba(37,99,235,0.12); border:1px solid rgba(96,165,250,0.35); font-size:13.5px; }
+  .lote-barra b{ margin-right:4px; }
+  .toast-desfazer{ position:fixed; left:50%; bottom:24px; transform:translate(-50%, 20px); opacity:0; pointer-events:none; transition:all .2s;
+    display:flex; gap:14px; align-items:center; background:#0B1220; color:#E5E7EB; border:1px solid rgba(96,165,250,0.45);
+    border-radius:10px; padding:11px 14px 11px 16px; font-size:14px; box-shadow:0 10px 30px rgba(0,0,0,.45); z-index:50; max-width:calc(100% - 32px); }
+  .toast-desfazer.on{ opacity:1; transform:translate(-50%, 0); pointer-events:auto; }
+  .toast-desfazer button{ background:transparent; border:none; color:#93C5FD; font-weight:600; font-size:14px; cursor:pointer; padding:4px 6px; }
+  .lote-barra .btn{ padding:6px 12px; font-size:13px; }
   .ind-link{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:6px 0 4px; }
   .ind-link .msg{ font-size:13px; flex-basis:100%; }
   .ind-link .msg.erro{ color:var(--bad); }
@@ -871,6 +913,29 @@ function resumoPedido(p, d){
   return { icone, tipo: agencia ? tipoPedido(p) : tipoServico(p).nome, titulo: curto(titulo, 60), linha: linha || (titulo === tituloItem ? "" : tituloItem) };
 }
 
+/* Detalhe do pedido (aberto): campos, contato e ações. Usado nos cartões (celular) e na tabela (computador). */
+function detalhePedidoHtml(p, d, nome){
+        const campos = Object.entries(p.dados || {}).map(([k, v]) => '<b>' + esc(ROTULOS[k] || (k.charAt(0).toUpperCase() + k.slice(1))) + ':</b> ' + esc(v)).join(' · ');
+        const agP = agendamentoDoPedido(p.id);
+        let html = '<div class="ped-detalhe"><div class="d">' + campos + '<br><b>Contato:</b> +' + esc(p.remetente)
+          + (agP ? '<br><b>Horário confirmado:</b> ' + esc(quandoBR(agP.data_hora)) : '')
+          + '</div>' + (p.pago_em ? '<div class="pago-box">✓ <span><b>Pagamento registrado</b> em ' + esc(new Date(p.pago_em).toLocaleDateString("pt-BR")) + '</span></div>' : '')
+          + '<div class="ped-acoes">'
+          + '<button class="btn btn-primary" type="button" data-resp="p' + p.id + '">Responder no WhatsApp</button>'
+          + botaoConversa(p.remetente, nome);
+        html += '<button class="btn" type="button" data-conf="' + p.id + '">' + (agP ? 'Remarcar horário' : 'Confirmar horário') + '</button>';
+        html += '<button class="btn" type="button" data-fu-ped="' + p.id + '">Agendar follow-up</button>';
+        Object.keys(STATUS).filter(s => s !== p.status).forEach(s => {
+          const rotulo = s === "pendente" ? (ehAgencia(d) ? "Voltar para aguardando proposta" : "Voltar para pendente") : s === "respondido" ? "Marcar como respondido" : STATUS[s];
+          html += '<button class="btn" type="button" data-status="' + s + '" data-id="' + p.id + '">' + rotulo + '</button>';
+        });
+        html += (p.pago_em ? '<button class="btn" type="button" data-pago="' + p.id + '" data-valor="0">Desfazer pagamento</button>'
+                           : '<button class="btn" type="button" data-pago="' + p.id + '" data-valor="1">Registrar pagamento</button>');
+        html += '<span class="msg" id="pedMsg' + p.id + '"></span></div>' + (tela.resp === "p" + p.id ? formResposta("p" + p.id) : '')
+          + (tela.confHorario === p.id ? formHorario(p.id) : '') + '</div>';
+  return html;
+}
+
 /* ---------- Pedidos: abre a lista, separa por status e o dono muda o status ---------- */
 function renderPedidos(){
   const d = dadosPainel;
@@ -896,7 +961,8 @@ function renderPedidos(){
     if (!lista.length){
       html += '<p class="sub" style="margin:0;">Nenhum pedido aqui.</p>';
     }
-    lista.slice(0, tela.limite).forEach(p => {
+    if (modoTabela() && lista.length){ html += tabelaPedidos(lista.slice(0, tela.limite), d); }
+    else lista.slice(0, tela.limite).forEach(p => {
       const titulo = (d.itens && d.itens[p.item]) || p.item;
       const nome = (p.dados && p.dados.nome) || ('+' + p.remetente);
       const aberto = tela.pedido === p.id;
@@ -910,26 +976,7 @@ function renderPedidos(){
         + (p.pago_em ? '<span class="pago" title="Pagamento registrado em ' + esc(new Date(p.pago_em).toLocaleDateString("pt-BR")) + '">✓ Pago</span>' : '') + '</span></span>'
         + '<span class="lado">' + (() => { const dh = String(dataHoraBR(p.created_at)); const i = dh.indexOf(', ');
             return i > 0 ? esc(dh.slice(0, i)) + '<span class="hr">' + esc(dh.slice(i)) + '</span>' : esc(dh); })() + (aberto ? ' ▴' : ' ▾') + '</span></button>';
-      if (aberto){
-        const campos = Object.entries(p.dados || {}).map(([k, v]) => '<b>' + esc(ROTULOS[k] || (k.charAt(0).toUpperCase() + k.slice(1))) + ':</b> ' + esc(v)).join(' · ');
-        const agP = agendamentoDoPedido(p.id);
-        html += '<div class="ped-detalhe"><div class="d">' + campos + '<br><b>Contato:</b> +' + esc(p.remetente)
-          + (agP ? '<br><b>Horário confirmado:</b> ' + esc(quandoBR(agP.data_hora)) : '')
-          + '</div>' + (p.pago_em ? '<div class="pago-box">✓ <span><b>Pagamento registrado</b> em ' + esc(new Date(p.pago_em).toLocaleDateString("pt-BR")) + '</span></div>' : '')
-          + '<div class="ped-acoes">'
-          + '<button class="btn btn-primary" type="button" data-resp="p' + p.id + '">Responder no WhatsApp</button>'
-          + botaoConversa(p.remetente, nome);
-        html += '<button class="btn" type="button" data-conf="' + p.id + '">' + (agP ? 'Remarcar horário' : 'Confirmar horário') + '</button>';
-        html += '<button class="btn" type="button" data-fu-ped="' + p.id + '">Agendar follow-up</button>';
-        Object.keys(STATUS).filter(s => s !== p.status).forEach(s => {
-          const rotulo = s === "pendente" ? (ehAgencia(d) ? "Voltar para aguardando proposta" : "Voltar para pendente") : s === "respondido" ? "Marcar como respondido" : STATUS[s];
-          html += '<button class="btn" type="button" data-status="' + s + '" data-id="' + p.id + '">' + rotulo + '</button>';
-        });
-        html += (p.pago_em ? '<button class="btn" type="button" data-pago="' + p.id + '" data-valor="0">Desfazer pagamento</button>'
-                           : '<button class="btn" type="button" data-pago="' + p.id + '" data-valor="1">Registrar pagamento</button>');
-        html += '<span class="msg" id="pedMsg' + p.id + '"></span></div>' + (tela.resp === "p" + p.id ? formResposta("p" + p.id) : '')
-          + (tela.confHorario === p.id ? formHorario(p.id) : '') + '</div>';
-      }
+      if (aberto) html += detalhePedidoHtml(p, d, nome);
       html += '</div>';
     });
     if (lista.length > tela.limite) html += '<div class="mais"><button class="btn" type="button" id="maisPed">Mostrar mais (' + (lista.length - tela.limite) + ')</button></div>';
@@ -942,6 +989,7 @@ function renderPedidos(){
     const id = Number(b.getAttribute("data-pedido")); tela.pedido = tela.pedido === id ? null : id; renderPedidos();
   }));
   box.querySelectorAll("[data-status]").forEach(b => b.addEventListener("click", () => mudarStatus(b)));
+  ligarTabelaPedidos(box);
   ligarHorario(box, renderPedidos);
   ligarResposta(box, renderPedidos);
   box.querySelectorAll("[data-pago]").forEach(b => b.addEventListener("click", () => registrarPagamento(b)));
@@ -950,6 +998,123 @@ function renderPedidos(){
     if (!p) return;
     novoFollowup({ remetente: p.remetente, nome: (p.dados || {}).nome || "", assunto: assuntoPedido(p), pedido_id: p.id });
   }));
+}
+
+
+/* ---------- Pedidos em tabela (computador): seleção, status direto na linha e ações em ícone ---------- */
+const MQ_TABELA = window.matchMedia ? window.matchMedia("(min-width: 900px)") : null;
+function modoTabela(){ return !!(MQ_TABELA && MQ_TABELA.matches); }
+if (MQ_TABELA && MQ_TABELA.addEventListener) MQ_TABELA.addEventListener("change", () => { if ($("pedidosPainel")) renderPedidos(); });
+const ICO = {
+  whats: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.1-5.6A8.4 8.4 0 1 1 21 11.5z"/></svg>',
+  olho: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+  pago: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20M6 15h4"/></svg>' };
+function tabelaPedidos(lista, d){
+  const sel = tela.selPed || (tela.selPed = new Set());
+  for (const id of [...sel]) if (!lista.some(p => p.id === id)) sel.delete(id);
+  const todosSel = lista.length && lista.every(p => sel.has(p.id));
+  const agencia = ehAgencia(d);
+  let h = '';
+  if (sel.size){
+    h += '<div class="lote-barra"><b>' + sel.size + (sel.size === 1 ? ' selecionado' : ' selecionados') + '</b>'
+      + Object.keys(STATUS).map(s => '<button class="btn" type="button" data-lote="' + s + '">' + esc(s === "pendente" ? (agencia ? "Aguardando proposta" : "Pendente") : STATUS[s]) + '</button>').join("")
+      + '<button class="btn" type="button" data-lote="limpar">Limpar seleção</button><span class="msg" id="loteMsg"></span></div>';
+  }
+  h += '<div class="tab-ped"><table><thead><tr>'
+    + '<th class="c-sel"><input type="checkbox" aria-label="Selecionar todos" data-sel-todos' + (todosSel ? ' checked' : '') + '></th>'
+    + '<th>' + (agencia ? 'Destino / cliente' : 'Pedido / cliente') + '</th><th>Tipo</th><th>Resumo</th><th>Recebido</th><th>Status</th><th class="c-acoes">Ações</th>'
+    + '</tr></thead><tbody>';
+  lista.forEach(p => {
+    const r = resumoPedido(p, d);
+    const nome = (p.dados && p.dados.nome) || ('+' + p.remetente);
+    const aberto = tela.pedido === p.id;
+    const agP = agendamentoDoPedido(p.id);
+    const opcoes = Object.keys(STATUS).map(s => '<option value="' + s + '"' + (s === p.status ? ' selected' : '') + '>' + esc(nomeStatus(s, p)) + '</option>').join("");
+    h += '<tr class="lin' + (aberto ? ' aberta' : '') + (sel.has(p.id) ? ' sel' : '') + '" data-lin="' + p.id + '">'
+      + '<td class="c-sel"><input type="checkbox" aria-label="Selecionar" data-sel="' + p.id + '"' + (sel.has(p.id) ? ' checked' : '') + '></td>'
+      + '<td><div class="t-ped"><span class="ped-ico' + (r.icone === "✈️🏨" ? ' duplo' : '') + '" aria-hidden="true">' + r.icone + '</span>'
+      + '<div><b>' + esc(r.titulo) + '</b><small>' + esc(nome) + '</small></div></div></td>'
+      + '<td>' + (r.tipo ? '<span class="tipo-ped">' + esc(r.tipo) + '</span>' : '') + '</td>'
+      + '<td class="c-res">' + esc(r.linha || '') + (agP ? '<div><span class="tipo-ped conf">📅 ' + esc(quandoCurto(agP.data_hora)) + '</span></div>' : '') + '</td>'
+      + '<td class="c-data" title="' + esc(String(dataHoraBR(p.created_at))) + '">' + esc(String(dataHoraBR(p.created_at)).split(', ')[0]) + '</td>'
+      + '<td><span class="sel-status status ' + esc(p.status) + '"><select data-sel-status="' + p.id + '" aria-label="Mudar status">' + opcoes + '</select></span>'
+      + (p.pago_em ? ' <span class="pago">✓ Pago</span>' : '') + '</td>'
+      + '<td class="c-acoes"><button class="ico-btn verde" type="button" title="Responder no WhatsApp" data-t-resp="' + p.id + '">' + ICO.whats + '</button>'
+      + '<button class="ico-btn" type="button" title="' + (aberto ? 'Fechar detalhes' : 'Ver detalhes e mais ações') + '" data-t-ver="' + p.id + '">' + ICO.olho + '</button>'
+      + '</td></tr>';
+    if (aberto) h += '<tr class="lin-det"><td></td><td colspan="6">' + detalhePedidoHtml(p, d, nome) + '</td></tr>';
+  });
+  return h + '</tbody></table></div>';
+}
+function ligarTabelaPedidos(box){
+  const sel = tela.selPed || (tela.selPed = new Set());
+  box.querySelectorAll("[data-sel]").forEach(c => c.addEventListener("change", () => {
+    const id = Number(c.getAttribute("data-sel")); c.checked ? sel.add(id) : sel.delete(id); renderPedidos(); }));
+  const tudo = box.querySelector("[data-sel-todos]");
+  if (tudo) tudo.addEventListener("change", () => {
+    box.querySelectorAll("[data-sel]").forEach(c => { const id = Number(c.getAttribute("data-sel")); tudo.checked ? sel.add(id) : sel.delete(id); });
+    renderPedidos(); });
+  box.querySelectorAll("[data-t-ver]").forEach(b => b.addEventListener("click", () => {
+    const id = Number(b.getAttribute("data-t-ver")); tela.pedido = tela.pedido === id ? null : id; renderPedidos(); }));
+  box.querySelectorAll("[data-t-resp]").forEach(b => b.addEventListener("click", () => {
+    const id = Number(b.getAttribute("data-t-resp")); tela.pedido = id; tela.resp = "p" + id; renderPedidos(); }));
+  // Clicar na linha (fora dos controles) abre/fecha os detalhes.
+  box.querySelectorAll("tr.lin").forEach(tr => tr.addEventListener("click", (e) => {
+    if (e.target.closest("input, select, button, a")) return;
+    const id = Number(tr.getAttribute("data-lin")); tela.pedido = tela.pedido === id ? null : id; renderPedidos(); }));
+  box.querySelectorAll("[data-sel-status]").forEach(sl => sl.addEventListener("change", async () => {
+    const id = Number(sl.getAttribute("data-sel-status")); sl.disabled = true;
+    const ok = await salvarStatusPedidos([id], sl.value);
+    if (!ok){ sl.disabled = false; alert("Não foi possível mudar o status. Tente de novo."); }
+  }));
+  box.querySelectorAll("[data-lote]").forEach(b => b.addEventListener("click", async () => {
+    const acao = b.getAttribute("data-lote");
+    if (acao === "limpar"){ sel.clear(); renderPedidos(); return; }
+    box.querySelectorAll("[data-lote]").forEach(x => x.disabled = true);
+    const ok = await salvarStatusPedidos([...sel], acao);
+    if (ok) sel.clear(); else { const m = $("loteMsg"); if (m){ m.className = "msg erro"; m.textContent = "Alguns não foram salvos. Tente de novo."; } }
+    renderPedidos();
+  }));
+}
+// Muda o status de um ou vários pedidos (mesma função do banco usada pelos botões) e atualiza a tela.
+async function salvarStatusPedidos(ids, status, semDesfazer){
+  let tudoOk = true; const anteriores = [];
+  for (const id of ids){
+    const antes = (dadosPainel.pedidos || []).find(p => p.id === id);
+    if (!antes || antes.status === status) continue;
+    const eraStatus = antes.status;
+    const { data, error } = await supa.rpc("atualizar_pedido", { p_id: id, p_status: status });
+    if (error || !data || !data.ok){ tudoOk = false; continue; }
+    if (antes.status === "pendente") dadosPainel.pedidos_pendentes = Math.max(0, Number(dadosPainel.pedidos_pendentes || 0) - 1);
+    if (status === "pendente") dadosPainel.pedidos_pendentes = Number(dadosPainel.pedidos_pendentes || 0) + 1;
+    antes.status = status; antes.status_em = new Date().toISOString();
+    anteriores.push([id, eraStatus]);
+  }
+  render(dadosPainel);
+  if (anteriores.length && !semDesfazer) avisoDesfazer(anteriores, status);
+  return tudoOk;
+}
+// Aviso de 6 segundos depois de mudar status pela tabela: "Desfazer" volta cada pedido ao status que tinha.
+let timerDesfazer = null;
+function avisoDesfazer(anteriores, status){
+  let el = $("toastDesfazer");
+  if (!el){ el = document.createElement("div"); el.id = "toastDesfazer"; el.className = "toast-desfazer"; document.body.appendChild(el); }
+  const qtd = anteriores.length;
+  const nomeNovo = nomeStatus(status, (dadosPainel.pedidos || []).find(p => p.id === anteriores[0][0]));
+  el.innerHTML = '<span>' + (qtd === 1 ? 'Status mudado para <b>' : qtd + ' pedidos mudados para <b>') + esc(nomeNovo) + '</b></span>'
+    + '<button type="button" id="btnDesfazer">Desfazer</button>';
+  el.classList.add("on");
+  clearTimeout(timerDesfazer);
+  timerDesfazer = setTimeout(() => el.classList.remove("on"), 6000);
+  $("btnDesfazer").addEventListener("click", async () => {
+    clearTimeout(timerDesfazer); el.innerHTML = '<span>Desfazendo...</span>';
+    const porStatus = {};
+    anteriores.forEach(([id, st]) => (porStatus[st] = porStatus[st] || []).push(id));
+    let ok = true;
+    for (const st of Object.keys(porStatus)) ok = (await salvarStatusPedidos(porStatus[st], st, true)) && ok;
+    el.innerHTML = '<span>' + (ok ? 'Desfeito ✓' : 'Não foi possível desfazer tudo. Confira os status.') + '</span>';
+    timerDesfazer = setTimeout(() => el.classList.remove("on"), 2500);
+  });
 }
 
 /* ---------- Follow-up: o dono escolhe o dia e a secretária manda "Como foi ___?" ---------- */

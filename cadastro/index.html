@@ -688,6 +688,31 @@ const META_APP_ID = "1959913748041423";
 const META_CONFIG_ID = "2023595051654544";
 const CADASTRO_WEBHOOK = "https://cutcall.app.n8n.cloud/webhook/cadastro-whatsapp";
 
+// Indique e ganhe: o link de um cliente traz ?ind=CÓDIGO. Guarda por 30 dias (a pessoa pode voltar depois para se cadastrar).
+const IND_CHAVE = "auryx_ind";
+function codigoIndicacao(){
+  const daUrl = (new URLSearchParams(window.location.search).get("ind") || "").trim().toUpperCase();
+  try{
+    if (/^[A-Z0-9]{4,12}$/.test(daUrl)){ localStorage.setItem(IND_CHAVE, JSON.stringify({ c: daUrl, t: Date.now() })); return daUrl; }
+    const g = JSON.parse(localStorage.getItem(IND_CHAVE) || "null");
+    if (g && g.c && Date.now() - g.t < 30 * 24 * 3600 * 1000) return g.c;
+  }catch(e){}
+  return /^[A-Z0-9]{4,12}$/.test(daUrl) ? daUrl : "";
+}
+const CODIGO_IND = codigoIndicacao();
+// Depois que o cadastro deu certo: liga o novo cliente a quem indicou (pelo e-mail). Nunca atrapalha o cadastro.
+async function registrarIndicacao(email){
+  if (!CODIGO_IND || !email) return;
+  try{
+    await fetch(SUPABASE_URL + "/rest/v1/rpc/registrar_indicacao_cadastro", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY },
+      body: JSON.stringify({ p_email: email, p_codigo: CODIGO_IND })
+    });
+    try{ localStorage.removeItem(IND_CHAVE); }catch(e){}
+  }catch(e){ console.log("[cadastro] indicação não registrada", e && e.message); }
+}
+
 window.fbAsyncInit = function(){
   FB.init({ appId: META_APP_ID, autoLogAppEvents: true, xfbml: true, version: "v26.0" });
 };
@@ -813,6 +838,7 @@ async function concluirConexao(response, motivo){
         try{ r = await res.json(); }catch(e){}
         throw new Error("servidor " + res.status + (r.faltando ? " faltando=" + r.faltando.join(",") : (r.motivo ? " " + r.motivo : "")));
       }
+      await registrarIndicacao(data.email);
       showStep("success");
     }catch(e){
       showFatal("err.fatal", diagnostico + " | " + (e && e.message ? e.message : "falha de rede"));

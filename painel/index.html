@@ -249,6 +249,17 @@
   .status.fechado{ color:var(--good); border-color:rgba(124,184,143,0.4); }
   .status.nao_fechou{ color:var(--muted); }
   .ped-detalhe{ margin-top:10px; }
+  /* Pedido em cartão: ícone do tipo, destino (ou serviço) em destaque, resumo e selo de status. */
+  .ped-card{ align-items:flex-start; }
+  .ped-card .ped-ico{ font-size:22px; line-height:1; width:34px; flex:0 0 34px; text-align:center; padding-top:2px; white-space:nowrap; }
+  .ped-card .ped-ico.duplo{ font-size:15px; letter-spacing:-2px; padding-top:5px; }
+  .ped-card .ped-txt{ flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+  .ped-card .ped-tit{ font-size:16px; font-weight:600; color:var(--parchment); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ped-card .ped-tit .quem{ font-weight:400; }
+  .ped-card .ped-res{ color:var(--muted); font-size:13px; line-height:1.45; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; white-space:normal; }
+  .ped-card .ped-selos{ display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; }
+  .ped-card .lado{ padding-top:3px; }
+  @media (max-width:560px){ .ped-card .ped-tit{ white-space:normal; } .ped-card .ped-tit .quem{ display:block; font-size:12.5px; max-width:none; } .ped-card .ped-tit .ponto{ display:none; } }
   /* Pagamento registrado: selo verde preenchido (diferente do contorno dos status) para ser visto de relance. */
   .pago{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.04em; text-transform:uppercase; padding:3px 8px; border-radius:6px;
     color:#052e1c; background:var(--good); font-weight:600; }
@@ -757,6 +768,44 @@ function irPara(view){
   if (ativo && ativo.scrollIntoView) ativo.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
 
+/* ---------- Pedidos em cartão: ícone, título e resumo de cada pedido ---------- */
+// Ícone pelo tipo de pedido (ids dos catálogos de cada segmento). Sem ícone conhecido: 📋.
+const ICONES_PEDIDO = { planejar: "🌴", cruzeiros: "🚢", passeios: "🗺️", seguro: "🛡️", orcamento: "📝", agendar: "📅", consulta: "📅",
+  visita: "📅", primeira: "🩺", canal: "🩺", retorno: "🔁", remarcar: "🔁", corte: "✂️", escova: "💨", coloracao: "🎨", unhas: "💅",
+  sobrancelha: "👁️", maquiagem: "💄", tratamento: "🧴", procedimento: "🧪", limpeza: "🪥", clareamento: "✨", implante: "🦷",
+  extracao: "🦷", ortodontia: "😁", instalacao: "🔧", reparo: "🛠️", cliente: "🛠️", andamento: "🔧", eletrica: "🔋", quadro: "🔋",
+  projeto: "📐", ar: "❄️", vazamento: "💧", desentupimento: "🚽", aquecedor: "🔥", revisao: "🛢️", freios: "🛑", suspensao: "🔩",
+  experimental: "🏋️", matricula: "✅", musculacao: "💪", funcional: "🔥", pilates: "🧘", personal: "🏅", danca: "🥊", aluno: "🙋",
+  conhecer: "✨", delivery: "🛵", eventos: "🎉", documentos: "📄" };
+const ehAgencia = (d) => /viage/i.test(String((d && d.tipo_negocio) || ""));
+// Para agência, "pendente" é "Aguardando proposta"; os outros negócios continuam com "Pendente".
+function nomeStatus(s){ return s === "pendente" && ehAgencia(dadosPainel) ? "Aguardando proposta" : (STATUS[s] || s); }
+function iconePedido(p, agencia){
+  const dd = p.dados || {};
+  if (p.item === "passagens_hoteis"){ const sv = String(dd.servico || ""); return /dois/i.test(sv) ? "✈️🏨" : /hotel/i.test(sv) ? "🏨" : "✈️"; }
+  if (p.item === "reserva") return agencia ? "🧳" : "🍽️";
+  return ICONES_PEDIDO[p.item] || "📋";
+}
+// "pular", "não", "nenhuma"... não entram no resumo (o cliente disse que não tem preferência).
+const semValor = (v) => /^\s*(pular|pode pular|n[aã]o( tenho| precisa)?|nenhuma?|sem prefer[eê]ncias?|nada|tanto faz|-)\s*[.!]*\s*$/i.test(String(v || ""));
+const curto = (v, n) => { const t = String(v || "").replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n - 1) + "…" : t; };
+function resumoPedido(p, d){
+  const dd = p.dados || {}; const agencia = ehAgencia(d);
+  const tituloItem = (d.itens && d.itens[p.item]) || p.item;
+  let titulo, partes;
+  if (agencia && p.item !== "reserva"){
+    titulo = dd.destino || dd.roteiro || tituloItem;
+    partes = [dd.datas, dd.pessoas, dd.preferencias, dd.pref_voo, dd.pref_hotel, dd.interesse];
+  } else if (agencia){
+    titulo = dd.viagem || tituloItem; partes = [dd.assunto];
+  } else {
+    titulo = tituloItem;
+    partes = Object.entries(dd).filter(([k]) => k !== "nome").map(([, v]) => v);
+  }
+  const linha = partes.filter(v => v && !semValor(v)).slice(0, 4).map(v => curto(v, 40)).join(" · ");
+  return { icone: iconePedido(p, agencia), titulo: curto(titulo, 60), linha: linha || (titulo === tituloItem ? "" : tituloItem) };
+}
+
 /* ---------- Pedidos: abre a lista, separa por status e o dono muda o status ---------- */
 function renderPedidos(){
   const d = dadosPainel;
@@ -774,7 +823,7 @@ function renderPedidos(){
   if (todos.length){
     const conta = (s) => todos.filter(p => s === "todos" || p.status === s).length;
     html += '<div class="sec-corpo"><div class="abas">';
-    [["pendente", "Pendentes"], ["respondido", "Respondidos"], ["fechado", "Vendas fechadas"], ["nao_fechou", "Não fecharam"], ["todos", "Todos"]].forEach(([s, n]) => {
+    [["pendente", ehAgencia(d) ? "Aguardando proposta" : "Pendentes"], ["respondido", "Respondidos"], ["fechado", "Vendas fechadas"], ["nao_fechou", "Não fecharam"], ["todos", "Todos"]].forEach(([s, n]) => {
       html += '<button type="button" class="aba' + (tela.aba === s ? ' ativa' : '') + '" data-aba="' + s + '">' + n + ' (' + (s === "pendente" ? pend : conta(s)) + ')</button>';
     });
     html += '</div>';
@@ -786,10 +835,14 @@ function renderPedidos(){
       const titulo = (d.itens && d.itens[p.item]) || p.item;
       const nome = (p.dados && p.dados.nome) || ('+' + p.remetente);
       const aberto = tela.pedido === p.id;
-      html += '<div class="pedido"><button type="button" class="ped-linha" data-pedido="' + p.id + '">'
-        + '<span>' + esc(titulo) + ' <span class="quem">· ' + esc(nome) + '</span></span>'
-        + '<span class="lado">' + dataHoraBR(p.created_at) + '<span class="status ' + esc(p.status) + '">' + esc(STATUS[p.status] || p.status) + '</span>'
-        + (p.pago_em ? '<span class="pago" title="Pagamento registrado em ' + esc(new Date(p.pago_em).toLocaleDateString("pt-BR")) + '">✓ Pago</span>' : '') + (aberto ? '▴' : '▾') + '</span></button>';
+      const r = resumoPedido(p, d);
+      html += '<div class="pedido"><button type="button" class="ped-linha ped-card" data-pedido="' + p.id + '" title="' + esc(titulo) + '">'
+        + '<span class="ped-ico' + (r.icone === "✈️🏨" ? ' duplo' : '') + '" aria-hidden="true">' + r.icone + '</span>'
+        + '<span class="ped-txt"><span class="ped-tit">' + esc(r.titulo) + ' <span class="quem"><span class="ponto">· </span>' + esc(nome) + '</span></span>'
+        + (r.linha ? '<span class="ped-res">' + esc(r.linha) + '</span>' : '')
+        + '<span class="ped-selos"><span class="status ' + esc(p.status) + '">' + esc(nomeStatus(p.status)) + '</span>'
+        + (p.pago_em ? '<span class="pago" title="Pagamento registrado em ' + esc(new Date(p.pago_em).toLocaleDateString("pt-BR")) + '">✓ Pago</span>' : '') + '</span></span>'
+        + '<span class="lado">' + dataHoraBR(p.created_at) + (aberto ? ' ▴' : ' ▾') + '</span></button>';
       if (aberto){
         const campos = Object.entries(p.dados || {}).map(([k, v]) => '<b>' + esc(ROTULOS[k] || (k.charAt(0).toUpperCase() + k.slice(1))) + ':</b> ' + esc(v)).join(' · ');
         const agP = agendamentoDoPedido(p.id);
@@ -802,7 +855,7 @@ function renderPedidos(){
         html += '<button class="btn" type="button" data-conf="' + p.id + '">' + (agP ? 'Remarcar horário' : 'Confirmar horário') + '</button>';
         html += '<button class="btn" type="button" data-fu-ped="' + p.id + '">Agendar follow-up</button>';
         Object.keys(STATUS).filter(s => s !== p.status).forEach(s => {
-          const rotulo = s === "pendente" ? "Voltar para pendente" : s === "respondido" ? "Marcar como respondido" : STATUS[s];
+          const rotulo = s === "pendente" ? (ehAgencia(d) ? "Voltar para aguardando proposta" : "Voltar para pendente") : s === "respondido" ? "Marcar como respondido" : STATUS[s];
           html += '<button class="btn" type="button" data-status="' + s + '" data-id="' + p.id + '">' + rotulo + '</button>';
         });
         html += (p.pago_em ? '<button class="btn" type="button" data-pago="' + p.id + '" data-valor="0">Desfazer pagamento</button>'

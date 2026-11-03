@@ -513,6 +513,7 @@ const tela = { abaFu: "agendado", fuForm: null, abaAg: "proximos", agendamento: 
 let dadosPainel = null;
 let adminDados = null;
 let adminLeads = null;
+let silencioDados = null;   // horário de silêncio dos avisos (null = SQL ainda não rodou: a seção não aparece)
 const STATUS = { pendente: "Pendente", respondido: "Respondido", fechado: "Venda fechada", nao_fechou: "Não fechou" };
 
 const $ = (id) => document.getElementById(id);
@@ -547,6 +548,8 @@ async function carregarPainel(){
   // Central de Respostas Rápidas: o que a dona mudou na biblioteca (se o SQL ainda não rodou, fica só a padrão).
   try { const r = await supa.rpc("get_respostas_rapidas"); respostasRapidas = Object.assign({ meus: [], favoritos: [], ocultos: [] }, (!r.error && r.data && typeof r.data === "object" && !Array.isArray(r.data)) ? r.data : {}); }
   catch (e) { respostasRapidas = { meus: [], favoritos: [], ocultos: [] }; }
+  // Horário de silêncio dos avisos (se o SQL ainda não rodou, a seção não aparece).
+  try { const s = await supa.rpc("get_silencio"); silencioDados = (!s.error && s.data && s.data.silencio) ? s.data : null; } catch (e) { silencioDados = null; }
   emailLogado = (u && u.user && u.user.email) || "";
   // Administração Auryx: só volta dados para os e-mails de administração (os outros nem veem o menu).
   try { const a = await supa.rpc("admin_resumo"); adminDados = (!a.error && a.data) ? a.data : null; } catch (e) { adminDados = null; }
@@ -605,7 +608,7 @@ function render(d){
     respostas: ["Respostas rápidas", "Textos prontos para a sua equipe responder os clientes pelo WhatsApp"],
     followup: ["Follow-up", FOLLOWUP_ATIVO ? "Escolha o dia e a secretária manda uma mensagem para saber como foi" : "Escolha o dia e o painel te lembra com a mensagem pronta para enviar"],
     personalizar: ["Personalizar", "Perguntas, respostas e serviços que a secretária usa"],
-    dados: ["Seus dados", "Nome do negócio, seu nome e WhatsApp de avisos"],
+    dados: ["Seus dados", "Nome do negócio, seu nome, WhatsApp de avisos e horário de silêncio"],
     plano: [emTeste ? "Escolher plano" : "Plano", emTeste ? "Continue com a sua secretária depois do teste grátis" : "Seu plano atual"],
     admin: ["Administração", "Clientes, receita, custos, lucro e limites da Auryx"],
   };
@@ -684,7 +687,7 @@ function render(d){
   if (tela.view === "followup") html += '<div class="panel" id="followupPainel"></div>';
   if (tela.view === "respostas") html += '<div class="panel" id="respostasPainel"></div>';
   if (tela.view === "personalizar") html += '<div class="panel" id="personalizar"></div>';
-  if (tela.view === "dados") html += '<div class="panel" id="seusDados"></div>';
+  if (tela.view === "dados") html += '<div class="panel" id="seusDados"></div>' + (silencioDados ? '<div class="panel" id="silencioPainel"></div>' : '');
   if (tela.view === "admin") html += '<div id="adminPainel"></div>';
 
   if (tela.view === "plano"){
@@ -714,6 +717,7 @@ function render(d){
   if ($("respostasPainel")) renderRespostas();
   if ($("personalizar")) renderPersonalizar(d);
   if ($("seusDados")) renderDados(d);
+  if ($("silencioPainel")) renderSilencio();
   if ($("adminPainel")) renderAdmin();
   document.querySelectorAll("#dashContent [data-ir]").forEach(b => b.addEventListener("click", () => irPara(b.getAttribute("data-ir"))));
   document.querySelectorAll("[data-devolver]").forEach(b => b.addEventListener("click", () => devolverConversa(b)));
@@ -2094,6 +2098,44 @@ async function salvarDados(){
   }
   tela.dadosSalvos = true;   // mostra "Salvo ✓" ao lado do número como ficou gravado
   await carregarPainel();
+}
+
+/* ---------- Horário de silêncio: avisos que não são urgentes esperam o fim do horário e chegam juntos num resumo ---------- */
+function renderSilencio(){
+  const box = $("silencioPainel"); const s = silencioDados; if (!box || !s) return;
+  const c = s.silencio || {}; const ativo = c.ativo !== false;
+  const fuso = s.timezone === "America/Sao_Paulo" ? "horário de Brasília" : esc(s.timezone || "");
+  box.innerHTML = '<h2>Horário de silêncio dos avisos</h2>'
+    + '<p class="sub">A secretária atende seus clientes a qualquer hora. Nesse horário, os avisos para você ficam guardados e chegam juntos num resumo quando o silêncio termina. '
+    + '<b>Urgências (🚨) chegam sempre na hora.</b></p>'
+    + '<div class="campo"><label style="display:flex; gap:10px; align-items:center; cursor:pointer;"><input type="checkbox" id="silAtivo" style="width:auto;"' + (ativo ? ' checked' : '') + '> Usar horário de silêncio</label></div>'
+    + '<div class="dois-campos" id="silHoras"' + (ativo ? '' : ' style="opacity:.5;"') + '>'
+    + '<div class="campo"><label for="silInicio">Começa às</label><input id="silInicio" type="time" value="' + esc(c.inicio || "22:00") + '"' + (ativo ? '' : ' disabled') + '></div>'
+    + '<div class="campo"><label for="silFim">Termina às</label><input id="silFim" type="time" value="' + esc(c.fim || "07:00") + '"' + (ativo ? '' : ' disabled') + '></div></div>'
+    + '<p class="sub" style="margin-top:10px;">Fuso: ' + fuso + '. Ex.: das 22:00 às 07:00, uma cotação que chega às 3h aparece no painel na hora e no seu WhatsApp às 7h.'
+    + (s.guardados ? ' <b>' + s.guardados + (s.guardados === 1 ? ' aviso guardado' : ' avisos guardados') + '</b> para o próximo resumo.' : '') + '</p>'
+    + '<div class="acoes"><button class="btn btn-primary" type="button" id="salvarSilencio">Salvar</button><span class="msg ok" id="silMsg"></span></div>';
+  $("silAtivo").addEventListener("change", (e) => {
+    const on = e.target.checked; $("silInicio").disabled = !on; $("silFim").disabled = !on; $("silHoras").style.opacity = on ? "" : ".5";
+  });
+  $("salvarSilencio").addEventListener("click", salvarSilencio);
+}
+
+async function salvarSilencio(){
+  const msg = $("silMsg"); const btn = $("salvarSilencio");
+  const ativo = $("silAtivo").checked;
+  let inicio = ($("silInicio").value || "").slice(0, 5); let fim = ($("silFim").value || "").slice(0, 5);
+  msg.className = "msg"; msg.textContent = "";
+  if (!ativo && (!/^\d\d:\d\d$/.test(inicio) || !/^\d\d:\d\d$/.test(fim) || inicio === fim)){ inicio = "22:00"; fim = "07:00"; }   // desligado: guarda um horário válido para quando religar
+  if (!/^\d\d:\d\d$/.test(inicio) || !/^\d\d:\d\d$/.test(fim)){ msg.className = "msg erro"; msg.textContent = "Escolha o horário de início e de fim."; return; }
+  if (inicio === fim){ msg.className = "msg erro"; msg.textContent = "O início e o fim não podem ser iguais."; return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Salvando...';
+  const { data, error } = await supa.rpc("salvar_silencio", { p_ativo: ativo, p_inicio: inicio, p_fim: fim });
+  btn.disabled = false; btn.textContent = "Salvar";
+  if (error || !data || !data.ok){ msg.className = "msg erro"; msg.textContent = "Não foi possível salvar agora. Tente de novo em alguns instantes."; return; }
+  silencioDados.silencio = { ativo: ativo, inicio: inicio, fim: fim };
+  msg.className = "msg ok";
+  msg.textContent = ativo ? "Salvo ✓ Silêncio das " + inicio + " às " + fim + "." : "Salvo ✓ Você recebe todos os avisos na hora.";
 }
 
 $("loginForm").addEventListener("submit", async (e) => {

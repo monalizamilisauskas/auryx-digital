@@ -249,6 +249,17 @@
   .status.fechado{ color:var(--good); border-color:rgba(124,184,143,0.4); }
   .status.nao_fechou{ color:var(--muted); }
   .ped-detalhe{ margin-top:10px; }
+  .ind-link{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:6px 0 4px; }
+  .ind-link .msg{ font-size:13px; flex-basis:100%; }
+  .ind-link .msg.erro{ color:var(--bad); }
+  .ind-link code{ flex:1; min-width:200px; background:var(--panel-3); border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:13.5px; color:var(--parchment); overflow-wrap:anywhere; }
+  .ind-passos{ margin:14px 0 0; padding-left:20px; color:var(--muted); font-size:13.5px; line-height:1.7; }
+  .ind-passos b{ color:var(--parchment); font-weight:500; }
+  .ind-item{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px 0; border-top:1px solid var(--line); font-size:14px; }
+  .ind-item:first-child{ border-top:none; }
+  .ind-item .ped-selos{ justify-content:flex-end; align-items:center; flex-wrap:nowrap; flex-shrink:0; }
+  @media (max-width:560px){ .ind-item{ flex-wrap:wrap; } .ind-item .ped-selos{ flex-wrap:wrap; justify-content:flex-start; } }
+  .ind-item small{ display:block; color:var(--muted); font-size:12.5px; margin-top:2px; }
   /* Pedido em cartão: ícone do tipo, destino (ou serviço) em destaque, resumo e selo de status. */
   .ped-card{ align-items:flex-start; }
   .ped-card .ped-ico{ font-size:22px; line-height:1; width:34px; flex:0 0 34px; text-align:center; padding-top:2px; white-space:nowrap; }
@@ -527,7 +538,9 @@ const tela = { abaFu: "agendado", fuForm: null, abaAg: "proximos", agendamento: 
 let dadosPainel = null;
 let adminDados = null;
 let adminLeads = null;
-let silencioDados = null;   // horário de silêncio dos avisos (null = SQL ainda não rodou: a seção não aparece)
+let silencioDados = null;
+let indicDados = null;       // Indique e ganhe (null = SQL ainda não rodou: o menu não aparece)
+let adminIndic = null;   // horário de silêncio dos avisos (null = SQL ainda não rodou: a seção não aparece)
 const STATUS = { pendente: "Pendente", respondido: "Respondido", fechado: "Venda fechada", nao_fechou: "Não fechou" };
 
 const $ = (id) => document.getElementById(id);
@@ -562,11 +575,14 @@ async function carregarPainel(){
   // Central de Respostas Rápidas: o que a dona mudou na biblioteca (se o SQL ainda não rodou, fica só a padrão).
   try { const r = await supa.rpc("get_respostas_rapidas"); respostasRapidas = Object.assign({ meus: [], favoritos: [], ocultos: [] }, (!r.error && r.data && typeof r.data === "object" && !Array.isArray(r.data)) ? r.data : {}); }
   catch (e) { respostasRapidas = { meus: [], favoritos: [], ocultos: [] }; }
+  // Indique e ganhe: código, link e indicações (se o SQL ainda não rodou, o menu não aparece).
+  try { const r = await supa.rpc("get_indicacoes"); indicDados = (!r.error && r.data && r.data.codigo) ? r.data : null; } catch (e) { indicDados = null; }
   // Horário de silêncio dos avisos (se o SQL ainda não rodou, a seção não aparece).
   try { const s = await supa.rpc("get_silencio"); silencioDados = (!s.error && s.data && s.data.silencio) ? s.data : null; } catch (e) { silencioDados = null; }
   emailLogado = (u && u.user && u.user.email) || "";
   // Administração Auryx: só volta dados para os e-mails de administração (os outros nem veem o menu).
   try { const a = await supa.rpc("admin_resumo"); adminDados = (!a.error && a.data) ? a.data : null; } catch (e) { adminDados = null; }
+  if (adminDados) { try { const x = await supa.rpc("admin_indicacoes"); adminIndic = (!x.error && x.data) ? x.data : null; } catch (e) { adminIndic = null; } }
   if (adminDados) { try { const l = await supa.rpc("admin_leads"); adminLeads = (!l.error && l.data) ? l.data : null; } catch (e) { adminLeads = null; } }
   render(data);
 }
@@ -608,6 +624,7 @@ function render(d){
     ["personalizar", "Personalizar" + (d.pode_personalizar ? "" : " 🔒"), 0],
     ["dados", "Seus dados", 0],
     ["plano", emTeste ? "Escolher plano" : "Plano", 0]);
+  if (indicDados) menu.push(["indicar", "Indique e ganhe", 0]);
   if (adminDados) menu.push(["admin", "Administração", 0]);
   if (!menu.some(m => m[0] === tela.view)) tela.view = "inicio";
   $("menuLateral").innerHTML = menu.map(([id, nome, n]) =>
@@ -623,6 +640,7 @@ function render(d){
     followup: ["Follow-up", FOLLOWUP_ATIVO ? "Escolha o dia e a secretária manda uma mensagem para saber como foi" : "Escolha o dia e o painel te lembra com a mensagem pronta para enviar"],
     personalizar: ["Personalizar", "Perguntas, respostas e serviços que a secretária usa"],
     dados: ["Seus dados", "Nome do negócio, seu nome, WhatsApp de avisos e horário de silêncio"],
+    indicar: ["Indique e ganhe", "Indique a Auryx e ganhe 10% de desconto por cada cliente novo que assinar"],
     plano: [emTeste ? "Escolher plano" : "Plano", emTeste ? "Continue com a sua secretária depois do teste grátis" : "Seu plano atual"],
     admin: ["Administração", "Clientes, receita, custos, lucro e limites da Auryx"],
   };
@@ -701,6 +719,7 @@ function render(d){
   if (tela.view === "followup") html += '<div class="panel" id="followupPainel"></div>';
   if (tela.view === "respostas") html += '<div class="panel" id="respostasPainel"></div>';
   if (tela.view === "personalizar") html += '<div class="panel" id="personalizar"></div>';
+  if (tela.view === "indicar") html += '<div class="panel" id="indicarPainel"></div>';
   if (tela.view === "dados") html += '<div class="panel" id="seusDados"></div>' + (silencioDados ? '<div class="panel" id="silencioPainel"></div>' : '');
   if (tela.view === "admin") html += '<div id="adminPainel"></div>';
 
@@ -731,6 +750,7 @@ function render(d){
   if ($("respostasPainel")) renderRespostas();
   if ($("personalizar")) renderPersonalizar(d);
   if ($("seusDados")) renderDados(d);
+  if ($("indicarPainel")) renderIndicar(d);
   if ($("silencioPainel")) renderSilencio();
   if ($("adminPainel")) renderAdmin();
   document.querySelectorAll("#dashContent [data-ir]").forEach(b => b.addEventListener("click", () => irPara(b.getAttribute("data-ir"))));
@@ -749,6 +769,7 @@ function icone(nome){
     pedidos: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3"/>',
     personalizar: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
     dados: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    indicar: '<rect x="3" y="8" width="18" height="13" rx="1.5"/><path d="M12 8v13M3 12h18M12 8c-1.5-3-6-3.5-6-1s4 1 6 1zm0 0c1.5-3 6-3.5 6-1s-4 1-6 1z"/>',
     plano: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/>',
     alerta: '<path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17h0"/>',
     info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h0"/>',
@@ -1185,6 +1206,7 @@ function renderAdmin(){
   html += perto.length ? perto.map(x => '<div class="adm-limite"><div>' + esc(x.nome) + ' · ' + esc(x.plano) + ' · ' + x.usadas + ' de ' + x.limite + ' mensagens</div><span>' + x.pct + '%</span></div>' + barra(x.pct)).join('')
     : '<p class="sub" style="margin:6px 0 0;">Nenhum cliente perto do limite.</p>';
   html += '</div>';
+  html += renderIndicacoesAdmin();
   html += renderLeads();
   const cf = a.config || {};
   const campo = (id, rotulo, valor, passo) => '<div class="campo"><label for="cfg_' + id + '">' + rotulo + '</label><input id="cfg_' + id + '" type="number" step="' + (passo || '1') + '" min="0" value="' + esc(valor) + '"></div>';
@@ -1197,6 +1219,7 @@ function renderAdmin(){
     + '</div><div class="acoes"><button class="btn btn-primary" type="button" id="cfgSalvar">Salvar valores</button><span class="msg" id="cfgMsg"></span></div></div></details>'
     + '<p class="sub" style="margin-top:14px;">Atualizado em ' + esc(dataHoraBR(a.atualizado_em)) + '. Toda segunda de manhã você recebe este resumo no WhatsApp.</p>';
   box.innerHTML = html;
+  ligarIndicacoesAdmin();
   $("cfgSalvar").addEventListener("click", async () => {
     const msg = $("cfgMsg"); const btn = $("cfgSalvar"); const p = {};
     ["custo_n8n_brl", "outros_custos_brl", "custo_openai_msg", "stripe_pct", "stripe_fixo", "limite_n8n", "limite_meta_semana", "alerta_pct"].forEach(id => {
@@ -2240,6 +2263,81 @@ async function salvarSilencio(){
   silencioDados.silencio = { ativo: ativo, inicio: inicio, fim: fim };
   msg.className = "msg ok";
   msg.textContent = ativo ? "Salvo ✓ Silêncio das " + inicio + " às " + fim + "." : "Salvo ✓ Você recebe todos os avisos na hora.";
+}
+
+/* ---------- Indique e ganhe: link do cliente e as indicações dele ---------- */
+const STATUS_IND = { cadastro: ["Cadastro em andamento", ""], teste: ["No teste grátis", ""], assinou: ["Assinou · desconto na fila", "conf"],
+  desconto_aplicado: ["10% na próxima fatura", "conf"], desconto_usado: ["Desconto usado ✓", "conf"] };
+function renderIndicar(d){
+  const box = $("indicarPainel"); const x = indicDados; if (!box || !x) return;
+  const lista = x.indicacoes || [];
+  const ganhos = lista.filter(i => ["assinou", "desconto_aplicado", "desconto_usado"].includes(i.status)).length;
+  const msgWhats = "Oi! Uso a AI Secretária da Auryx para atender meus clientes no WhatsApp e tem me ajudado muito. "
+    + "Dá para testar grátis por 7 dias: " + x.link;
+  let html = '<h2>Indique e ganhe</h2>'
+    + '<p class="sub">Indique a Auryx para outros negócios. A cada cliente novo que <b>assinar</b> pelo seu link, você ganha <b>10% de desconto em 1 mês</b> da sua mensalidade.</p>'
+    + '<div class="subtitulo">Seu link de indicação</div>'
+    + '<div class="ind-link"><code id="indLink">' + esc(x.link) + '</code>'
+    + '<button class="btn btn-primary" type="button" id="indCopiar">Copiar link</button>'
+    + '<a class="btn" id="indWhats" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent(msgWhats) + '">Enviar pelo WhatsApp</a>'
+    + '<span class="msg ok" id="indMsg"></span></div>'
+    + '<ol class="ind-passos"><li>Mande o link para quem pode gostar da secretária.</li>'
+    + '<li>A pessoa se cadastra pelo link e faz o <b>teste grátis</b>. Ela paga o valor normal do plano.</li>'
+    + '<li>Quando ela <b>assinar</b>, o desconto de 10% entra <b>sozinho</b> na sua próxima mensalidade. Indicou mais de um? Um desconto por mês, em sequência.</li></ol>'
+    + '<div class="subtitulo" style="margin-top:22px;">Suas indicações' + (lista.length ? ' (' + lista.length + ')' : '') + (ganhos ? ' · ' + ganhos + (ganhos === 1 ? ' desconto' : ' descontos') : '') + '</div>';
+  if (!lista.length){
+    html += '<p class="sub" style="margin:6px 0 0;">Ainda ninguém se cadastrou pelo seu link. Assim que alguém se cadastrar, aparece aqui.</p>';
+  } else {
+    html += '<div>' + lista.map(i => { const st = STATUS_IND[i.status] || [i.status, ""];
+      return '<div class="ind-item"><div>' + esc(i.nome) + '<small>Cadastro em ' + esc(new Date(i.criado_em).toLocaleDateString("pt-BR")) + '</small></div>'
+        + '<span class="tipo-ped' + (st[1] ? ' ' + st[1] : '') + '">' + esc(st[0]) + '</span></div>'; }).join("") + '</div>';
+  }
+  box.innerHTML = html;
+  $("indCopiar").addEventListener("click", async () => {
+    const msg = $("indMsg");
+    try { await navigator.clipboard.writeText(x.link); msg.className = "msg ok"; msg.textContent = "Link copiado ✓"; }
+    catch (e) { const r = document.createRange(); r.selectNodeContents($("indLink")); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      msg.className = "msg"; msg.textContent = "Selecionado: copie com Ctrl+C"; }
+  });
+}
+
+/* Administração → Indicações: o desconto é aplicado sozinho no Stripe; aqui dá para acompanhar, tentar de novo ou marcar à mão. */
+function renderIndicacoesAdmin(){
+  const a = adminIndic; if (!a) return '';
+  const lista = a.lista || [];
+  const data = (v) => esc(new Date(v).toLocaleDateString("pt-BR"));
+  let html = '<div class="panel" id="admIndic"><h2>Indicações</h2><p class="sub">' + (a.total || 0) + ' indicações · ' + (a.convertidas || 0) + ' viraram cliente · '
+    + (a.na_fila || 0) + ' desconto(s) na fila' + (a.com_erro ? ' · <b style="color:var(--bad);">' + a.com_erro + ' com erro</b>' : '') + '. '
+    + 'O cupom <b>INDICACAO</b> (10%, 1 mês) é aplicado sozinho na assinatura de quem indicou, um por fatura.</p>';
+  if (!a.chave_stripe) html += '<div class="aviso atencao" style="margin:0 0 12px;"><div class="txt"><b>Falta a chave do Stripe no cofre.</b> Sem ela os descontos ficam na fila. '
+    + 'No SQL Editor: <code>select vault.create_secret(\'CHAVE_RESTRITA\', \'stripe_api_key\');</code></div></div>';
+  html += lista.length ? lista.map(i => {
+      let lado;
+      if (i.desconto_usado_em) lado = '<span class="tipo-ped conf">Usado na fatura de ' + data(i.desconto_usado_em) + '</span>';
+      else if (i.desconto_aplicado_em) lado = '<span class="tipo-ped conf">Aplicado em ' + data(i.desconto_aplicado_em) + ' · próxima fatura</span>';
+      else lado = '<span class="ped-selos" style="margin:0;"><span class="tipo-ped">' + (i.desconto_erro ? 'Erro' : 'Na fila') + '</span>'
+        + '<button class="btn" type="button" data-ind-acao="tentar" data-id="' + i.id + '">Tentar de novo</button>'
+        + '<button class="btn" type="button" data-ind-acao="manual" data-id="' + i.id + '">Já apliquei à mão</button></span>';
+      return '<div class="ind-item"><div><b>' + esc(i.indicador) + '</b> indicou ' + esc(i.indicado || 'um cliente')
+        + '<small>' + esc(i.indicador_email || '') + ' · assinou em ' + data(i.convertida_em)
+        + (i.desconto_erro && !i.desconto_aplicado_em ? ' · ' + esc(String(i.desconto_erro).slice(0, 120)) : '') + '</small></div>' + lado + '</div>'; }).join("")
+    : '<p class="sub" style="margin:6px 0 0;">Nenhuma indicação virou cliente ainda.</p>';
+  return html + '<span class="msg" id="admIndMsg"></span></div>';
+}
+function ligarIndicacoesAdmin(){
+  document.querySelectorAll("[data-ind-acao]").forEach(b => b.addEventListener("click", async () => {
+    const acao = b.getAttribute("data-ind-acao"); const msg = $("admIndMsg");
+    b.disabled = true; b.textContent = "Salvando...";
+    const { data, error } = await supa.rpc("admin_desconto_indicacao", { p_id: Number(b.getAttribute("data-id")), p_acao: acao });
+    const r = await supa.rpc("admin_indicacoes"); if (!r.error && r.data) adminIndic = r.data;
+    renderAdmin();
+    const m = $("admIndMsg"); if (!m) return;
+    if (error){ m.className = "msg erro"; m.textContent = "Não foi possível salvar. Tente de novo."; return; }
+    const res = data && data.resultado;
+    m.className = "msg " + (data && data.ok ? "ok" : "erro");
+    m.textContent = { aplicado: "Desconto aplicado no Stripe ✓", manual: "Marcado como aplicado ✓", aguardando: "Já tem um desconto esperando a próxima fatura; este entra depois.",
+      sem_assinatura: "Quem indicou ainda não tem assinatura ativa; entra quando assinar.", sem_chave: "Falta a chave do Stripe no cofre.", falhou: "O Stripe recusou. Veja o erro na linha." }[res] || "Feito.";
+  }));
 }
 
 $("loginForm").addEventListener("submit", async (e) => {

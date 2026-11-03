@@ -259,7 +259,9 @@
   .ped-card .ped-res{ color:var(--muted); font-size:13px; line-height:1.45; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; white-space:normal; }
   .ped-card .ped-selos{ display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; }
   .ped-card .lado{ padding-top:3px; }
-  @media (max-width:560px){ .ped-card .ped-tit{ white-space:normal; } .ped-card .ped-tit .quem{ display:block; font-size:12.5px; max-width:none; } .ped-card .ped-tit .ponto{ display:none; } }
+  /* Etiqueta do tipo (Passagem, Hotel, Cruzeiro...): o dono entende o ícone sem precisar decorar. */
+  .tipo-ped{ font-size:11.5px; font-weight:600; padding:3px 8px; border-radius:6px; color:#BFDBFE; background:rgba(37,99,235,0.18); border:1px solid rgba(96,165,250,0.35); white-space:nowrap; }
+  @media (max-width:560px){ .ped-card .ped-tit{ white-space:normal; } .ped-card .ped-tit .quem{ display:block; font-size:12.5px; max-width:none; } .ped-card .ped-tit .ponto{ display:none; } .ped-card .lado .hr{ display:none; } .ped-card{ gap:8px; } .ped-card .ped-selos .tipo-ped, .ped-card .ped-selos .status, .ped-card .ped-selos .pago{ font-size:10.5px; padding:2px 6px; } .ped-card .ped-selos{ gap:5px; } }
   /* Pagamento registrado: selo verde preenchido (diferente do contorno dos status) para ser visto de relance. */
   .pago{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.04em; text-transform:uppercase; padding:3px 8px; border-radius:6px;
     color:#052e1c; background:var(--good); font-weight:600; }
@@ -786,6 +788,12 @@ function iconePedido(p, agencia){
   if (p.item === "reserva") return agencia ? "🧳" : "🍽️";
   return ICONES_PEDIDO[p.item] || "📋";
 }
+// Nome curto do tipo, escrito ao lado do ícone (só agência: nos outros negócios o título já é o serviço).
+function tipoPedido(p){
+  const sv = String((p.dados || {}).servico || "");
+  if (p.item === "passagens_hoteis") return /dois/i.test(sv) ? "Passagem + hotel" : /hotel/i.test(sv) ? "Hotel" : "Passagem";
+  return { planejar: "Pacote", cruzeiros: "Cruzeiro", passeios: "Passeio", seguro: "Seguro viagem", reserva: "Reserva existente" }[p.item] || "";
+}
 // "pular", "não", "nenhuma"... não entram no resumo (o cliente disse que não tem preferência).
 const semValor = (v) => /^\s*(pular|pode pular|n[aã]o( tenho| precisa)?|nenhuma?|sem prefer[eê]ncias?|nada|tanto faz|-)\s*[.!]*\s*$/i.test(String(v || ""));
 const curto = (v, n) => { const t = String(v || "").replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n - 1) + "…" : t; };
@@ -803,7 +811,7 @@ function resumoPedido(p, d){
     partes = Object.entries(dd).filter(([k]) => k !== "nome").map(([, v]) => v);
   }
   const linha = partes.filter(v => v && !semValor(v)).slice(0, 4).map(v => curto(v, 40)).join(" · ");
-  return { icone: iconePedido(p, agencia), titulo: curto(titulo, 60), linha: linha || (titulo === tituloItem ? "" : tituloItem) };
+  return { icone: iconePedido(p, agencia), tipo: agencia ? tipoPedido(p) : "", titulo: curto(titulo, 60), linha: linha || (titulo === tituloItem ? "" : tituloItem) };
 }
 
 /* ---------- Pedidos: abre a lista, separa por status e o dono muda o status ---------- */
@@ -840,9 +848,10 @@ function renderPedidos(){
         + '<span class="ped-ico' + (r.icone === "✈️🏨" ? ' duplo' : '') + '" aria-hidden="true">' + r.icone + '</span>'
         + '<span class="ped-txt"><span class="ped-tit">' + esc(r.titulo) + ' <span class="quem"><span class="ponto">· </span>' + esc(nome) + '</span></span>'
         + (r.linha ? '<span class="ped-res">' + esc(r.linha) + '</span>' : '')
-        + '<span class="ped-selos"><span class="status ' + esc(p.status) + '">' + esc(nomeStatus(p.status)) + '</span>'
+        + '<span class="ped-selos">' + (r.tipo ? '<span class="tipo-ped">' + esc(r.tipo) + '</span>' : '') + '<span class="status ' + esc(p.status) + '">' + esc(nomeStatus(p.status)) + '</span>'
         + (p.pago_em ? '<span class="pago" title="Pagamento registrado em ' + esc(new Date(p.pago_em).toLocaleDateString("pt-BR")) + '">✓ Pago</span>' : '') + '</span></span>'
-        + '<span class="lado">' + dataHoraBR(p.created_at) + (aberto ? ' ▴' : ' ▾') + '</span></button>';
+        + '<span class="lado">' + (() => { const dh = String(dataHoraBR(p.created_at)); const i = dh.indexOf(', ');
+            return i > 0 ? esc(dh.slice(0, i)) + '<span class="hr">' + esc(dh.slice(i)) + '</span>' : esc(dh); })() + (aberto ? ' ▴' : ' ▾') + '</span></button>';
       if (aberto){
         const campos = Object.entries(p.dados || {}).map(([k, v]) => '<b>' + esc(ROTULOS[k] || (k.charAt(0).toUpperCase() + k.slice(1))) + ':</b> ' + esc(v)).join(' · ');
         const agP = agendamentoDoPedido(p.id);

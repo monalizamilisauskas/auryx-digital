@@ -285,6 +285,11 @@
   .lote-barra{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:0 0 12px; padding:10px 12px; border-radius:10px;
     background:rgba(37,99,235,0.12); border:1px solid rgba(96,165,250,0.35); font-size:13.5px; }
   .lote-barra b{ margin-right:4px; }
+  .toast-desfazer{ position:fixed; left:50%; bottom:24px; transform:translate(-50%, 20px); opacity:0; pointer-events:none; transition:all .2s;
+    display:flex; gap:14px; align-items:center; background:#0B1220; color:#E5E7EB; border:1px solid rgba(96,165,250,0.45);
+    border-radius:10px; padding:11px 14px 11px 16px; font-size:14px; box-shadow:0 10px 30px rgba(0,0,0,.45); z-index:50; max-width:calc(100% - 32px); }
+  .toast-desfazer.on{ opacity:1; transform:translate(-50%, 0); pointer-events:auto; }
+  .toast-desfazer button{ background:transparent; border:none; color:#93C5FD; font-weight:600; font-size:14px; cursor:pointer; padding:4px 6px; }
   .lote-barra .btn{ padding:6px 12px; font-size:13px; }
   .ind-link{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:6px 0 4px; }
   .ind-link .msg{ font-size:13px; flex-basis:100%; }
@@ -1072,19 +1077,44 @@ function ligarTabelaPedidos(box){
   }));
 }
 // Muda o status de um ou vários pedidos (mesma função do banco usada pelos botões) e atualiza a tela.
-async function salvarStatusPedidos(ids, status){
-  let tudoOk = true;
+async function salvarStatusPedidos(ids, status, semDesfazer){
+  let tudoOk = true; const anteriores = [];
   for (const id of ids){
     const antes = (dadosPainel.pedidos || []).find(p => p.id === id);
     if (!antes || antes.status === status) continue;
+    const eraStatus = antes.status;
     const { data, error } = await supa.rpc("atualizar_pedido", { p_id: id, p_status: status });
     if (error || !data || !data.ok){ tudoOk = false; continue; }
     if (antes.status === "pendente") dadosPainel.pedidos_pendentes = Math.max(0, Number(dadosPainel.pedidos_pendentes || 0) - 1);
     if (status === "pendente") dadosPainel.pedidos_pendentes = Number(dadosPainel.pedidos_pendentes || 0) + 1;
     antes.status = status; antes.status_em = new Date().toISOString();
+    anteriores.push([id, eraStatus]);
   }
   render(dadosPainel);
+  if (anteriores.length && !semDesfazer) avisoDesfazer(anteriores, status);
   return tudoOk;
+}
+// Aviso de 6 segundos depois de mudar status pela tabela: "Desfazer" volta cada pedido ao status que tinha.
+let timerDesfazer = null;
+function avisoDesfazer(anteriores, status){
+  let el = $("toastDesfazer");
+  if (!el){ el = document.createElement("div"); el.id = "toastDesfazer"; el.className = "toast-desfazer"; document.body.appendChild(el); }
+  const qtd = anteriores.length;
+  const nomeNovo = nomeStatus(status, (dadosPainel.pedidos || []).find(p => p.id === anteriores[0][0]));
+  el.innerHTML = '<span>' + (qtd === 1 ? 'Status mudado para <b>' : qtd + ' pedidos mudados para <b>') + esc(nomeNovo) + '</b></span>'
+    + '<button type="button" id="btnDesfazer">Desfazer</button>';
+  el.classList.add("on");
+  clearTimeout(timerDesfazer);
+  timerDesfazer = setTimeout(() => el.classList.remove("on"), 6000);
+  $("btnDesfazer").addEventListener("click", async () => {
+    clearTimeout(timerDesfazer); el.innerHTML = '<span>Desfazendo...</span>';
+    const porStatus = {};
+    anteriores.forEach(([id, st]) => (porStatus[st] = porStatus[st] || []).push(id));
+    let ok = true;
+    for (const st of Object.keys(porStatus)) ok = (await salvarStatusPedidos(porStatus[st], st, true)) && ok;
+    el.innerHTML = '<span>' + (ok ? 'Desfeito ✓' : 'Não foi possível desfazer tudo. Confira os status.') + '</span>';
+    timerDesfazer = setTimeout(() => el.classList.remove("on"), 2500);
+  });
 }
 
 /* ---------- Follow-up: o dono escolhe o dia e a secretária manda "Como foi ___?" ---------- */

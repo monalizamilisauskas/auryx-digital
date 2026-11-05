@@ -280,6 +280,18 @@
   .ma-semana input[type=time]{ background:var(--panel-3); border:1px solid var(--line); color:var(--parchment); border-radius:7px; padding:5px 6px; font-size:13px; width:118px; }
   .ma-semana input[type=time]:disabled{ opacity:.35; }
   .ma-sel{ background:var(--panel-3); border:1px solid var(--line); color:var(--parchment); border-radius:8px; padding:8px 10px; font-size:14px; font-family:'Inter',sans-serif; width:100%; }
+  .ma-avisos{ margin:22px 0 6px; padding:16px; border:1px solid var(--line); border-left:3px solid var(--gold); border-radius:12px; background:var(--panel-2, rgba(255,255,255,.02)); }
+  .ma-av-tit{ font-size:17px; font-weight:600; color:var(--parchment); }
+  .ma-av-sub{ margin:4px 0 12px; font-size:13px; color:var(--muted); }
+  .ma-av-trav{ margin:0 0 12px; font-size:13.5px; color:var(--parchment); } .ma-av-trav a{ color:var(--gold-bright); }
+  .ma-avisos.trav .ma-av-op{ opacity:.5; }
+  .ma-av-op{ padding:12px 0; border-top:1px solid var(--line); }
+  .ma-av-op label{ display:block; margin-bottom:8px; cursor:pointer; }
+  .ma-av-op label b{ display:block; font-size:15px; font-weight:600; color:var(--parchment); }
+  .ma-av-op label span{ display:block; font-size:12.5px; color:var(--muted); margin-top:2px; }
+  .ma-av-op .ma-sel{ max-width:280px; }
+  .ma-av-ex{ margin-top:8px; padding:8px 10px; border-radius:8px; background:rgba(37,211,102,.08); font-size:12.5px; line-height:1.5; color:var(--parchment); max-width:340px; }
+  .ma-av-ex small{ display:block; font-size:11px; color:var(--muted); }
   .ma-chave{ display:flex; gap:10px; align-items:flex-start; margin:10px 0; font-size:14px; cursor:pointer; }
   .ma-chave input{ width:18px; height:18px; margin-top:2px; accent-color:var(--gold); }
   .ma-chave small{ display:block; color:var(--muted); font-size:12.5px; }
@@ -2678,6 +2690,7 @@ function ligarDiaAgenda(box){
 function formMeusHorarios(cfg){
   const sem = cfg.semana || {};
   const ordem = [1, 2, 3, 4, 5, 6, 0];
+  const trav = !!(agendaCfg && agendaCfg.avisos_no_plano === false);
   const op = (vals, atual, rot) => vals.map(v => '<option value="' + v + '"' + (Number(atual) === v ? ' selected' : '') + '>' + rot(v) + '</option>').join("");
   let h = '<label class="ma-chave"><input type="checkbox" id="maAtivo"' + (cfg.ativo ? ' checked' : '') + '><span><b>Secretária marca os horários sozinha</b>'
     + '<small>Ela oferece só os horários livres desta agenda e confirma com o cliente na conversa. Não precisa de Google Agenda.</small></span></label>'
@@ -2699,18 +2712,20 @@ function formMeusHorarios(cfg){
     + '<div class="campo"><label for="maAnt">Antecedência mínima</label><select class="ma-sel" id="maAnt">' + op([0, 1, 2, 3, 4, 12, 24, 48], cfg.antecedencia_h, v => v === 0 ? 'Sem antecedência' : v < 24 ? v + (v === 1 ? ' hora antes' : ' horas antes') : (v / 24) + (v === 24 ? ' dia antes' : ' dias antes')) + '</select></div>'
     + '<div class="campo"><label for="maFrente">Marcar até quantos dias para frente</label><select class="ma-sel" id="maFrente">' + op([7, 14, 21, 30, 45, 60, 90], cfg.dias_frente, v => v + ' dias') + '</select></div>'
     + '</div>'
-    + '<div class="subtitulo" style="margin-top:16px;">Avisos da agenda no seu WhatsApp' + (agendaCfg && agendaCfg.avisos_no_plano === false ? ' 🔒' : '') + '</div>'
-    + (agendaCfg && agendaCfg.avisos_no_plano === false
-        ? '<p class="sub" style="margin:4px 0 8px;">Disponível a partir do plano <b>Básico</b>. <a href="#" data-ir="plano" style="color:var(--gold-bright);">Ver planos</a></p>' : '')
-    + '<div class="dois-campos">'
-    + '<div class="campo"><label for="maResumo">Resumo da agenda</label><select class="ma-sel" id="maResumo"' + (agendaCfg && agendaCfg.avisos_no_plano === false ? ' disabled' : '') + '>'
+    + '<div class="ma-avisos' + (trav ? ' trav' : '') + '">'
+    + '<div class="ma-av-tit">📲 Avisos da agenda no seu WhatsApp' + (trav ? ' 🔒' : '') + '</div>'
+    + '<p class="ma-av-sub">A secretária manda para o seu WhatsApp de avisos. Assim você não esquece nenhum horário.</p>'
+    + (trav ? '<p class="ma-av-trav">Disponível a partir do plano <b>Básico</b>. <a href="#" data-ir="plano">Ver planos</a></p>' : '')
+    + '<div class="ma-av-op"><label for="maResumo"><b>1. Resumo da agenda</b><span>Lista dos horários do dia. Só chega nos dias com horário marcado.</span></label>'
+    + '<select class="ma-sel" id="maResumo"' + (trav ? ' disabled' : '') + '>'
     + [["vespera", "Na véspera, às 19h"], ["manha", "No dia, às 7h"], ["off", "Não enviar"]]
         .map(([v, n]) => '<option value="' + v + '"' + ((cfg.resumo || "vespera") === v ? ' selected' : '') + '>' + n + '</option>').join("") + '</select>'
-    + '<small style="display:block;color:var(--muted);font-size:12.5px;margin-top:6px;">“📅 Agenda de amanhã: 3 horários — 09:00 · Corte · Bia…” Só nos dias com horário marcado.</small></div>'
-    + '<div class="campo"><label for="maLembrete">Lembrete antes de cada horário</label><select class="ma-sel" id="maLembrete"' + (agendaCfg && agendaCfg.avisos_no_plano === false ? ' disabled' : '') + '>'
+    + '<div class="ma-av-ex"><small>Exemplo da mensagem:</small>📅 Agenda de amanhã: 2 horários<br>09:00 · Corte · Bia<br>14:00 · Escova · Lia</div></div>'
+    + '<div class="ma-av-op"><label for="maLembrete"><b>2. Lembrete antes de cada horário</b><span>Um aviso pouco antes de cada cliente chegar.</span></label>'
+    + '<select class="ma-sel" id="maLembrete"' + (trav ? ' disabled' : '') + '>'
     + [[60, "1 hora antes"], [120, "2 horas antes"], [0, "Não enviar"]]
         .map(([v, n]) => '<option value="' + v + '"' + (Number(cfg.lembrete_dono != null ? cfg.lembrete_dono : 60) === v ? ' selected' : '') + '>' + n + '</option>').join("") + '</select>'
-    + '<small style="display:block;color:var(--muted);font-size:12.5px;margin-top:6px;">“⏰ Daqui a 1 hora: 10:00 · Corte · Bia”</small></div>'
+    + '<div class="ma-av-ex"><small>Exemplo da mensagem:</small>⏰ Daqui a 1 hora: 10:00 · Corte · Bia</div></div>'
     + '</div><div class="acoes"><button class="btn btn-primary" type="button" id="maSalvar">Salvar meus horários</button><span class="msg" id="maMsg"></span></div>'
     + '<p class="sub" style="margin-top:10px;font-size:12.5px;">Folgas e feriados: marque no <b>Calendário</b>, clicando no dia.</p>';
   return h;

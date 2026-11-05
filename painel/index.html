@@ -249,6 +249,42 @@
   .status.fechado{ color:var(--good); border-color:rgba(124,184,143,0.4); }
   .status.nao_fechou{ color:var(--muted); }
   .ped-detalhe{ margin-top:10px; }
+  /* Minha agenda: calendário do mês, dia aberto e "Meus horários" */
+  .ma-topo{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+  .ma-mes{ display:flex; align-items:center; gap:8px; font-weight:600; font-size:16px; }
+  .ma-mes button{ background:transparent; border:1px solid var(--line); color:var(--parchment); border-radius:8px; width:32px; height:32px; cursor:pointer; }
+  .ma-grade{ display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .ma-grade .cab{ font-size:11.5px; font-weight:600; color:var(--muted); text-transform:uppercase; padding:8px 6px; background:var(--panel-2); border-bottom:1px solid var(--line); }
+  .ma-dia{ min-height:78px; padding:6px 7px; border:none; border-right:1px solid var(--line); border-bottom:1px solid var(--line); background:transparent; border-radius:0; margin:0; color:var(--parchment);
+    text-align:left; cursor:pointer; display:flex; flex-direction:column; gap:4px; font-family:'Inter',sans-serif; }
+  .ma-dia:nth-child(7n+7){ border-right:none; }
+  .ma-dia:hover{ background:rgba(37,99,235,0.07); }
+  .ma-dia.fora{ opacity:.35; cursor:default; }
+  .ma-dia.hoje .n{ background:var(--gold); color:#fff; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; }
+  .ma-dia.sel{ background:rgba(37,99,235,0.16); box-shadow:inset 0 0 0 2px rgba(96,165,250,0.6); }
+  .ma-dia .n{ font-size:13px; font-weight:600; }
+  .ma-dia .et{ font-size:11px; padding:2px 6px; border-radius:6px; align-self:flex-start; white-space:nowrap; }
+  .et.livre{ color:#6EE7B7; background:rgba(52,211,153,0.12); } .et.quase{ color:#FCD34D; background:rgba(245,158,11,0.14); }
+  .et.cheio{ color:#FCA5A5; background:rgba(239,68,68,0.14); } .et.folga{ color:var(--muted); background:rgba(148,163,184,0.15); }
+  .et.marc{ color:#BFDBFE; background:rgba(37,99,235,0.18); }
+  .ma-dia.folga{ background:repeating-linear-gradient(135deg, transparent 0 6px, rgba(148,163,184,0.07) 6px 12px); }
+  .ma-detalhe{ margin-top:14px; border:1px solid var(--line); border-radius:12px; padding:14px; background:var(--panel-2); }
+  .ma-h{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--line); font-size:14px; }
+  .ma-h:first-of-type{ border-top:none; }
+  .ma-h .hh{ font-weight:600; width:52px; flex:0 0 52px; }
+  .ma-h .qq{ flex:1; color:var(--muted); }
+  .ma-h .btn{ padding:5px 10px; font-size:12.5px; }
+  .ma-semana{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  .ma-semana td, .ma-semana th{ padding:7px 6px; border-bottom:1px solid var(--line); text-align:left; }
+  .ma-semana th{ font-size:11.5px; color:var(--muted); text-transform:uppercase; font-weight:600; }
+  .ma-semana input[type=time]{ background:var(--panel-3); border:1px solid var(--line); color:var(--parchment); border-radius:7px; padding:5px 6px; font-size:13px; width:118px; }
+  .ma-semana input[type=time]:disabled{ opacity:.35; }
+  .ma-sel{ background:var(--panel-3); border:1px solid var(--line); color:var(--parchment); border-radius:8px; padding:8px 10px; font-size:14px; font-family:'Inter',sans-serif; width:100%; }
+  .ma-chave{ display:flex; gap:10px; align-items:flex-start; margin:10px 0; font-size:14px; cursor:pointer; }
+  .ma-chave input{ width:18px; height:18px; margin-top:2px; accent-color:var(--gold); }
+  .ma-chave small{ display:block; color:var(--muted); font-size:12.5px; }
+  .ma-dia .et .cp{ display:none; }
+  @media (max-width:560px){ .ma-dia{ min-height:54px; padding:4px 3px; gap:3px; } .ma-dia .et{ font-size:10.5px; padding:1px 5px; } .ma-dia .et .tx{ display:none; } .ma-dia .et .cp{ display:inline; } .ma-semana .pz{ display:none; } .ma-semana input[type=time]{ width:96px; } }
   /* Tabela de pedidos (computador) */
   .tab-ped{ border:1px solid var(--line); border-radius:12px; overflow-x:auto; }
   .tab-ped td, .tab-ped th{ padding-left:10px; padding-right:10px; }
@@ -344,6 +380,7 @@
   .status.pendente{ color:#FCD34D; border-color:rgba(245,158,11,0.45); }
   .status.confirmado{ color:var(--gold-bright); border-color:rgba(96,165,250,0.45); }
   .status.realizado{ color:var(--good); border-color:rgba(52,211,153,0.4); }
+  .status.aguardando{ color:#FCD34D; border-color:rgba(245,158,11,0.45); }
   .status.cancelado{ color:var(--muted); }
   .status.nao_compareceu{ color:#FCD34D; border-color:rgba(245,158,11,0.45); }
   .dia{ font-size:12.5px; font-weight:600; color:var(--gold-bright); text-transform:uppercase; letter-spacing:.04em; margin:18px 0 6px; }
@@ -575,13 +612,14 @@ const TIPOS_FU = {
     dica: "Agradece e pede a opinião do cliente. Bom logo depois do serviço." },
 };
 const STATUS_FU = { agendado: "Agendado", enviado: "Enviado", falhou: "Não enviado", cancelado: "Cancelado" };
-const STATUS_AG = { confirmado: "Confirmado", realizado: "Realizado", cancelado: "Cancelado", nao_compareceu: "Não compareceu" };
+const STATUS_AG = { confirmado: "Confirmado", aguardando: "Aguardando aprovação", realizado: "Realizado", cancelado: "Cancelado", nao_compareceu: "Não compareceu" };
 const tela = { abaFu: "agendado", fuForm: null, abaAg: "proximos", agendamento: null, view: (() => { try { return localStorage.getItem("painelView") || "inicio"; } catch (e) { return "inicio"; } })(), aba: "pendente", pedido: null, limite: 20 };
 let dadosPainel = null;
 let adminDados = null;
 let adminLeads = null;
 let silencioDados = null;
-let indicDados = null;       // Indique e ganhe (null = SQL ainda não rodou: o menu não aparece)
+let indicDados = null;
+let agendaCfg = null;        // Minha agenda (null = SQL ainda não rodou: a seção não aparece)       // Indique e ganhe (null = SQL ainda não rodou: o menu não aparece)
 let adminIndic = null;   // horário de silêncio dos avisos (null = SQL ainda não rodou: a seção não aparece)
 const STATUS = { pendente: "Pendente", respondido: "Respondido", fechado: "Venda fechada", nao_fechou: "Não fechou" };
 
@@ -617,6 +655,8 @@ async function carregarPainel(){
   // Central de Respostas Rápidas: o que a dona mudou na biblioteca (se o SQL ainda não rodou, fica só a padrão).
   try { const r = await supa.rpc("get_respostas_rapidas"); respostasRapidas = Object.assign({ meus: [], favoritos: [], ocultos: [] }, (!r.error && r.data && typeof r.data === "object" && !Array.isArray(r.data)) ? r.data : {}); }
   catch (e) { respostasRapidas = { meus: [], favoritos: [], ocultos: [] }; }
+  // Minha agenda: horários de atendimento (se o SQL ainda não rodou, a seção não aparece).
+  try { const g = await supa.rpc("get_agenda_config"); agendaCfg = (!g.error && g.data && g.data.config) ? g.data : null; } catch (e) { agendaCfg = null; }
   // Indique e ganhe: código, link e indicações (se o SQL ainda não rodou, o menu não aparece).
   try { const r = await supa.rpc("get_indicacoes"); indicDados = (!r.error && r.data && r.data.codigo) ? r.data : null; } catch (e) { indicDados = null; }
   // Horário de silêncio dos avisos (se o SQL ainda não rodou, a seção não aparece).
@@ -757,7 +797,7 @@ function render(d){
   }
 
   if (tela.view === "pedidos") html += '<div class="panel" id="pedidosPainel"></div>';
-  if (tela.view === "agenda") html += '<div class="panel" id="agendaPainel"></div>';
+  if (tela.view === "agenda") html += (agendaCfg ? '<div class="panel" id="minhaAgenda"></div>' : '') + '<div class="panel" id="agendaPainel"></div>';
   if (tela.view === "followup") html += '<div class="panel" id="followupPainel"></div>';
   if (tela.view === "respostas") html += '<div class="panel" id="respostasPainel"></div>';
   if (tela.view === "personalizar") html += '<div class="panel" id="personalizar"></div>';
@@ -787,6 +827,7 @@ function render(d){
 
   $("dashContent").innerHTML = html;
   if ($("pedidosPainel")) renderPedidos();
+  if ($("minhaAgenda")) renderMinhaAgenda();
   if ($("agendaPainel")) renderAgenda();
   if ($("followupPainel")) renderFollowup();
   if ($("respostasPainel")) renderRespostas();
@@ -1469,7 +1510,9 @@ function renderAgenda(){
           + '<div class="ped-acoes">';
         const falar = '<button class="btn btn-primary" type="button" data-resp="a' + a.id + '">Falar no WhatsApp</button>' + botaoConversa(a.remetente, a.nome);
         const status = (s, rotulo, cls) => '<button class="' + (cls || 'btn') + '" type="button" data-statusag="' + s + '" data-id="' + a.id + '">' + rotulo + '</button>';
-        if (a.status === "confirmado" && passou(a)){
+        if (a.status === "aguardando"){
+          html += status("confirmado", "Aprovar horário", "btn btn-primary") + falar + status("cancelado", "Recusar", "btn-link");
+        } else if (a.status === "confirmado" && passou(a)){
           html += '<span class="como-foi">Como foi?</span>' + status("realizado", "Realizado") + status("nao_compareceu", "Não compareceu")
             + falar + status("cancelado", "Foi cancelado", "btn-link");
         } else if (a.status === "confirmado"){
@@ -2507,6 +2550,180 @@ function ligarIndicacoesAdmin(){
     m.textContent = { aplicado: "Desconto aplicado no Stripe ✓", manual: "Marcado como aplicado ✓", aguardando: "Já tem um desconto esperando a próxima fatura; este entra depois.",
       sem_assinatura: "Quem indicou ainda não tem assinatura ativa; entra quando assinar.", sem_chave: "Falta a chave do Stripe no cofre.", falhou: "O Stripe recusou. Veja o erro na linha." }[res] || "Feito.";
   }));
+}
+
+/* ---------- Minha agenda (05/11): calendário do mês + "Meus horários" (a secretária marca sozinha) ---------- */
+const NOMES_DIA = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+async function carregarMes(ano, mes){
+  const k = ano + "-" + mes; tela.agMes = tela.agMes || {};
+  try { const r = await supa.rpc("agenda_mes", { p_ano: ano, p_mes: mes }); tela.agMes[k] = (!r.error && r.data) ? r.data : { dias: {}, agendamentos: {}, folgas: [] }; }
+  catch (e) { tela.agMes[k] = { dias: {}, agendamentos: {}, folgas: [] }; }
+}
+async function carregarDia(dia){
+  try { const r = await supa.rpc("agenda_dia", { p_dia: dia }); tela.agDiaDados = (!r.error && r.data) ? r.data : null; } catch (e) { tela.agDiaDados = null; }
+}
+function renderMinhaAgenda(){
+  const box = $("minhaAgenda"); const g = agendaCfg; if (!box || !g) return;
+  const cfg = g.config; const tz = g.timezone || "America/Sao_Paulo";
+  const hoje = new Date().toLocaleDateString("en-CA", { timeZone: tz });
+  if (!tela.agAno){ tela.agAno = Number(hoje.slice(0, 4)); tela.agMesN = Number(hoje.slice(5, 7)); }
+  if (!tela.abaMA) tela.abaMA = cfg.ativo ? "cal" : "horarios";
+  const k = tela.agAno + "-" + tela.agMesN;
+  let html = '<div class="ma-topo"><div><h2 style="margin:0;">Minha agenda</h2><p class="sub" style="margin:4px 0 0;">'
+    + (cfg.ativo ? '<b style="color:var(--good);">Ligada</b>: a secretária oferece os horários livres e ' + (cfg.aprovar ? 'reserva para você aprovar.' : 'marca sozinha na conversa.')
+               : '<b style="color:#FCD34D;">Desligada</b>: configure em <b>Meus horários</b> para a secretária marcar sozinha, sem Google Agenda.') + '</p></div>'
+    + '<div class="abas" style="margin:0;"><button type="button" class="aba' + (tela.abaMA === "cal" ? ' ativa' : '') + '" data-abama="cal">Calendário</button>'
+    + '<button type="button" class="aba' + (tela.abaMA === "horarios" ? ' ativa' : '') + '" data-abama="horarios">Meus horários</button></div></div>';
+  if (tela.abaMA === "horarios") html += formMeusHorarios(cfg);
+  else {
+    const m = tela.agMes && tela.agMes[k];
+    const nm = new Date(Date.UTC(tela.agAno, tela.agMesN - 1, 15)).toLocaleDateString("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" });
+    const nomeMes = nm.charAt(0).toUpperCase() + nm.slice(1);
+    html += '<div class="ma-topo" style="margin-bottom:8px;"><div class="ma-mes"><button type="button" data-mamov="-1" aria-label="Mês anterior">‹</button>' + esc(nomeMes)
+      + '<button type="button" data-mamov="1" aria-label="Próximo mês">›</button></div>'
+      + '<button class="btn" type="button" id="maFolgaVarios">Folga de vários dias</button></div>';
+    if (tela.maFolgaForm) html += '<div class="ma-detalhe" style="margin:0 0 12px;"><div class="dois-campos"><div class="campo"><label for="maDe">De</label><input id="maDe" type="date" value="' + esc(tela.agDia || hoje) + '"></div>'
+      + '<div class="campo"><label for="maAte">Até</label><input id="maAte" type="date" value="' + esc(tela.agDia || hoje) + '"></div></div>'
+      + '<div class="campo"><label for="maMotivo">Motivo (opcional)</label><input id="maMotivo" maxlength="60" placeholder="Ex.: Férias, Feriado"></div>'
+      + '<div class="acoes" style="margin-top:6px;"><button class="btn btn-primary" type="button" id="maFolgaSalvar">Marcar folga</button><span class="msg" id="maFolgaMsg"></span></div></div>';
+    html += '<div class="ma-grade">' + ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map(n => '<div class="cab">' + n + '</div>').join("");
+    const primeiro = new Date(Date.UTC(tela.agAno, tela.agMesN - 1, 1));
+    const ini = (primeiro.getUTCDay() + 6) % 7;   // segunda = 0
+    const nDias = new Date(Date.UTC(tela.agAno, tela.agMesN, 0)).getUTCDate();
+    const total = Math.ceil((ini + nDias) / 7) * 7;
+    for (let i = 0; i < total; i++){
+      const dn = i - ini + 1;
+      if (dn < 1 || dn > nDias){ html += '<div class="ma-dia fora"></div>'; continue; }
+      const dia = tela.agAno + "-" + String(tela.agMesN).padStart(2, "0") + "-" + String(dn).padStart(2, "0");
+      const inf = (m && m.dias && m.dias[dia]) || null; const nAg = (m && m.agendamentos && m.agendamentos[dia]) || 0;
+      let et = '', cls = '';
+      const E = (c, tx, cp) => '<span class="et ' + c + '"><span class="tx">' + tx + '</span><span class="cp">' + cp + '</span></span>';
+      if (!m) et = '';
+      else if (inf && inf.livres === 0 && inf.bloqueados > 0 && !inf.ocupados){ et = E('folga', 'Folga', 'folga'); cls = ' folga'; }
+      else if (inf && inf.livres === 0 && inf.ocupados > 0) et = E('cheio', 'Lotado', 'cheio');
+      else if (inf && inf.livres > 0) et = E(inf.livres <= 2 ? 'quase' : 'livre', inf.livres + (inf.livres === 1 ? ' livre' : ' livres'), inf.livres + ' liv');
+      else if (dia >= hoje) et = E('folga', 'Fechado', '—');
+      html += '<button type="button" class="ma-dia' + cls + (dia === hoje ? ' hoje' : '') + (tela.agDia === dia ? ' sel' : '') + '" data-madia="' + dia + '">'
+        + '<span class="n">' + dn + '</span>' + et + (nAg ? '<span class="et marc"><span class="tx">' + nAg + (nAg === 1 ? ' marcado' : ' marcados') + '</span><span class="cp">' + nAg + ' marc</span></span>' : '') + '</button>';
+    }
+    html += '</div>';
+    if (tela.agDia) html += detalheDiaAgenda(tela.agDia, cfg);
+    if (!m) setTimeout(async () => { await carregarMes(tela.agAno, tela.agMesN); renderMinhaAgenda(); }, 0);
+  }
+  box.innerHTML = html;
+  box.querySelectorAll("[data-abama]").forEach(b => b.addEventListener("click", () => { tela.abaMA = b.getAttribute("data-abama"); renderMinhaAgenda(); }));
+  box.querySelectorAll("[data-mamov]").forEach(b => b.addEventListener("click", () => {
+    let mm = tela.agMesN + Number(b.getAttribute("data-mamov")), aa = tela.agAno; if (mm < 1){ mm = 12; aa--; } if (mm > 12){ mm = 1; aa++; }
+    tela.agAno = aa; tela.agMesN = mm; tela.agDia = null; renderMinhaAgenda(); }));
+  box.querySelectorAll("[data-madia]").forEach(b => b.addEventListener("click", async () => {
+    const dia = b.getAttribute("data-madia"); if (tela.agDia === dia){ tela.agDia = null; renderMinhaAgenda(); return; }
+    tela.agDia = dia; tela.agDiaDados = undefined; renderMinhaAgenda(); await carregarDia(dia); renderMinhaAgenda(); }));
+  if ($("maFolgaVarios")) $("maFolgaVarios").addEventListener("click", () => { tela.maFolgaForm = !tela.maFolgaForm; renderMinhaAgenda(); });
+  if ($("maFolgaSalvar")) $("maFolgaSalvar").addEventListener("click", async () => {
+    const de = $("maDe").value, ate = $("maAte").value || de; const msg = $("maFolgaMsg");
+    if (!de || ate < de){ msg.className = "msg erro"; msg.textContent = "Confira as datas."; return; }
+    const { error } = await supa.rpc("agenda_bloquear", { p_inicio: null, p_dia_de: de, p_dia_ate: ate, p_motivo: $("maMotivo").value.trim() || "Folga" });
+    if (error){ msg.className = "msg erro"; msg.textContent = "Não foi possível salvar."; return; }
+    tela.maFolgaForm = false; await recarregarAgenda(); });
+  ligarDiaAgenda(box);
+  ligarMeusHorarios(box);
+}
+async function recarregarAgenda(){
+  if (tela.agMes) delete tela.agMes[tela.agAno + "-" + tela.agMesN];
+  await carregarMes(tela.agAno, tela.agMesN);
+  if (tela.agDia) await carregarDia(tela.agDia);
+  renderMinhaAgenda();
+}
+function detalheDiaAgenda(dia, cfg){
+  const dd = tela.agDiaDados;
+  const r0 = new Date(dia + "T12:00:00Z").toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", timeZone: "UTC" });
+  const rot = r0.charAt(0).toUpperCase() + r0.slice(1);
+  let h = '<div class="ma-detalhe"><div class="ma-topo" style="margin-bottom:6px;"><b>' + esc(rot) + '</b>';
+  if (dd === undefined) return h + '</div><p class="sub" style="margin:0;">Carregando…</p></div>';
+  if (!dd) return h + '</div><p class="sub" style="margin:0;">Não foi possível carregar este dia.</p></div>';
+  const diaTodo = (dd.bloqueios || []).filter(b => b.dia_todo);
+  h += diaTodo.length ? '<button class="btn" type="button" data-maliberar="' + diaTodo.map(b => b.id).join(",") + '">Desmarcar folga</button>'
+                      : '<button class="btn" type="button" data-mafolga="' + dia + '">Folga o dia todo</button>';
+  h += '</div>';
+  const ags = dd.agendamentos || [];
+  const hs = dd.horarios || [];
+  if (!hs.length && !ags.length) return h + '<p class="sub" style="margin:0;">' + (diaTodo.length ? 'Folga: a secretária não oferece horários neste dia.' : 'Dia fechado no seu expediente (veja em Meus horários) ou já passou.') + '</p></div>';
+  const porHora = {}; ags.forEach(a => { (porHora[a.hora] = porHora[a.hora] || []).push(a); });
+  hs.forEach(x => {
+    const lista = porHora[x.hora] || []; delete porHora[x.hora];
+    const quem = lista.map(a => esc(a.servico || 'Atendimento') + ' · ' + esc(a.nome || foneBR(a.remetente)) + (a.status === 'aguardando' ? ' <span class="et quase">aguardando</span>' : '')).join('<br>');
+    let acao = '';
+    if (x.situacao === 'bloqueado') acao = x.bloqueio && !diaTodo.some(b => b.id === x.bloqueio) ? '<button class="btn" type="button" data-maliberar="' + x.bloqueio + '">Liberar</button>' : '';
+    else if (!lista.length) acao = '<button class="btn" type="button" data-mabloq="' + esc(x.inicio) + '">Bloquear</button>';
+    h += '<div class="ma-h"><span class="hh">' + esc(x.hora) + '</span><span class="qq">' + (quem || (x.situacao === 'bloqueado' ? 'Bloqueado' : x.situacao === 'ocupado' ? 'Ocupado' : '<span style="color:#6EE7B7;">Livre</span>')) + '</span>' + acao + '</div>';
+  });
+  Object.keys(porHora).sort().forEach(hr => porHora[hr].forEach(a => {
+    h += '<div class="ma-h"><span class="hh">' + esc(hr) + '</span><span class="qq">' + esc(a.servico || 'Atendimento') + ' · ' + esc(a.nome || foneBR(a.remetente)) + '</span></div>'; }));
+  return h + '<p class="sub" style="margin:8px 0 0;font-size:12.5px;">Para ver ou mudar um agendamento, use a lista de agendamentos abaixo.</p></div>';
+}
+function ligarDiaAgenda(box){
+  box.querySelectorAll("[data-mabloq]").forEach(b => b.addEventListener("click", async () => {
+    b.disabled = true; const { error } = await supa.rpc("agenda_bloquear", { p_inicio: b.getAttribute("data-mabloq"), p_dia_de: null, p_dia_ate: null, p_motivo: "Bloqueado" });
+    if (error){ b.disabled = false; b.textContent = "Tente de novo"; return; } await recarregarAgenda(); }));
+  box.querySelectorAll("[data-mafolga]").forEach(b => b.addEventListener("click", async () => {
+    b.disabled = true; const dia = b.getAttribute("data-mafolga");
+    const { error } = await supa.rpc("agenda_bloquear", { p_inicio: null, p_dia_de: dia, p_dia_ate: dia, p_motivo: "Folga" });
+    if (error){ b.disabled = false; b.textContent = "Tente de novo"; return; } await recarregarAgenda(); }));
+  box.querySelectorAll("[data-maliberar]").forEach(b => b.addEventListener("click", async () => {
+    b.disabled = true;
+    for (const id of b.getAttribute("data-maliberar").split(",")) await supa.rpc("agenda_desbloquear", { p_id: Number(id) });
+    await recarregarAgenda(); }));
+}
+function formMeusHorarios(cfg){
+  const sem = cfg.semana || {};
+  const ordem = [1, 2, 3, 4, 5, 6, 0];
+  const op = (vals, atual, rot) => vals.map(v => '<option value="' + v + '"' + (Number(atual) === v ? ' selected' : '') + '>' + rot(v) + '</option>').join("");
+  let h = '<label class="ma-chave"><input type="checkbox" id="maAtivo"' + (cfg.ativo ? ' checked' : '') + '><span><b>Secretária marca os horários sozinha</b>'
+    + '<small>Ela oferece só os horários livres desta agenda e confirma com o cliente na conversa. Não precisa de Google Agenda.</small></span></label>'
+    + '<label class="ma-chave"><input type="checkbox" id="maAprovar"' + (cfg.aprovar ? ' checked' : '') + '><span><b>Quero aprovar cada horário antes</b>'
+    + '<small>O horário fica reservado como "aguardando" e você aprova com 1 toque em Agendamentos. O cliente recebe "a equipe confirma por aqui".</small></span></label>'
+    + '<div class="subtitulo" style="margin-top:14px;">Dias e horários de atendimento</div>'
+    + '<div style="overflow-x:auto;"><table class="ma-semana"><thead><tr><th>Dia</th><th>Abre</th><th>Fecha</th><th class="pz">Almoço de</th><th class="pz">até</th></tr></thead><tbody>';
+  ordem.forEach(dw => {
+    const x = sem[String(dw)] || {}; const ab = !!x.aberto;
+    const t = (id, v) => '<input type="time" id="' + id + dw + '" value="' + esc(v || "") + '"' + (ab ? '' : ' disabled') + '>';
+    h += '<tr><td><label style="display:flex;gap:8px;align-items:center;cursor:pointer;"><input type="checkbox" data-maaberto="' + dw + '"' + (ab ? ' checked' : '') + '> ' + NOMES_DIA[dw] + '</label></td>'
+      + '<td>' + t("maIni", x.inicio || "09:00") + '</td><td>' + t("maFim", x.fim || "18:00") + '</td>'
+      + '<td class="pz">' + t("maPi", x.pausa_inicio || "") + '</td><td class="pz">' + t("maPf", x.pausa_fim || "") + '</td></tr>';
+  });
+  h += '</tbody></table></div>'
+    + '<div class="dois-campos" style="margin-top:14px;">'
+    + '<div class="campo"><label for="maDur">Duração de cada atendimento</label><select class="ma-sel" id="maDur">' + op([15, 20, 30, 40, 45, 60, 90, 120, 180], cfg.duracao, v => v < 60 ? v + ' min' : (v / 60) + (v === 60 ? ' hora' : ' horas')) + '</select></div>'
+    + '<div class="campo"><label for="maSim">Atendimentos ao mesmo tempo</label><select class="ma-sel" id="maSim">' + op([1, 2, 3, 4, 5, 6, 8, 10], cfg.simultaneos, v => v + (v === 1 ? ' (só um por vez)' : '')) + '</select></div>'
+    + '<div class="campo"><label for="maAnt">Antecedência mínima</label><select class="ma-sel" id="maAnt">' + op([0, 1, 2, 3, 4, 12, 24, 48], cfg.antecedencia_h, v => v === 0 ? 'Sem antecedência' : v < 24 ? v + (v === 1 ? ' hora antes' : ' horas antes') : (v / 24) + (v === 24 ? ' dia antes' : ' dias antes')) + '</select></div>'
+    + '<div class="campo"><label for="maFrente">Marcar até quantos dias para frente</label><select class="ma-sel" id="maFrente">' + op([7, 14, 21, 30, 45, 60, 90], cfg.dias_frente, v => v + ' dias') + '</select></div>'
+    + '</div><div class="acoes"><button class="btn btn-primary" type="button" id="maSalvar">Salvar meus horários</button><span class="msg" id="maMsg"></span></div>'
+    + '<p class="sub" style="margin-top:10px;font-size:12.5px;">Folgas e feriados: marque no <b>Calendário</b>, clicando no dia.</p>';
+  return h;
+}
+function ligarMeusHorarios(box){
+  box.querySelectorAll("[data-maaberto]").forEach(c => c.addEventListener("change", () => {
+    const dw = c.getAttribute("data-maaberto"); ["maIni", "maFim", "maPi", "maPf"].forEach(id => { const el = $(id + dw); if (el) el.disabled = !c.checked; }); }));
+  if (!$("maSalvar")) return;
+  $("maSalvar").addEventListener("click", async () => {
+    const msg = $("maMsg"); const semana = {};
+    for (const dw of [0, 1, 2, 3, 4, 5, 6]){
+      const ab = box.querySelector('[data-maaberto="' + dw + '"]').checked;
+      const ini = $("maIni" + dw).value, fim = $("maFim" + dw).value, pi = $("maPi" + dw).value, pf = $("maPf" + dw).value;
+      if (ab && (!ini || !fim || fim <= ini)){ msg.className = "msg erro"; msg.textContent = NOMES_DIA[dw] + ": o horário de fechar precisa ser depois do de abrir."; return; }
+      if (ab && pi && pf && pf <= pi){ msg.className = "msg erro"; msg.textContent = NOMES_DIA[dw] + ": confira o horário de almoço."; return; }
+      semana[dw] = ab ? Object.assign({ aberto: true, inicio: ini, fim: fim }, pi && pf ? { pausa_inicio: pi, pausa_fim: pf } : {}) : { aberto: false };
+    }
+    const dur = Number($("maDur").value);
+    const p = { ativo: $("maAtivo").checked, aprovar: $("maAprovar").checked, duracao: dur, passo: Math.min(dur, 60), simultaneos: Number($("maSim").value),
+      antecedencia_h: Number($("maAnt").value), dias_frente: Number($("maFrente").value), semana };
+    const btn = $("maSalvar"); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Salvando...';
+    const { data, error } = await supa.rpc("salvar_agenda_config", { p });
+    btn.disabled = false; btn.textContent = "Salvar meus horários";
+    if (error || !data || !data.ok){ msg.className = "msg erro"; msg.textContent = "Não foi possível salvar. Confira os horários e tente de novo."; return; }
+    agendaCfg.config = data.config; tela.agMes = {}; tela.agDia = null;
+    renderMinhaAgenda(); const m2 = $("maMsg"); if (m2){ m2.className = "msg ok"; m2.textContent = "Salvo ✓" + (data.config.ativo ? " A secretária já usa estes horários." : ""); }
+  });
 }
 
 $("loginForm").addEventListener("submit", async (e) => {

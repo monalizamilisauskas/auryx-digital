@@ -281,6 +281,10 @@
   .ma-semana input[type=time]:disabled{ opacity:.35; }
   .ma-sel{ background:var(--panel-3); border:1px solid var(--line); color:var(--parchment); border-radius:8px; padding:8px 10px; font-size:14px; font-family:'Inter',sans-serif; width:100%; }
   .ma-avisos{ margin:22px 0 6px; padding:16px; border:1px solid var(--line); border-left:3px solid var(--gold); border-radius:12px; background:var(--panel-2, rgba(255,255,255,.02)); }
+  .ma-av-topo{ display:flex; gap:12px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; }
+  .ma-av-res{ margin:6px 0 0; font-size:14px; line-height:1.6; color:var(--muted); } .ma-av-res b{ color:var(--parchment); font-weight:600; }
+  #maAvMsg{ display:block; margin-top:6px; font-size:13.5px; font-weight:600; } #maAvMsg.ok{ color:var(--good, #22C55E); }
+  #maAvForm{ margin-top:12px; }
   .ma-av-tit{ font-size:17px; font-weight:600; color:var(--parchment); }
   .ma-av-sub{ margin:4px 0 12px; font-size:13px; color:var(--muted); }
   .ma-av-trav{ margin:0 0 12px; font-size:13.5px; color:var(--parchment); } .ma-av-trav a{ color:var(--gold-bright); }
@@ -2622,6 +2626,7 @@ function renderMinhaAgenda(){
     if (tela.agDia) html += detalheDiaAgenda(tela.agDia, cfg);
     if (!m) setTimeout(async () => { await carregarMes(tela.agAno, tela.agMesN); renderMinhaAgenda(); }, 0);
   }
+  if (tela.abaMA === "horarios") html += htmlAvisosAgenda(cfg, !!(g.avisos_no_plano === false));
   box.innerHTML = html;
   box.querySelectorAll("[data-abama]").forEach(b => b.addEventListener("click", () => { tela.abaMA = b.getAttribute("data-abama"); renderMinhaAgenda(); }));
   box.querySelectorAll("[data-mamov]").forEach(b => b.addEventListener("click", () => {
@@ -2638,6 +2643,7 @@ function renderMinhaAgenda(){
     if (error){ msg.className = "msg erro"; msg.textContent = "Não foi possível salvar."; return; }
     tela.maFolgaForm = false; await recarregarAgenda(); });
   ligarDiaAgenda(box);
+  ligarAvisosAgenda();
   ligarMeusHorarios(box);
   box.querySelectorAll("[data-ir]").forEach(b => b.addEventListener("click", (e) => { e.preventDefault(); irPara(b.getAttribute("data-ir")); }));
 }
@@ -2690,7 +2696,6 @@ function ligarDiaAgenda(box){
 function formMeusHorarios(cfg){
   const sem = cfg.semana || {};
   const ordem = [1, 2, 3, 4, 5, 6, 0];
-  const trav = !!(agendaCfg && agendaCfg.avisos_no_plano === false);
   const op = (vals, atual, rot) => vals.map(v => '<option value="' + v + '"' + (Number(atual) === v ? ' selected' : '') + '>' + rot(v) + '</option>').join("");
   let h = '<label class="ma-chave"><input type="checkbox" id="maAtivo"' + (cfg.ativo ? ' checked' : '') + '><span><b>Secretária marca os horários sozinha</b>'
     + '<small>Ela oferece só os horários livres desta agenda e confirma com o cliente na conversa. Não precisa de Google Agenda.</small></span></label>'
@@ -2712,23 +2717,51 @@ function formMeusHorarios(cfg){
     + '<div class="campo"><label for="maAnt">Antecedência mínima</label><select class="ma-sel" id="maAnt">' + op([0, 1, 2, 3, 4, 12, 24, 48], cfg.antecedencia_h, v => v === 0 ? 'Sem antecedência' : v < 24 ? v + (v === 1 ? ' hora antes' : ' horas antes') : (v / 24) + (v === 24 ? ' dia antes' : ' dias antes')) + '</select></div>'
     + '<div class="campo"><label for="maFrente">Marcar até quantos dias para frente</label><select class="ma-sel" id="maFrente">' + op([7, 14, 21, 30, 45, 60, 90], cfg.dias_frente, v => v + ' dias') + '</select></div>'
     + '</div>'
-    + '<div class="ma-avisos' + (trav ? ' trav' : '') + '">'
-    + '<div class="ma-av-tit">📲 Avisos da agenda no seu WhatsApp' + (trav ? ' 🔒' : '') + '</div>'
-    + '<p class="ma-av-sub">A secretária manda para o seu WhatsApp de avisos. Assim você não esquece nenhum horário.</p>'
-    + (trav ? '<p class="ma-av-trav">Disponível a partir do plano <b>Básico</b>. <a href="#" data-ir="plano">Ver planos</a></p>' : '')
-    + '<div class="ma-av-op"><label for="maResumo"><b>1. Resumo da agenda</b><span>Lista dos horários do dia. Só chega nos dias com horário marcado.</span></label>'
-    + '<select class="ma-sel" id="maResumo"' + (trav ? ' disabled' : '') + '>'
-    + [["vespera", "Na véspera, às 19h"], ["manha", "No dia, às 7h"], ["off", "Não enviar"]]
-        .map(([v, n]) => '<option value="' + v + '"' + ((cfg.resumo || "vespera") === v ? ' selected' : '') + '>' + n + '</option>').join("") + '</select>'
-    + '<div class="ma-av-ex"><small>Exemplo da mensagem:</small>📅 Agenda de amanhã: 2 horários<br>09:00 · Corte · Bia<br>14:00 · Escova · Lia</div></div>'
-    + '<div class="ma-av-op"><label for="maLembrete"><b>2. Lembrete antes de cada horário</b><span>Um aviso pouco antes de cada cliente chegar.</span></label>'
-    + '<select class="ma-sel" id="maLembrete"' + (trav ? ' disabled' : '') + '>'
-    + [[60, "1 hora antes"], [120, "2 horas antes"], [0, "Não enviar"]]
-        .map(([v, n]) => '<option value="' + v + '"' + (Number(cfg.lembrete_dono != null ? cfg.lembrete_dono : 60) === v ? ' selected' : '') + '>' + n + '</option>').join("") + '</select>'
-    + '<div class="ma-av-ex"><small>Exemplo da mensagem:</small>⏰ Daqui a 1 hora: 10:00 · Corte · Bia</div></div>'
-    + '</div><div class="acoes"><button class="btn btn-primary" type="button" id="maSalvar">Salvar meus horários</button><span class="msg" id="maMsg"></span></div>'
+    + '<div class="acoes"><button class="btn btn-primary" type="button" id="maSalvar">Salvar meus horários</button><span class="msg" id="maMsg"></span></div>'
     + '<p class="sub" style="margin-top:10px;font-size:12.5px;">Folgas e feriados: marque no <b>Calendário</b>, clicando no dia.</p>';
   return h;
+}
+const ROT_RESUMO = { vespera: "na véspera, às 19h", manha: "no dia, às 7h", off: "não enviar" };
+const ROT_LEMBRETE = { 60: "1 hora antes", 120: "2 horas antes", 0: "não enviar" };
+function htmlAvisosAgenda(cfg, trav){
+  const res = cfg.resumo || "vespera", lem = Number(cfg.lembrete_dono != null ? cfg.lembrete_dono : 60);
+  return '<div class="ma-avisos' + (trav ? ' trav' : '') + '" id="maAvisos">'
+    + '<div class="ma-av-topo"><div><div class="ma-av-tit">📲 Avisos da agenda no seu WhatsApp' + (trav ? ' 🔒' : '') + '</div>'
+    + (trav ? '<p class="ma-av-trav">Disponível a partir do plano <b>Básico</b>. <a href="#" data-ir="plano">Ver planos</a></p>'
+            : '<p class="ma-av-res">Resumo da agenda: <b>' + ROT_RESUMO[res] + '</b><br>Lembrete: <b>' + ROT_LEMBRETE[lem] + '</b></p>')
+    + '<span class="msg" id="maAvMsg"></span></div>'
+    + (trav ? '' : '<button class="btn btn-ghost" type="button" id="maAvAbrir">Alterar</button>') + '</div>'
+    + '<div id="maAvForm" style="display:none;">'
+    + '<p class="ma-av-sub">A secretária manda para o seu WhatsApp de avisos. Assim você não esquece nenhum horário.</p>'
+    + '<div class="ma-av-op"><label for="maResumo"><b>1. Resumo da agenda</b><span>Lista dos horários do dia. Só chega nos dias com horário marcado.</span></label>'
+    + '<select class="ma-sel" id="maResumo">'
+    + [["vespera", "Na véspera, às 19h"], ["manha", "No dia, às 7h"], ["off", "Não enviar"]]
+        .map(([v, n]) => '<option value="' + v + '"' + (res === v ? ' selected' : '') + '>' + n + '</option>').join("") + '</select>'
+    + '<div class="ma-av-ex"><small>Exemplo da mensagem:</small>📅 Agenda de amanhã: 2 horários<br>09:00 · Corte · Bia<br>14:00 · Escova · Lia</div></div>'
+    + '<div class="ma-av-op"><label for="maLembrete"><b>2. Lembrete antes de cada horário</b><span>Um aviso pouco antes de cada cliente chegar.</span></label>'
+    + '<select class="ma-sel" id="maLembrete">'
+    + [[60, "1 hora antes"], [120, "2 horas antes"], [0, "Não enviar"]]
+        .map(([v, n]) => '<option value="' + v + '"' + (lem === v ? ' selected' : '') + '>' + n + '</option>').join("") + '</select>'
+    + '<div class="ma-av-ex"><small>Exemplo da mensagem:</small>⏰ Daqui a 1 hora: 10:00 · Corte · Bia</div></div>'
+    + '<div class="acoes"><button class="btn btn-primary" type="button" id="maAvSalvar">Salvar avisos</button>'
+    + '<button class="btn btn-ghost" type="button" id="maAvCancelar">Cancelar</button><span class="msg" id="maAvErro"></span></div>'
+    + '</div></div>';
+}
+function ligarAvisosAgenda(){
+  const abrir = $("maAvAbrir"); if (!abrir) return;
+  const form = $("maAvForm");
+  abrir.addEventListener("click", () => { form.style.display = ""; abrir.style.display = "none"; $("maAvMsg").textContent = ""; });
+  $("maAvCancelar").addEventListener("click", () => renderMinhaAgenda());
+  $("maAvSalvar").addEventListener("click", async () => {
+    const p = Object.assign({}, agendaCfg.config, { resumo: $("maResumo").value, lembrete_dono: Number($("maLembrete").value) });
+    const btn = $("maAvSalvar"); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Salvando...';
+    const { data, error } = await supa.rpc("salvar_agenda_config", { p });
+    btn.disabled = false; btn.textContent = "Salvar avisos";
+    if (error || !data || !data.ok){ const e = $("maAvErro"); e.className = "msg erro"; e.textContent = "Não foi possível salvar. Tente de novo."; return; }
+    agendaCfg.config = data.config; renderMinhaAgenda();
+    const m = $("maAvMsg"); if (m){ m.className = "msg ok"; m.textContent = "Avisos salvos ✓"; }
+    const box = $("maAvisos"); if (box) box.scrollIntoView({ block: "nearest" });
+  });
 }
 function ligarMeusHorarios(box){
   box.querySelectorAll("[data-maaberto]").forEach(c => c.addEventListener("change", () => {
@@ -2745,7 +2778,7 @@ function ligarMeusHorarios(box){
     }
     const dur = Number($("maDur").value);
     const p = { ativo: $("maAtivo").checked, aprovar: $("maAprovar").checked, duracao: dur, passo: Math.min(dur, 60), simultaneos: Number($("maSim").value),
-      antecedencia_h: Number($("maAnt").value), dias_frente: Number($("maFrente").value), resumo: $("maResumo").value, lembrete_dono: Number($("maLembrete").value), semana };
+      antecedencia_h: Number($("maAnt").value), dias_frente: Number($("maFrente").value), resumo: agendaCfg.config.resumo, lembrete_dono: agendaCfg.config.lembrete_dono, semana };
     const btn = $("maSalvar"); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Salvando...';
     const { data, error } = await supa.rpc("salvar_agenda_config", { p });
     btn.disabled = false; btn.textContent = "Salvar meus horários";

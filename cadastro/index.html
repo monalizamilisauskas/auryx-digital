@@ -198,6 +198,25 @@
   .eyebrow{ color:var(--gold-bright); }
   .btn-primary{ background:linear-gradient(180deg, #3B82F6, #2563EB); box-shadow:0 10px 30px -10px rgba(37,99,235,0.7), inset 0 1px 0 rgba(255,255,255,0.18); }
 </style>
+<!-- Meta Pixel Code (Pixel 1707052657523129: visitas, lead do kit, cadastro e contato pelo WhatsApp) -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '1707052657523129');
+fbq('track', 'PageView');
+// Clique num link do WhatsApp da Auryx = contato
+document.addEventListener('click', function(ev){ var a = ev.target.closest && ev.target.closest('a[href*="wa.me"]'); if (a) fbq('track', 'Contact'); });
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=1707052657523129&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
 </head>
 <body>
 
@@ -839,6 +858,7 @@ async function concluirConexao(response, motivo){
         throw new Error("servidor " + res.status + (r.faltando ? " faltando=" + r.faltando.join(",") : (r.motivo ? " " + r.motivo : "")));
       }
       await registrarIndicacao(data.email);
+      try { if (typeof fbq === "function") fbq("track", "CompleteRegistration", { content_name: "teste_gratis" }); } catch (e) {}
       showStep("success");
     }catch(e){
       showFatal("err.fatal", diagnostico + " | " + (e && e.message ? e.message : "falha de rede"));

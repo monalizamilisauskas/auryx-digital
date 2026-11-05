@@ -563,7 +563,7 @@ const AGENDA_AURYX = "";
 // "Eu mesma envio": no dia, o painel mostra a mensagem pronta e o dono envia pelo próprio WhatsApp, sem custo.
 const FOLLOWUP_ATIVO = false;
 // Confirmação e lembrete de horário pelo WhatsApp: muda para true quando o envio estiver ligado no n8n (modelos aprovados na Meta).
-const AVISOS_ATIVO = true;
+const AVISOS_ATIVO = false;   // envio automático (confirmação/lembrete) ainda não está no ar: o dono envia pelo WhatsApp
 let respostasRapidas = { meus: [], favoritos: [], ocultos: [] };
 // Tipos de follow-up: cada um é um modelo aprovado na Meta; a dona só escreve a parte do meio ({{3}}).
 const TIPOS_FU = {
@@ -2077,9 +2077,13 @@ function formHorario(pedidoId){
     + '<div class="campo"><label for="hrServico">Serviço</label><input id="hrServico" maxlength="80" placeholder="Ex.: Corte e escova" value="' + esc(servico) + '"></div>'
     + '<div class="campo"><label for="hrEndereco">Endereço (se o atendimento for no local do cliente)</label><input id="hrEndereco" maxlength="160" value="' + esc(endereco) + '"></div>'
     + '<div class="fu-previa"><span>' + (AVISOS_ATIVO ? 'O cliente recebe no WhatsApp:' : 'Mensagem de confirmação (o envio automático começa em breve; por enquanto, avise o cliente pelo WhatsApp):') + '</span>'
-    + '<p id="hrPrevia">' + esc(textoConfirmacao(servico, data, hora)) + '</p></div>'
+    + '<p id="hrPrevia">' + esc(textoConfirmacao(servico, data, hora)) + '</p>'
+    + (AVISOS_ATIVO || !p.remetente ? '' : '<a class="btn" style="margin-top:8px;" target="_blank" rel="noopener" href="https://wa.me/' + esc(String(p.remetente).replace(/\D/g, '')) + '"'
+      + ' onclick="this.href=\'https://wa.me/' + esc(String(p.remetente).replace(/\D/g, '')) + '?text=\'+encodeURIComponent(document.getElementById(\'hrPrevia\').textContent)">Enviar pelo WhatsApp</a>')
+    + '</div>'
     + '<small style="display:block;color:var(--muted);font-size:12.5px;margin-top:8px;line-height:1.5;">'
-    + (dias === 0 ? 'Na véspera, às 10h, o cliente recebe um lembrete para confirmar ou remarcar.'
+    + (!AVISOS_ATIVO ? 'Lembrete automático na véspera: em breve. Por enquanto, o horário fica na sua Agenda do painel para você lembrar o cliente.'
+      : dias === 0 ? 'Na véspera, às 10h, o cliente recebe um lembrete para confirmar ou remarcar.'
       : 'Se o horário for daqui a ' + dias + (dias === 1 ? ' dia' : ' dias') + ' ou mais, na véspera, às 10h, o cliente recebe um lembrete para confirmar ou remarcar.') + '</small>'
     + '<div class="acoes" style="margin-top:12px;"><button class="btn btn-primary" type="button" id="hrSalvar">' + (ag ? 'Salvar novo horário' : 'Confirmar horário') + '</button>'
     + '<button class="btn" type="button" id="hrCancelar">Cancelar</button><span class="msg" id="hrMsg"></span></div></div>';

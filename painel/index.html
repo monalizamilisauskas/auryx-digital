@@ -2626,7 +2626,7 @@ function renderMinhaAgenda(){
     if (tela.agDia) html += detalheDiaAgenda(tela.agDia, cfg);
     if (!m) setTimeout(async () => { await carregarMes(tela.agAno, tela.agMesN); renderMinhaAgenda(); }, 0);
   }
-  html += htmlAvisosAgenda(cfg, !!(g.avisos_no_plano === false));
+  if (tela.abaMA === "horarios") html += htmlAvisosAgenda(cfg, !!(g.avisos_no_plano === false));
   box.innerHTML = html;
   box.querySelectorAll("[data-abama]").forEach(b => b.addEventListener("click", () => { tela.abaMA = b.getAttribute("data-abama"); renderMinhaAgenda(); }));
   box.querySelectorAll("[data-mamov]").forEach(b => b.addEventListener("click", () => {

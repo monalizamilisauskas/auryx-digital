@@ -107,6 +107,25 @@
   }
   @media (max-width:520px){ .previa{ height:250px; } .previa .tag{ font-size:12.5px; left:auto; right:4%; } h1{ font-size:32px; } }
 </style>
+<!-- Meta Pixel Code (Pixel 1707052657523129: visitas, lead do kit, cadastro e contato pelo WhatsApp) -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '1707052657523129');
+fbq('track', 'PageView');
+// Clique num link do WhatsApp da Auryx = contato
+document.addEventListener('click', function(ev){ var a = ev.target.closest && ev.target.closest('a[href*="wa.me"]'); if (a) fbq('track', 'Contact'); });
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=1707052657523129&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
 </head>
 <body>
 
@@ -247,6 +266,7 @@ $("formKit").addEventListener("submit", async ev => {
   } catch (e) {
     // sem conexão com o banco: entrega o kit mesmo assim, para não perder a pessoa
   }
+  try { if (typeof fbq === "function") fbq("track", "Lead", { content_name: "kit", content_category: tipo }); } catch (e) {}
   const url = "/kit/kit-respostas-" + ARQUIVOS[tipo] + ".pdf";
   $("baixar").href = url;
   $("sucessoTxt").textContent = "Obrigado, " + nome.split(" ")[0] + "! O download começa em instantes. Se não começar, toque no botão abaixo.";

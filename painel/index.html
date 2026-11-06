@@ -2715,6 +2715,10 @@ function formMeusHorarios(cfg){
     + '<div class="campo"><label for="maDur">Duração de cada atendimento</label><select class="ma-sel" id="maDur">' + op([15, 20, 30, 40, 45, 60, 90, 120, 180], cfg.duracao, v => v < 60 ? v + ' min' : (v / 60) + (v === 60 ? ' hora' : ' horas')) + '</select></div>'
     + '<div class="campo"><label for="maSim">Atendimentos ao mesmo tempo</label><select class="ma-sel" id="maSim">' + op([1, 2, 3, 4, 5, 6, 8, 10], cfg.simultaneos, v => v + (v === 1 ? ' (só um por vez)' : '')) + '</select></div>'
     + '<div class="campo"><label for="maAnt">Antecedência mínima</label><select class="ma-sel" id="maAnt">' + op([0, 1, 2, 3, 4, 12, 24, 48], cfg.antecedencia_h, v => v === 0 ? 'Sem antecedência' : v < 24 ? v + (v === 1 ? ' hora antes' : ' horas antes') : (v / 24) + (v === 24 ? ' dia antes' : ' dias antes')) + '</select></div>'
+    + '<div class="campo"><label for="maMesmoDia">Marcar para o mesmo dia</label><select class="ma-sel" id="maMesmoDia">'
+    + '<option value="sim"' + (cfg.mesmo_dia === false ? '' : ' selected') + '>Sim, se tiver horário livre</option>'
+    + '<option value="nao"' + (cfg.mesmo_dia === false ? ' selected' : '') + '>Não, só a partir do dia seguinte</option></select>'
+    + '<small style="display:block;color:var(--muted);font-size:12.5px;margin-top:6px;">Escolha "Não" se você nem sempre está no local: ninguém marca para hoje sem você saber.</small></div>'
     + '<div class="campo"><label for="maFrente">Marcar até quantos dias para frente</label><select class="ma-sel" id="maFrente">' + op([7, 14, 21, 30, 45, 60, 90], cfg.dias_frente, v => v + ' dias') + '</select></div>'
     + '</div>'
     + '<div class="acoes"><button class="btn btn-primary" type="button" id="maSalvar">Salvar meus horários</button><span class="msg" id="maMsg"></span></div>'
@@ -2778,7 +2782,7 @@ function ligarMeusHorarios(box){
     }
     const dur = Number($("maDur").value);
     const p = { ativo: $("maAtivo").checked, aprovar: $("maAprovar").checked, duracao: dur, passo: Math.min(dur, 60), simultaneos: Number($("maSim").value),
-      antecedencia_h: Number($("maAnt").value), dias_frente: Number($("maFrente").value), resumo: agendaCfg.config.resumo, lembrete_dono: agendaCfg.config.lembrete_dono, semana };
+      antecedencia_h: Number($("maAnt").value), mesmo_dia: $("maMesmoDia").value !== "nao", dias_frente: Number($("maFrente").value), resumo: agendaCfg.config.resumo, lembrete_dono: agendaCfg.config.lembrete_dono, semana };
     const btn = $("maSalvar"); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Salvando...';
     const { data, error } = await supa.rpc("salvar_agenda_config", { p });
     btn.disabled = false; btn.textContent = "Salvar meus horários";

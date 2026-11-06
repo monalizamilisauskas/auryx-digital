@@ -211,6 +211,15 @@
   .subtitulo{ font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--gold); margin:22px 0 10px; }
   .acoes{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:18px; }
   .acoes .msg{ font-size:13px; }
+  .cancel-form{ margin-top:14px; padding:16px; border:1px solid var(--line); border-radius:12px; }
+  .cancel-form h3{ margin:0 0 4px; font-size:17px; }
+  .cancel-op{ display:flex; gap:10px; align-items:center; padding:8px 10px; border:1px solid var(--line); border-radius:9px; margin:6px 0; cursor:pointer; font-size:14px; }
+  .cancel-op input{ accent-color:var(--gold); width:16px; height:16px; }
+  .cancel-op:has(input:checked){ border-color:rgba(96,165,250,0.6); background:rgba(37,99,235,0.08); }
+  .cancel-oferta{ margin:14px 0 4px; padding:12px 14px; border-radius:10px; background:rgba(52,211,153,0.08); border:1px solid rgba(52,211,153,0.35); font-size:14px; line-height:1.5; }
+  .cancel-aviso{ margin-top:12px; padding:12px 14px; border-radius:10px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.4); font-size:14px; line-height:1.5; }
+  .cancel-aviso b, .cancel-aviso span{ display:block; } .cancel-aviso span{ color:var(--muted); margin-top:2px; }
+  .btn-perigo{ color:var(--bad) !important; border-color:rgba(185,112,94,0.55) !important; }
   .acoes .msg.ok{ color:var(--good); } .acoes .msg.erro{ color:var(--bad); }
   .bloqueado{ color:var(--muted); font-size:14px; line-height:1.6; }
   .conv{ display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap; border-top:1px solid var(--line); padding:14px 0; }
@@ -648,6 +657,7 @@ let adminDados = null;
 let adminLeads = null;
 let adminOrigens = null; let origensDias = 30;
 let silencioDados = null;
+let cancelDados = null;
 let indicDados = null;
 let agendaCfg = null;        // Minha agenda (null = SQL ainda não rodou: a seção não aparece)       // Indique e ganhe (null = SQL ainda não rodou: o menu não aparece)
 let adminIndic = null;   // horário de silêncio dos avisos (null = SQL ainda não rodou: a seção não aparece)
@@ -690,6 +700,8 @@ async function carregarPainel(){
   // Indique e ganhe: código, link e indicações (se o SQL ainda não rodou, o menu não aparece).
   try { const r = await supa.rpc("get_indicacoes"); indicDados = (!r.error && r.data && r.data.codigo) ? r.data : null; } catch (e) { indicDados = null; }
   // Horário de silêncio dos avisos (se o SQL ainda não rodou, a seção não aparece).
+  // Cancelamento pelo painel (se o SQL ainda não rodou, continua o texto antigo com o e-mail).
+  try { const c = await supa.rpc("get_cancelamento"); cancelDados = (!c.error && c.data) ? c.data : null; } catch (e) { cancelDados = null; }
   try { const s = await supa.rpc("get_silencio"); silencioDados = (!s.error && s.data && s.data.silencio) ? s.data : null; } catch (e) { silencioDados = null; }
   emailLogado = (u && u.user && u.user.email) || "";
   // Administração Auryx: só volta dados para os e-mails de administração (os outros nem veem o menu).
@@ -851,7 +863,8 @@ function render(d){
       html += '</div>';
     } else {
       html += '<p class="sub">' + (d.limite_mensagens ? 'Até ' + Number(d.limite_mensagens).toLocaleString("pt-BR") + ' mensagens por mês. ' : '')
-        + 'Para mudar de plano ou cancelar, fale com a gente em hello@auryx.digital.</p>';
+        + (cancelDados ? 'Para mudar de plano, fale com a gente em hello@auryx.digital.' : 'Para mudar de plano ou cancelar, fale com a gente em hello@auryx.digital.') + '</p>'
+        + (cancelDados ? '<div id="cancelBox"></div>' : '');
     }
     html += '</div>';
   }
@@ -867,9 +880,67 @@ function render(d){
   if ($("indicarPainel")) renderIndicar(d);
   if ($("silencioPainel")) renderSilencio();
   if ($("adminPainel")) renderAdmin();
+  if ($("cancelBox")) renderCancelamento();
   document.querySelectorAll("#dashContent [data-ir]").forEach(b => b.addEventListener("click", () => irPara(b.getAttribute("data-ir"))));
   document.querySelectorAll("[data-devolver]").forEach(b => b.addEventListener("click", () => devolverConversa(b)));
   if (tela.view === "conversas") ligarResposta($("dashContent"), () => render(dadosPainel));
+}
+
+/* ---------- Cancelar assinatura: motivo, oferta de plano menor e cancelamento no fim do mês pago ---------- */
+const MOTIVOS_CANCEL = [["preco", "Preço alto para mim"], ["pouco_uso", "Não tive clientes suficientes no WhatsApp"],
+  ["erros", "A secretária respondeu errado ou confundiu clientes"], ["recurso", "Faltou um recurso que eu preciso"],
+  ["outro_sistema", "Vou usar outro sistema"], ["pausa", "Vou fechar ou pausar o negócio"], ["outro", "Outro motivo"]];
+const dataCurta = (iso) => iso ? new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }) : "";
+function renderCancelamento(){
+  const box = $("cancelBox"); const c = cancelDados; if (!box || !c) return;
+  let h = '';
+  if (c.agendado){
+    h = '<div class="cancel-aviso"><b>Cancelamento ' + (c.agendado.cancela_em ? 'agendado: a secretária funciona até ' + esc(dataCurta(c.agendado.cancela_em)) : 'pedido: a Auryx confirma por e-mail') + '.</b>'
+      + '<span>Depois disso ela é pausada e para de responder seus clientes. Mudou de ideia?</span>'
+      + '<div class="acoes" style="margin-top:8px;"><button class="btn btn-primary" type="button" id="cancelDesistir">Desistir do cancelamento</button><span class="msg" id="cancelMsg"></span></div></div>';
+  } else if (!c.pode_cancelar){
+    h = '';
+  } else if (!tela.cancelAberto){
+    h = '<button class="btn-link" type="button" id="cancelAbrir" style="margin-top:6px;">Cancelar assinatura</button>';
+  } else {
+    const m = tela.cancelMotivo || "";
+    h = '<div class="cancel-form"><h3>Que pena! Por que você quer cancelar?</h3>'
+      + '<p class="sub" style="margin:0 0 10px;">Sua resposta ajuda a gente a melhorar a secretária.</p>'
+      + MOTIVOS_CANCEL.map(([v, n]) => '<label class="cancel-op"><input type="radio" name="cancelMotivo" value="' + v + '"' + (m === v ? ' checked' : '') + '> ' + esc(n) + '</label>').join('')
+      + '<div class="campo" style="margin-top:10px;"><label for="cancelDetalhe">Quer contar mais? (opcional)</label><textarea id="cancelDetalhe" class="resp-texto" style="min-height:80px;" rows="3" maxlength="1000" placeholder="O que faltou, o que deu errado, o que faria você ficar...">' + esc(tela.cancelDetalhe || '') + '</textarea></div>';
+    if (c.menor){
+      h += '<div class="cancel-oferta"><b>Prefere pagar menos?</b> O plano <b>' + esc(c.menor.nome) + '</b> custa ' + moeda(c.menor.preco_brl) + '/mês'
+        + (c.menor.limite ? ', até ' + Number(c.menor.limite).toLocaleString("pt-BR") + ' mensagens por mês' : '') + ', e a secretária continua atendendo seus clientes.'
+        + (c.troca_pedida ? '<div class="msg ok" style="margin-top:8px;">Pedido de troca recebido ✓ A Auryx troca o seu plano em até 1 dia útil e te avisa.</div>'
+           : '<div class="acoes" style="margin-top:8px;"><button class="btn" type="button" id="cancelTrocar">Quero trocar para o ' + esc(c.menor.nome) + '</button><span class="msg" id="trocaMsg"></span></div>')
+        + '</div>';
+    }
+    h += '<div class="acoes"><button class="btn btn-perigo" type="button" id="cancelConfirmar">Confirmar cancelamento</button>'
+      + '<button class="btn" type="button" id="cancelVoltar">Voltar</button><span class="msg" id="cancelMsg"></span></div>'
+      + '<p class="sub" style="margin-top:8px;font-size:12.5px;">A secretária continua funcionando até o fim do mês já pago. Não há multa.</p></div>';
+  }
+  box.innerHTML = h;
+  const guardar = () => { const r = box.querySelector('[name="cancelMotivo"]:checked'); tela.cancelMotivo = r ? r.value : ""; const t = $("cancelDetalhe"); if (t) tela.cancelDetalhe = t.value; };
+  if ($("cancelAbrir")) $("cancelAbrir").addEventListener("click", () => { tela.cancelAberto = true; renderCancelamento(); });
+  if ($("cancelVoltar")) $("cancelVoltar").addEventListener("click", () => { tela.cancelAberto = false; renderCancelamento(); });
+  if ($("cancelTrocar")) $("cancelTrocar").addEventListener("click", async () => {
+    guardar(); const b = $("cancelTrocar"); b.disabled = true; b.innerHTML = '<span class="spinner"></span>Enviando...';
+    const { data, error } = await supa.rpc("pedir_troca_plano", { p_plano: c.menor.id, p_motivo: tela.cancelMotivo || "" });
+    if (error || !data || !data.ok){ b.disabled = false; b.textContent = "Tentar de novo"; $("trocaMsg").className = "msg erro"; $("trocaMsg").textContent = "Não foi possível enviar."; return; }
+    c.troca_pedida = true; renderCancelamento(); });
+  if ($("cancelConfirmar")) $("cancelConfirmar").addEventListener("click", async () => {
+    guardar(); const msg = $("cancelMsg");
+    if (!tela.cancelMotivo){ msg.className = "msg erro"; msg.textContent = "Escolha um motivo."; return; }
+    if (!confirm("Confirmar o cancelamento? A secretária continua até o fim do mês já pago e depois é pausada.")) return;
+    const b = $("cancelConfirmar"); b.disabled = true; b.innerHTML = '<span class="spinner"></span>Cancelando...';
+    const { data, error } = await supa.rpc("cancelar_assinatura", { p_motivo: tela.cancelMotivo, p_detalhe: tela.cancelDetalhe || "" });
+    if (error || !data || !data.ok){ b.disabled = false; b.textContent = "Confirmar cancelamento"; msg.className = "msg erro"; msg.textContent = "Não foi possível cancelar agora. Tente de novo ou escreva para hello@auryx.digital."; return; }
+    c.agendado = { cancela_em: data.cancela_em || null }; tela.cancelAberto = false; renderCancelamento(); });
+  if ($("cancelDesistir")) $("cancelDesistir").addEventListener("click", async () => {
+    const b = $("cancelDesistir"); b.disabled = true; b.innerHTML = '<span class="spinner"></span>Salvando...';
+    const { data, error } = await supa.rpc("desistir_cancelamento");
+    if (error || !data || !data.ok){ b.disabled = false; b.textContent = "Tentar de novo"; $("cancelMsg").className = "msg erro"; $("cancelMsg").textContent = "Não foi possível agora."; return; }
+    c.agendado = null; renderCancelamento(); const m = document.createElement("p"); m.className = "msg ok"; m.textContent = "Que bom que você fica! ✓ A assinatura continua normal."; $("cancelBox").appendChild(m); });
 }
 
 function icone(nome){

@@ -853,6 +853,10 @@ function render(d){
     if (emTeste){
       html += '<p class="sub">Continue com a sua secretária depois do teste grátis. Depois de contratar, você personaliza as respostas e os serviços aqui no painel.</p><div class="planos">';
       (d.planos || []).forEach(p => {
+        // Completo: sob consulta (preço e volume combinados com a Auryx).
+        if (p.id === 'completo'){ html += '<div class="plano"><div class="n">' + esc(p.nome) + '</div><div class="p">Sob consulta</div>'
+          + '<div class="l">Para negócios com muito movimento: volume de mensagens e preço combinados com você.</div>'
+          + '<a class="btn" href="https://wa.me/5585992824164?text=' + encodeURIComponent('Olá! Quero uma proposta do plano Completo da Auryx.') + '" target="_blank" rel="noopener">Pedir proposta</a></div>'; return; }
         html += '<div class="plano"><div class="n">' + esc(p.nome) + '</div><div class="p">' + moeda(p.preco_brl) + '/mês</div>'
           + '<div class="l">Até ' + Number(p.limite || 0).toLocaleString("pt-BR") + ' mensagens/mês'
           + (PERGUNTAS_POR_PLANO[p.id] ? '<br>Personalizar: até ' + PERGUNTAS_POR_PLANO[p.id] + ' perguntas' : '')

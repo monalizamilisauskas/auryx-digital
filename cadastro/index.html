@@ -217,6 +217,7 @@ document.addEventListener('click', function(ev){ var a = ev.target.closest && ev
 src="https://www.facebook.com/tr?id=1707052657523129&ev=PageView&noscript=1"
 /></noscript>
 <!-- End Meta Pixel Code -->
+<script src="/origem.js"></script>
 </head>
 <body>
 
@@ -719,6 +720,18 @@ function codigoIndicacao(){
   return /^[A-Z0-9]{4,12}$/.test(daUrl) ? daUrl : "";
 }
 const CODIGO_IND = codigoIndicacao();
+// Rastreamento dos anúncios: depois que o cadastro deu certo, grava de onde a pessoa veio (primeira e última origem). Nunca atrapalha.
+async function registrarOrigem(email){
+  if (!email || !window.auryxOrigem) return;
+  try{
+    const o = window.auryxOrigem();
+    await fetch(SUPABASE_URL + "/rest/v1/rpc/registrar_origem_cadastro", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY },
+      body: JSON.stringify({ p_email: email, p_primeira: o.primeira, p_ultima: o.ultima })
+    });
+  }catch(e){ console.log("[cadastro] origem não registrada", e && e.message); }
+}
 // Depois que o cadastro deu certo: liga o novo cliente a quem indicou (pelo e-mail). Nunca atrapalha o cadastro.
 async function registrarIndicacao(email){
   if (!CODIGO_IND || !email) return;
@@ -858,6 +871,7 @@ async function concluirConexao(response, motivo){
         throw new Error("servidor " + res.status + (r.faltando ? " faltando=" + r.faltando.join(",") : (r.motivo ? " " + r.motivo : "")));
       }
       await registrarIndicacao(data.email);
+      await registrarOrigem(data.email);
       try { if (typeof fbq === "function") fbq("track", "CompleteRegistration", { content_name: "teste_gratis" }); } catch (e) {}
       showStep("success");
     }catch(e){

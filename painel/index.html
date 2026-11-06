@@ -646,6 +646,7 @@ const tela = { abaFu: "agendado", fuForm: null, abaAg: "proximos", agendamento: 
 let dadosPainel = null;
 let adminDados = null;
 let adminLeads = null;
+let adminOrigens = null; let origensDias = 30;
 let silencioDados = null;
 let indicDados = null;
 let agendaCfg = null;        // Minha agenda (null = SQL ainda não rodou: a seção não aparece)       // Indique e ganhe (null = SQL ainda não rodou: o menu não aparece)
@@ -695,6 +696,7 @@ async function carregarPainel(){
   try { const a = await supa.rpc("admin_resumo"); adminDados = (!a.error && a.data) ? a.data : null; } catch (e) { adminDados = null; }
   if (adminDados) { try { const x = await supa.rpc("admin_indicacoes"); adminIndic = (!x.error && x.data) ? x.data : null; } catch (e) { adminIndic = null; } }
   if (adminDados) { try { const l = await supa.rpc("admin_leads"); adminLeads = (!l.error && l.data) ? l.data : null; } catch (e) { adminLeads = null; } }
+  if (adminDados) { try { const o = await supa.rpc("admin_origens", { p_dias: origensDias }); adminOrigens = (!o.error && o.data) ? o.data : null; } catch (e) { adminOrigens = null; } }
   render(data);
 }
 
@@ -1394,6 +1396,42 @@ function barra(pct){
 }
 const TIPO_LEAD = { salao: "Salão", clinica: "Clínica", clinica_odontologica: "Odontologia", academia: "Academia", restaurante: "Restaurante",
   mecanico: "Oficina", eletricista: "Eletricista", encanador: "Encanador", agencia_viagens: "Agência de viagens", suporte: "Atendimento", barbearia: "Barbearia", estetica: "Estética", pet_shop: "Pet shop", geral: "Outro" };
+// Rastreamento dos anúncios: de onde vêm os leads do kit, os cadastros e os clientes pagantes (por canal e campanha).
+const PARAM_META = "utm_source=facebook&utm_medium=pago&utm_campaign={{campaign.name}}&utm_content={{ad.name}}";
+function renderOrigens(){
+  const O = adminOrigens; if (!O) return '';
+  const linhas = O.linhas || [];
+  const tot = linhas.reduce((t, x) => ({ l: t.l + x.leads, c: t.c + x.cadastros, p: t.p + x.pagantes }), { l: 0, c: 0, p: 0 });
+  const pct = (a, b) => b ? Math.round(100 * a / b) + '%' : '—';
+  let h = '<div class="panel" id="origensPainel"><div class="ag-topo"><div><h2 style="margin:0;">O que está funcionando</h2>'
+    + '<p class="sub" style="margin:4px 0 0;">De onde vieram os leads do kit, os cadastros (teste grátis) e quem virou cliente pagante.</p></div>'
+    + '<select class="ma-sel" id="origensDias" style="width:auto;">' + [7, 30, 90].map(d => '<option value="' + d + '"' + (d === (O.dias || origensDias) ? ' selected' : '') + '>Últimos ' + d + ' dias</option>').join('') + '</select></div>'
+    + '<div class="metric-grid" style="margin:14px 0;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">'
+    + '<div class="metric-card"><div class="label">Leads do kit</div><div class="value neutral">' + tot.l + '</div></div>'
+    + '<div class="metric-card"><div class="label">Cadastros</div><div class="value neutral">' + tot.c + '</div><div class="adm-extra">' + (O.cadastros_sem_origem ? O.cadastros_sem_origem + ' sem origem registrada' : '') + '</div></div>'
+    + '<div class="metric-card"><div class="label">Viraram pagantes</div><div class="value">' + tot.p + '</div><div class="adm-extra">' + (tot.c ? pct(tot.p, tot.c) + ' dos cadastros' : '') + '</div></div></div>';
+  if (!linhas.length) h += '<p class="sub">Ainda sem dados neste período. Os números começam a aparecer a partir dos próximos cadastros e downloads do kit.</p>';
+  else h += '<div class="tab-ped"><table><thead><tr><th>Canal</th><th>Campanha</th><th>Leads do kit</th><th>Cadastros</th><th>Pagantes</th><th>Cadastro → pagante</th></tr></thead><tbody>'
+    + linhas.map(x => '<tr><td><b>' + esc(x.canal) + '</b></td><td class="c-res">' + esc(x.campanha) + '</td><td>' + x.leads + '</td><td>' + x.cadastros + '</td><td><b' + (x.pagantes ? ' style="color:var(--good);"' : '') + '>' + x.pagantes + '</b></td><td class="c-data">' + pct(x.pagantes, x.cadastros) + '</td></tr>').join('')
+    + '</tbody></table></div>';
+  h += '<details class="ajuda" style="margin-top:14px;"><summary>Como marcar os anúncios para aparecerem aqui</summary>'
+    + '<p>No Gerenciador de Anúncios da Meta, em cada anúncio, desça até <b>Rastreamento → Parâmetros de URL</b> e cole:</p>'
+    + '<div class="ind-link"><code style="flex:1;word-break:break-all;font-size:12.5px;">' + esc(PARAM_META) + '</code><button class="btn" type="button" id="copiarParam">Copiar</button><span class="msg" id="copiarParamMsg"></span></div>'
+    + '<p>A Meta troca <b>{{campaign.name}}</b> e <b>{{ad.name}}</b> pelo nome da campanha e do anúncio. Assim esta tabela mostra qual campanha trouxe cada cadastro e cada cliente pagante. '
+    + 'Para o Instagram orgânico, use links como <b>auryx.digital/kit?utm_source=instagram&amp;utm_campaign=bio</b>.</p>'
+    + '<p>Conta a última origem antes de a pessoa se cadastrar (até 90 dias). Quem entrou sem link marcado aparece como "direto / sem origem".</p></details></div>';
+  return h;
+}
+function ligarOrigens(){
+  const sel = $("origensDias");
+  if (sel) sel.addEventListener("change", async () => {
+    origensDias = Number(sel.value); sel.disabled = true;
+    try { const o = await supa.rpc("admin_origens", { p_dias: origensDias }); if (!o.error && o.data) adminOrigens = o.data; } catch (e) {}
+    renderAdmin(); });
+  const b = $("copiarParam");
+  if (b) b.addEventListener("click", async () => { const m = $("copiarParamMsg");
+    try { await navigator.clipboard.writeText(PARAM_META); m.className = "msg ok"; m.textContent = "Copiado ✓"; } catch (e) { m.className = "msg erro"; m.textContent = "Selecione e copie o texto."; } });
+}
 // Leads da página auryx.digital/kit (Kit de respostas prontas): quem baixou e quem já virou cliente
 function renderLeads(){
   const L = adminLeads; if (!L) return '';
@@ -1447,7 +1485,7 @@ function renderAdmin(){
     : '<p class="sub" style="margin:6px 0 0;">Nenhum cliente perto do limite.</p>';
   html += '</div>';
   html += renderIndicacoesAdmin();
-  html += renderLeads();
+  html += renderOrigens() + renderLeads();
   const cf = a.config || {};
   const campo = (id, rotulo, valor, passo) => '<div class="campo"><label for="cfg_' + id + '">' + rotulo + '</label><input id="cfg_' + id + '" type="number" step="' + (passo || '1') + '" min="0" value="' + esc(valor) + '"></div>';
   html += '<details class="cfg-agenda"><summary><span>' + icone("personalizar") + 'Valores usados no cálculo</span><span class="cfg-resumo">n8n ' + brl(cf.custo_n8n_brl) + ' · Stripe ' + cf.stripe_pct + '% + ' + brl(cf.stripe_fixo) + '</span></summary>'
@@ -1460,6 +1498,7 @@ function renderAdmin(){
     + '<p class="sub" style="margin-top:14px;">Atualizado em ' + esc(dataHoraBR(a.atualizado_em)) + '. Toda segunda de manhã você recebe este resumo no WhatsApp.</p>';
   box.innerHTML = html;
   ligarIndicacoesAdmin();
+  ligarOrigens();
   $("cfgSalvar").addEventListener("click", async () => {
     const msg = $("cfgMsg"); const btn = $("cfgSalvar"); const p = {};
     ["custo_n8n_brl", "outros_custos_brl", "custo_openai_msg", "stripe_pct", "stripe_fixo", "limite_n8n", "limite_meta_semana", "alerta_pct"].forEach(id => {

@@ -481,6 +481,14 @@
   @media (max-width:560px){ #adminPainel .metric-grid{ grid-template-columns:1fr; } #adminPainel .metric-card{ padding:18px; } #adminPainel .adm-limite{ font-size:13px; } }
   .ag-topo{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
   .ag-topo .sub b{ color:var(--parchment); font-weight:600; }
+  .ag-card .ag-hora{ flex:0 0 64px; display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px 4px; border-radius:10px; background:rgba(37,99,235,0.12); border:1px solid rgba(96,165,250,0.3); }
+  .ag-card .ag-hora b{ font-size:17px; font-weight:700; color:var(--parchment); line-height:1; }
+  .ag-card .ag-hora small{ font-size:16px; line-height:1; }
+  .ag-card.st-realizado .ag-hora{ background:rgba(52,211,153,0.1); border-color:rgba(52,211,153,0.35); }
+  .ag-card.st-aguardando .ag-hora, .ag-card.st-nao_compareceu .ag-hora{ background:rgba(245,158,11,0.08); border-color:rgba(245,158,11,0.35); }
+  @media (max-width:560px){ .ag-card .ped-res .fone{ display:none; } .ag-card .ag-hora{ flex-basis:58px; } }
+  .ag-card.st-cancelado{ opacity:.6; } .ag-card.st-cancelado .ag-hora{ background:transparent; }
+  .ag-card .status.confirmado{ color:var(--good); border-color:rgba(52,211,153,0.45); background:rgba(52,211,153,0.08); }
   .ag-info{ display:flex; gap:14px; align-items:center; min-width:0; }
   .ag-linha .seta{ color:var(--muted); font-size:11px; }
   .aba .ponto{ display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--amber); margin-left:4px; vertical-align:1px; }
@@ -1479,8 +1487,10 @@ function renderAgenda(){
     cancelados: (a) => a.status === "cancelado",
   };
   if (!filtros[tela.abaAg]) tela.abaAg = "proximos";
-  const nHoje = Number(d.agendamentos_hoje || 0);
-  const nSemana = Number(d.agendamentos_semana || 0);
+  // Contagem pela própria lista (assim bate com o que aparece embaixo): hoje e próximos 7 dias, sem os cancelados.
+  const limite7 = diaDe(new Date(Date.now() + 7 * 86400000).toISOString());
+  const nHoje = todos.filter(a => a.status !== "cancelado" && diaDe(a.data_hora) === hojeStr).length;
+  const nSemana = todos.filter(a => a.status !== "cancelado" && diaDe(a.data_hora) > hojeStr && diaDe(a.data_hora) <= limite7).length;
   let html = '<div class="ag-topo"><p class="sub" style="margin:0;">' + (nHoje ? '<b>' + nHoje + '</b> ' + (nHoje === 1 ? 'agendamento hoje' : 'agendamentos hoje') : 'Nenhum agendamento hoje')
     + (nSemana ? ' · <b>' + nSemana + '</b> nos próximos 7 dias' : '') + '</p>'
     + '<details class="ajuda" style="margin:0;"><summary>Como funciona?</summary>'
@@ -1511,13 +1521,18 @@ function renderAgenda(){
       }
       const hora = new Date(a.data_hora).toLocaleTimeString("pt-BR", { timeZone: tz, hour: "2-digit", minute: "2-digit" });
       const aberto = tela.agendamento === a.id;
-      // Do lado direito, só o que pede atenção: o status aparece quando não é mais "confirmado".
-      const lado = a.status !== "confirmado" ? '<span class="status ' + esc(a.status) + '">' + esc(STATUS_AG[a.status] || a.status) + '</span>'
-        : faltaResultado(a) ? '<span class="chip alerta">Marcar como foi</span>' : chipAviso(a);
-      html += '<div class="pedido ag-linha"><button type="button" class="ped-linha" data-ag="' + a.id + '" aria-expanded="' + aberto + '">'
-        + '<span class="ag-info"><span class="hora">' + hora + '</span><span>' + esc(a.servico || "Agendamento")
-        + ' <span class="quem">· ' + esc(a.nome || foneBR(a.remetente)) + '</span></span></span>'
-        + '<span class="lado">' + lado + '<span class="seta">' + (aberto ? '▴' : '▾') + '</span></span></button>';
+      // Cartão no modelo dos pedidos: hora em destaque, serviço e cliente, dia por extenso e selos (status sempre visível).
+      const ped = a.pedido_id ? (d.pedidos || []).find(p => p.id === a.pedido_id) : null;
+      const icoAg = ped ? (resumoPedido(ped, d).icone || "📅") : "📅";
+      const diaLongo = new Date(a.data_hora).toLocaleDateString("pt-BR", { timeZone: tz, weekday: "long", day: "2-digit", month: "2-digit" });
+      const extra = a.status === "confirmado" ? (faltaResultado(a) ? '<span class="chip alerta">Marcar como foi</span>' : chipAviso(a)) : '';
+      html += '<div class="pedido ag-linha"><button type="button" class="ped-linha ped-card ag-card st-' + esc(a.status) + '" data-ag="' + a.id + '" aria-expanded="' + aberto + '">'
+        + '<span class="ag-hora"><b>' + hora + '</b><small>' + esc(icoAg) + '</small></span>'
+        + '<span class="ped-txt"><span class="ped-tit">' + esc(a.servico ? a.servico.charAt(0).toUpperCase() + a.servico.slice(1) : "Agendamento")
+        + ' <span class="quem"><span class="ponto">· </span>' + esc(a.nome || foneBR(a.remetente)) + '</span></span>'
+        + '<span class="ped-res">' + esc(diaLongo.charAt(0).toUpperCase() + diaLongo.slice(1)) + (a.nome ? '<span class="fone"> · ' + esc(foneBR(a.remetente)) + '</span>' : '') + '</span>'
+        + '<span class="ped-selos"><span class="status ' + esc(a.status) + '">' + esc(STATUS_AG[a.status] || a.status) + '</span>' + extra + '</span></span>'
+        + '<span class="lado"><span class="seta">' + (aberto ? '▴' : '▾') + '</span></span></button>';
       if (aberto){
         const remarcavel = a.pedido_id && a.status === "confirmado" && (d.pedidos || []).some(p => p.id === a.pedido_id);
         const quando = new Date(a.data_hora).toLocaleString("pt-BR", { timeZone: tz, weekday: "long", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });

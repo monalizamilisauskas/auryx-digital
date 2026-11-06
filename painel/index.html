@@ -321,7 +321,8 @@
   .tab-ped .t-ped .ped-ico.duplo{ font-size:14px; letter-spacing:-2px; }
   .tab-ped .t-ped b{ display:block; font-weight:600; font-size:14.5px; }
   .tab-ped .t-ped small{ display:block; color:var(--muted); font-size:12.5px; margin-top:1px; }
-  .tab-ped .c-res{ color:var(--muted); min-width:180px; line-height:1.45; }
+  .tab-ped .c-res{ color:var(--muted); min-width:120px; line-height:1.45; }
+  .tab-ped td.c-acoes{ padding-left:4px; }
   .tab-ped td .tipo-ped{ white-space:nowrap; }
   .tab-ped .c-data{ color:var(--muted); white-space:nowrap; font-size:12.5px; }
   .tab-ag .c-hora{ white-space:nowrap; width:96px; } .tab-ag .c-hora b{ display:block; font-size:16px; font-weight:700; } .tab-ag .c-hora small{ display:block; color:var(--muted); font-size:12px; margin-top:2px; }
@@ -367,6 +368,8 @@
   .ped-card .ped-selos{ display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; }
   .ped-card .lado{ padding-top:3px; }
   /* Etiqueta do tipo (Passagem, Hotel, Cruzeiro...): o dono entende o ícone sem precisar decorar. */
+  .ver-conv{ font-size:12px; font-weight:600; padding:3px 9px; border-radius:6px; color:var(--parchment); background:rgba(255,255,255,0.05); border:1px solid var(--line); cursor:pointer; white-space:nowrap; }
+  .ver-conv:hover{ border-color:rgba(96,165,250,0.6); color:#fff; }
   .tipo-ped.conf{ color:var(--good); background:rgba(52,211,153,0.1); border-color:rgba(52,211,153,0.45); }
   .tipo-ped{ font-size:11.5px; font-weight:600; padding:3px 8px; border-radius:6px; color:#BFDBFE; background:rgba(37,99,235,0.18); border:1px solid rgba(96,165,250,0.35); white-space:nowrap; }
   @media (max-width:560px){ .ped-card .ped-tit{ white-space:normal; } .ped-card .ped-tit .quem{ display:block; font-size:12.5px; max-width:none; } .ped-card .ped-tit .ponto{ display:none; } .ped-card .lado .hr{ display:none; } .ped-card{ gap:8px; } .ped-card .ped-selos .tipo-ped, .ped-card .ped-selos .status, .ped-card .ped-selos .pago{ font-size:10.5px; padding:2px 6px; } .ped-card .ped-selos{ gap:5px; } }
@@ -1041,7 +1044,8 @@ function renderPedidos(){
         + (r.linha ? '<span class="ped-res">' + esc(r.linha) + '</span>' : '')
         + '<span class="ped-selos">' + (r.tipo ? '<span class="tipo-ped">' + esc(r.tipo) + '</span>' : '') + '<span class="status ' + esc(p.status) + '">' + esc(nomeStatus(p.status, p)) + '</span>'
         + (agendamentoDoPedido(p.id) ? '<span class="tipo-ped conf">📅 Confirmado: ' + esc(quandoCurto(agendamentoDoPedido(p.id).data_hora)) + '</span>' : '')
-        + (p.pago_em ? '<span class="pago" title="Pagamento registrado em ' + esc(new Date(p.pago_em).toLocaleDateString("pt-BR")) + '">✓ Pago</span>' : '') + '</span></span>'
+        + (p.pago_em ? '<span class="pago" title="Pagamento registrado em ' + esc(new Date(p.pago_em).toLocaleDateString("pt-BR")) + '">✓ Pago</span>' : '')
+        + '<span class="ver-conv" role="button" tabindex="0" data-hist="' + esc(p.remetente) + '" data-nome="' + esc(nome) + '">💬 Ver conversa</span></span></span>'
         + '<span class="lado">' + (() => { const dh = String(dataHoraBR(p.created_at)); const i = dh.indexOf(', ');
             return i > 0 ? esc(dh.slice(0, i)) + '<span class="hr">' + esc(dh.slice(i)) + '</span>' : esc(dh); })() + (aberto ? ' ▴' : ' ▾') + '</span></button>';
       if (aberto) html += detalhePedidoHtml(p, d, nome);
@@ -1053,7 +1057,8 @@ function renderPedidos(){
   box.innerHTML = html;
   if ($("maisPed")) $("maisPed").addEventListener("click", () => { tela.limite += 20; renderPedidos(); });
   box.querySelectorAll("[data-aba]").forEach(b => b.addEventListener("click", () => { tela.aba = b.getAttribute("data-aba"); tela.pedido = null; tela.limite = 20; renderPedidos(); }));
-  box.querySelectorAll("[data-pedido]").forEach(b => b.addEventListener("click", () => {
+  box.querySelectorAll("[data-pedido]").forEach(b => b.addEventListener("click", (e) => {
+    if (e.target.closest("[data-hist]")) return;
     const id = Number(b.getAttribute("data-pedido")); tela.pedido = tela.pedido === id ? null : id; renderPedidos();
   }));
   box.querySelectorAll("[data-status]").forEach(b => b.addEventListener("click", () => mudarStatus(b)));
@@ -1070,10 +1075,11 @@ function renderPedidos(){
 
 
 /* ---------- Pedidos em tabela (computador): seleção, status direto na linha e ações em ícone ---------- */
-const MQ_TABELA = window.matchMedia ? window.matchMedia("(min-width: 900px)") : null;
+const MQ_TABELA = window.matchMedia ? window.matchMedia("(min-width: 1200px)") : null;
 function modoTabela(){ return !!(MQ_TABELA && MQ_TABELA.matches); }
 if (MQ_TABELA && MQ_TABELA.addEventListener) MQ_TABELA.addEventListener("change", () => { if ($("pedidosPainel")) renderPedidos(); if ($("agendaPainel")) renderAgenda(); });
 const ICO = {
+  conversa: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg>',
   whats: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.1-5.6A8.4 8.4 0 1 1 21 11.5z"/></svg>',
   olho: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
   pago: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20M6 15h4"/></svg>' };
@@ -1108,6 +1114,7 @@ function tabelaPedidos(lista, d){
       + '<td><span class="sel-status status ' + esc(p.status) + '"><select data-sel-status="' + p.id + '" aria-label="Mudar status">' + opcoes + '</select></span>'
       + (p.pago_em ? ' <span class="pago">✓ Pago</span>' : '') + '</td>'
       + '<td class="c-acoes"><button class="ico-btn verde" type="button" title="Responder no WhatsApp" data-t-resp="' + p.id + '">' + ICO.whats + '</button>'
+      + '<button class="ico-btn" type="button" title="Ver conversa" data-hist="' + esc(p.remetente) + '" data-nome="' + esc(nome) + '">' + ICO.conversa + '</button>'
       + '<button class="ico-btn" type="button" title="' + (aberto ? 'Fechar detalhes' : 'Ver detalhes e mais ações') + '" data-t-ver="' + p.id + '">' + ICO.olho + '</button>'
       + '</td></tr>';
     if (aberto) h += '<tr class="lin-det"><td></td><td colspan="6">' + detalhePedidoHtml(p, d, nome) + '</td></tr>';
@@ -1558,6 +1565,7 @@ function renderAgenda(){
           + '<td class="c-data">' + esc(foneBR(a.remetente)) + '</td>'
           + '<td><span class="sel-status status ' + esc(a.status) + '"><select data-ag-status="' + a.id + '" aria-label="Mudar situação">' + opc + '</select></span>' + extra + '<span class="msg" id="agTMsg' + a.id + '"></span></td>'
           + '<td class="c-acoes"><button class="ico-btn verde" type="button" title="Falar no WhatsApp" data-t-agresp="' + a.id + '">' + ICO.whats + '</button>'
+          + '<button class="ico-btn" type="button" title="Ver conversa" data-hist="' + esc(a.remetente) + '" data-nome="' + esc(a.nome || "") + '">' + ICO.conversa + '</button>'
           + '<button class="ico-btn" type="button" title="' + (aberto ? 'Fechar detalhes' : 'Ver detalhes e mais ações') + '" data-t-agver="' + a.id + '">' + ICO.olho + '</button></td></tr>';
         if (aberto) html += '<tr class="lin-det"><td colspan="5">' + detalheAg(a) + '</td></tr>';
       });
@@ -1582,7 +1590,8 @@ function renderAgenda(){
         + '<span class="ped-txt"><span class="ped-tit">' + esc(a.servico ? a.servico.charAt(0).toUpperCase() + a.servico.slice(1) : "Agendamento")
         + ' <span class="quem"><span class="ponto">· </span>' + esc(a.nome || foneBR(a.remetente)) + '</span></span>'
         + '<span class="ped-res">' + esc(diaLongo.charAt(0).toUpperCase() + diaLongo.slice(1)) + (a.nome ? '<span class="fone"> · ' + esc(foneBR(a.remetente)) + '</span>' : '') + '</span>'
-        + '<span class="ped-selos"><span class="status ' + esc(a.status) + '">' + esc(STATUS_AG[a.status] || a.status) + '</span>' + extra + '</span></span>'
+        + '<span class="ped-selos"><span class="status ' + esc(a.status) + '">' + esc(STATUS_AG[a.status] || a.status) + '</span>' + extra
+        + '<span class="ver-conv" role="button" tabindex="0" data-hist="' + esc(a.remetente) + '" data-nome="' + esc(a.nome || "") + '">💬 Ver conversa</span></span></span>'
         + '<span class="lado"><span class="seta">' + (aberto ? '▴' : '▾') + '</span></span></button>';
       if (aberto) html += detalheAg(a);
       html += '</div>';
@@ -1620,7 +1629,8 @@ function renderAgenda(){
   if ($("lembreteDias")) $("lembreteDias").addEventListener("change", (e) => salvarLembrete(e.target.value));
   $("cfgAgenda").addEventListener("toggle", (e) => { tela.cfgAgenda = e.target.open; });
   box.querySelectorAll("[data-abaag]").forEach(b => b.addEventListener("click", () => { tela.abaAg = b.getAttribute("data-abaag"); tela.agendamento = null; renderAgenda(); }));
-  box.querySelectorAll("[data-ag]").forEach(b => b.addEventListener("click", () => {
+  box.querySelectorAll("[data-ag]").forEach(b => b.addEventListener("click", (e) => {
+    if (e.target.closest("[data-hist]")) return;
     const id = Number(b.getAttribute("data-ag")); tela.agendamento = tela.agendamento === id ? null : id; renderAgenda();
   }));
   box.querySelectorAll("[data-statusag]").forEach(b => b.addEventListener("click", () => {
@@ -1689,6 +1699,9 @@ async function abrirHistorico(remetente, nome){
   lista.innerHTML = html;
   lista.scrollTop = lista.scrollHeight;
 }
+document.addEventListener("keydown", (e) => {
+  if ((e.key === "Enter" || e.key === " ") && e.target.classList && e.target.classList.contains("ver-conv")){ e.preventDefault(); e.stopPropagation(); abrirHistorico(e.target.getAttribute("data-hist"), e.target.getAttribute("data-nome")); }
+}, true);
 document.addEventListener("click", (e) => {
   const b = e.target.closest && e.target.closest("[data-hist]");
   if (b){ e.preventDefault(); abrirHistorico(b.getAttribute("data-hist"), b.getAttribute("data-nome")); }

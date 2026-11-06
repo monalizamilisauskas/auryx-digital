@@ -324,6 +324,8 @@
   .tab-ped .c-res{ color:var(--muted); min-width:180px; line-height:1.45; }
   .tab-ped td .tipo-ped{ white-space:nowrap; }
   .tab-ped .c-data{ color:var(--muted); white-space:nowrap; font-size:12.5px; }
+  .tab-ag .c-hora{ white-space:nowrap; width:96px; } .tab-ag .c-hora b{ display:block; font-size:16px; font-weight:700; } .tab-ag .c-hora small{ display:block; color:var(--muted); font-size:12px; margin-top:2px; }
+  .tab-ag .chip{ margin-left:6px; }
   .tab-ped .c-acoes{ white-space:nowrap; text-align:right; }
   .sel-status{ display:inline-flex; padding:0; position:relative; }
   .sel-status select{ appearance:none; -webkit-appearance:none; background:transparent; border:none; color:inherit; font:inherit;
@@ -923,12 +925,13 @@ const TIPOS_SERVICO = {
   remarcar: { nome: "Remarcação", espera: "Aguardando confirmação" }, visita: { nome: "Visita", espera: "Aguardando confirmação" },
   reserva: { nome: "Reserva", espera: "Aguardando confirmação" }, evento: { nome: "Evento", espera: "Aguardando orçamento" },
   delivery: { nome: "Delivery", espera: "" }, experimental: { nome: "Aula experimental", espera: "Aguardando confirmação" },
-  matricula: { nome: "Matrícula", espera: "Aguardando confirmação" }, atendimento: { nome: "Atendimento", espera: "" } };
+  matricula: { nome: "Matrícula", espera: "Aguardando confirmação" }, atendimento: { nome: "Atendimento", espera: "" },
+  suporte: { nome: "Suporte", espera: "Aguardando resposta" }, demo: { nome: "Demonstração", espera: "Aguardando confirmação" } };
 function tipoServico(p){
   const dd = p.dados || {};
   const porItem = { orcamento: "orc", remarcar: "remarcar", visita: "visita", agendar: "agenda", consulta: "agenda", primeira: "agenda",
     retorno: "agenda", reserva: "reserva", eventos: "evento", delivery: "delivery", experimental: "experimental", matricula: "matricula",
-    andamento: "atendimento", aluno: "atendimento", documentos: "atendimento" };
+    andamento: "atendimento", aluno: "atendimento", documentos: "atendimento", suporte: "suporte", demonstracao: "demo" };
   const k = porItem[p.item] || (dd.descricao || dd.problema ? "orc" : (dd.quando || dd.horario) ? "agenda" : "");
   return k ? TIPOS_SERVICO[k] : { nome: "", espera: "" };
 }
@@ -968,7 +971,7 @@ function resumoPedido(p, d){
     const ordem = p.item === "remarcar"
       ? [dd.atual ? "era " + dd.atual : "", dd.pedido]
       : [dd.problema, dd.servico, dd.descricao, dd.modalidade, dd.objetivo, dd.datas, dd.quando, dd.horario,
-         dd.profissional && !semValor(dd.profissional) ? "com " + dd.profissional : "", dd.convenio, dd.endereco, dd.ocasiao, p.item === "eventos" ? "" : dd.itens];
+         dd.profissional && !semValor(dd.profissional) ? "com " + dd.profissional : "", dd.convenio, dd.endereco, dd.ocasiao, dd.negocio, dd.email, p.item === "eventos" ? "" : dd.itens];
     partes = ordem.filter(v => v && String(v) !== usado);
   }
   const linha = partes.filter(v => v && !semValor(v)).slice(0, 4).map(v => curto(v, 40)).join(" · ");
@@ -1069,7 +1072,7 @@ function renderPedidos(){
 /* ---------- Pedidos em tabela (computador): seleção, status direto na linha e ações em ícone ---------- */
 const MQ_TABELA = window.matchMedia ? window.matchMedia("(min-width: 900px)") : null;
 function modoTabela(){ return !!(MQ_TABELA && MQ_TABELA.matches); }
-if (MQ_TABELA && MQ_TABELA.addEventListener) MQ_TABELA.addEventListener("change", () => { if ($("pedidosPainel")) renderPedidos(); });
+if (MQ_TABELA && MQ_TABELA.addEventListener) MQ_TABELA.addEventListener("change", () => { if ($("pedidosPainel")) renderPedidos(); if ($("agendaPainel")) renderAgenda(); });
 const ICO = {
   whats: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.1-5.6A8.4 8.4 0 1 1 21 11.5z"/></svg>',
   olho: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
@@ -1510,8 +1513,56 @@ function renderAgenda(){
     let lista = todos.filter(filtros[tela.abaAg]);
     lista = lista.slice().sort((a, b) => tela.abaAg === "proximos" ? new Date(a.data_hora) - new Date(b.data_hora) : new Date(b.data_hora) - new Date(a.data_hora));
     if (!lista.length) html += '<p class="sub" style="margin:0;">' + (tela.abaAg === "proximos" ? 'Nenhum horário marcado daqui para frente.' : 'Nenhum agendamento aqui.') + '</p>';
+    const detalheAg = (a) => {
+        let h = '';
+        const remarcavel = a.pedido_id && a.status === "confirmado" && (d.pedidos || []).some(p => p.id === a.pedido_id);
+        const quando = new Date(a.data_hora).toLocaleString("pt-BR", { timeZone: tz, weekday: "long", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+        h += '<div class="ped-detalhe"><div class="d">' + esc(quando)
+          + (a.endereco ? ' · ' + esc(a.endereco) : '') + ' · ' + esc(foneBR(a.remetente)) + linhaLembrete(a) + '</div>'
+          + '<div class="ped-acoes">';
+        const falar = '<button class="btn btn-primary" type="button" data-resp="a' + a.id + '">Falar no WhatsApp</button>' + botaoConversa(a.remetente, a.nome);
+        const status = (s, rotulo, cls) => '<button class="' + (cls || 'btn') + '" type="button" data-statusag="' + s + '" data-id="' + a.id + '">' + rotulo + '</button>';
+        if (a.status === "aguardando"){
+          h += status("confirmado", "Aprovar horário", "btn btn-primary") + falar + status("cancelado", "Recusar", "btn-link");
+        } else if (a.status === "confirmado" && passou(a)){
+          h += '<span class="como-foi">Como foi?</span>' + status("realizado", "Realizado") + status("nao_compareceu", "Não compareceu")
+            + falar + status("cancelado", "Foi cancelado", "btn-link");
+        } else if (a.status === "confirmado"){
+          h += falar + (remarcavel ? '<button class="btn" type="button" data-conf="' + a.pedido_id + '">Remarcar horário</button>' : '')
+            + status("cancelado", "Cancelar agendamento", "btn-link");
+        } else if (a.status === "realizado"){
+          h += falar + '<button class="btn" type="button" data-fu-ag="' + a.id + '">Agendar follow-up</button>'
+            + status("confirmado", "Desfazer", "btn-link");
+        } else {
+          h += falar + status("confirmado", a.status === "cancelado" ? "Reativar agendamento" : "Desfazer", "btn-link");
+        }
+        h += '<span class="msg" id="agMsg' + a.id + '"></span></div>' + (tela.resp === "a" + a.id ? formResposta("a" + a.id) : '')
+          + (remarcavel && tela.confHorario === a.pedido_id ? formHorario(a.pedido_id) : '') + '</div>';
+              return h;
+    };
     let diaAtual = "";
-    lista.forEach(a => {
+    if (modoTabela() && lista.length){
+      html += '<div class="tab-ped tab-ag"><table><thead><tr><th>Horário</th><th>Serviço / cliente</th><th>Telefone</th><th>Situação</th><th class="c-acoes">Ações</th></tr></thead><tbody>';
+      lista.forEach(a => {
+        const aberto = tela.agendamento === a.id;
+        const ped = a.pedido_id ? (d.pedidos || []).find(p => p.id === a.pedido_id) : null;
+        const ico = ped ? (resumoPedido(ped, d).icone || "📅") : "📅";
+        const dia = diaDe(a.data_hora);
+        const rot = dia === hojeStr ? "Hoje" : dia === amanhaStr ? "Amanhã" : new Date(a.data_hora).toLocaleDateString("pt-BR", { timeZone: tz, weekday: "short", day: "2-digit", month: "2-digit" });
+        const hora = new Date(a.data_hora).toLocaleTimeString("pt-BR", { timeZone: tz, hour: "2-digit", minute: "2-digit" });
+        const opc = ["confirmado", "aguardando", "realizado", "nao_compareceu", "cancelado"].map(s => '<option value="' + s + '"' + (s === a.status ? ' selected' : '') + '>' + esc(STATUS_AG[s]) + '</option>').join("");
+        const extra = a.status === "confirmado" && faltaResultado(a) ? ' <span class="chip alerta">Marcar como foi</span>' : '';
+        html += '<tr class="lin' + (aberto ? ' aberta' : '') + '" data-lin-ag="' + a.id + '">'
+          + '<td class="c-hora"><b>' + hora + '</b><small>' + esc(rot.charAt(0).toUpperCase() + rot.slice(1)) + '</small></td>'
+          + '<td><div class="t-ped"><span class="ped-ico" aria-hidden="true">' + ico + '</span><div><b>' + esc(a.servico ? a.servico.charAt(0).toUpperCase() + a.servico.slice(1) : "Agendamento") + '</b><small>' + esc(a.nome || "Sem nome") + '</small></div></div></td>'
+          + '<td class="c-data">' + esc(foneBR(a.remetente)) + '</td>'
+          + '<td><span class="sel-status status ' + esc(a.status) + '"><select data-ag-status="' + a.id + '" aria-label="Mudar situação">' + opc + '</select></span>' + extra + '<span class="msg" id="agTMsg' + a.id + '"></span></td>'
+          + '<td class="c-acoes"><button class="ico-btn verde" type="button" title="Falar no WhatsApp" data-t-agresp="' + a.id + '">' + ICO.whats + '</button>'
+          + '<button class="ico-btn" type="button" title="' + (aberto ? 'Fechar detalhes' : 'Ver detalhes e mais ações') + '" data-t-agver="' + a.id + '">' + ICO.olho + '</button></td></tr>';
+        if (aberto) html += '<tr class="lin-det"><td colspan="5">' + detalheAg(a) + '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+    } else lista.forEach(a => {
       const dia = diaDe(a.data_hora);
       if (dia !== diaAtual){
         diaAtual = dia;
@@ -1533,31 +1584,7 @@ function renderAgenda(){
         + '<span class="ped-res">' + esc(diaLongo.charAt(0).toUpperCase() + diaLongo.slice(1)) + (a.nome ? '<span class="fone"> · ' + esc(foneBR(a.remetente)) + '</span>' : '') + '</span>'
         + '<span class="ped-selos"><span class="status ' + esc(a.status) + '">' + esc(STATUS_AG[a.status] || a.status) + '</span>' + extra + '</span></span>'
         + '<span class="lado"><span class="seta">' + (aberto ? '▴' : '▾') + '</span></span></button>';
-      if (aberto){
-        const remarcavel = a.pedido_id && a.status === "confirmado" && (d.pedidos || []).some(p => p.id === a.pedido_id);
-        const quando = new Date(a.data_hora).toLocaleString("pt-BR", { timeZone: tz, weekday: "long", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-        html += '<div class="ped-detalhe"><div class="d">' + esc(quando)
-          + (a.endereco ? ' · ' + esc(a.endereco) : '') + ' · ' + esc(foneBR(a.remetente)) + linhaLembrete(a) + '</div>'
-          + '<div class="ped-acoes">';
-        const falar = '<button class="btn btn-primary" type="button" data-resp="a' + a.id + '">Falar no WhatsApp</button>' + botaoConversa(a.remetente, a.nome);
-        const status = (s, rotulo, cls) => '<button class="' + (cls || 'btn') + '" type="button" data-statusag="' + s + '" data-id="' + a.id + '">' + rotulo + '</button>';
-        if (a.status === "aguardando"){
-          html += status("confirmado", "Aprovar horário", "btn btn-primary") + falar + status("cancelado", "Recusar", "btn-link");
-        } else if (a.status === "confirmado" && passou(a)){
-          html += '<span class="como-foi">Como foi?</span>' + status("realizado", "Realizado") + status("nao_compareceu", "Não compareceu")
-            + falar + status("cancelado", "Foi cancelado", "btn-link");
-        } else if (a.status === "confirmado"){
-          html += falar + (remarcavel ? '<button class="btn" type="button" data-conf="' + a.pedido_id + '">Remarcar horário</button>' : '')
-            + status("cancelado", "Cancelar agendamento", "btn-link");
-        } else if (a.status === "realizado"){
-          html += falar + '<button class="btn" type="button" data-fu-ag="' + a.id + '">Agendar follow-up</button>'
-            + status("confirmado", "Desfazer", "btn-link");
-        } else {
-          html += falar + status("confirmado", a.status === "cancelado" ? "Reativar agendamento" : "Desfazer", "btn-link");
-        }
-        html += '<span class="msg" id="agMsg' + a.id + '"></span></div>' + (tela.resp === "a" + a.id ? formResposta("a" + a.id) : '')
-          + (remarcavel && tela.confHorario === a.pedido_id ? formHorario(a.pedido_id) : '') + '</div>';
-      }
+      if (aberto) html += detalheAg(a);
       html += '</div>';
     });
     html += '</div>';
@@ -1571,6 +1598,23 @@ function renderAgenda(){
     + '<div class="cfg-corpo">' + blocoAgenda(d) + blocoLembrete(d) + '</div></details>';
   box.innerHTML = html;
   ligarAgenda();
+  box.querySelectorAll("[data-t-agver]").forEach(b => b.addEventListener("click", (e) => { e.stopPropagation();
+    const id = Number(b.getAttribute("data-t-agver")); tela.agendamento = tela.agendamento === id ? null : id; tela.resp = null; renderAgenda(); }));
+  box.querySelectorAll("[data-t-agresp]").forEach(b => b.addEventListener("click", (e) => { e.stopPropagation();
+    const id = Number(b.getAttribute("data-t-agresp")); tela.agendamento = id; tela.resp = "a" + id; renderAgenda(); }));
+  box.querySelectorAll("tr[data-lin-ag]").forEach(tr => tr.addEventListener("click", (e) => {
+    if (e.target.closest("select,button,a,input")) return;
+    const id = Number(tr.getAttribute("data-lin-ag")); tela.agendamento = tela.agendamento === id ? null : id; renderAgenda(); }));
+  box.querySelectorAll("[data-ag-status]").forEach(sl => sl.addEventListener("change", async () => {
+    const id = Number(sl.getAttribute("data-ag-status")); const novo = sl.value;
+    const a = (dadosPainel.agendamentos || []).find(x => x.id === id);
+    if (novo === "cancelado" && !confirm("Cancelar o agendamento" + (a && a.nome ? " de " + a.nome : "") + "? Avise o cliente pelo WhatsApp.")){ sl.value = a ? a.status : sl.value; return; }
+    sl.disabled = true;
+    const { data, error } = await supa.rpc("atualizar_agendamento", { p_id: id, p_status: novo });
+    if (error || !data || !data.ok){ sl.disabled = false; if (a) sl.value = a.status; const m = $("agTMsg" + id); if (m){ m.className = "msg erro"; m.textContent = " Não foi possível salvar."; } return; }
+    if (a) a.status = novo;
+    renderAgenda();
+  }));
   ligarHorario(box, renderAgenda);
   ligarResposta(box, renderAgenda);
   if ($("lembreteDias")) $("lembreteDias").addEventListener("change", (e) => salvarLembrete(e.target.value));

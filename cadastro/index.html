@@ -198,7 +198,7 @@
   .eyebrow{ color:var(--gold-bright); }
   .btn-primary{ background:linear-gradient(180deg, #3B82F6, #2563EB); box-shadow:0 10px 30px -10px rgba(37,99,235,0.7), inset 0 1px 0 rgba(255,255,255,0.18); }
 </style>
-<!-- Meta Pixel Code (Pixel 1707052657523129: visitas, lead do kit, cadastro e contato pelo WhatsApp) -->
+<!-- Meta Pixel Code (Pixels 1707052657523129 e 2104998210163796, da segunda conta de anúncios: visitas, lead do kit, cadastro e contato pelo WhatsApp. Todo fbq('track') vai para os dois) -->
 <script>
 !function(f,b,e,v,n,t,s)
 {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -209,12 +209,15 @@ t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window, document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
 fbq('init', '1707052657523129');
+fbq('init', '2104998210163796');
 fbq('track', 'PageView');
 // Clique num link do WhatsApp da Auryx = contato
 document.addEventListener('click', function(ev){ var a = ev.target.closest && ev.target.closest('a[href*="wa.me"]'); if (a) fbq('track', 'Contact'); });
 </script>
 <noscript><img height="1" width="1" style="display:none"
 src="https://www.facebook.com/tr?id=1707052657523129&ev=PageView&noscript=1"
+/><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=2104998210163796&ev=PageView&noscript=1"
 /></noscript>
 <!-- End Meta Pixel Code -->
 <script src="/origem.js"></script>

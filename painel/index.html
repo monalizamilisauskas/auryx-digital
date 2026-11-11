@@ -1538,7 +1538,10 @@ function renderAdmin(){
   const planos = Object.entries(a.por_plano || {}).map(([n, q]) => esc(n) + ': ' + q).join(' · ') || 'nenhum ainda';
   const card = (rotulo, valor, extra, neutro) => '<div class="metric-card"><div class="label">' + rotulo + '</div><div class="value' + (neutro ? ' neutral' : '') + '">' + valor + '</div>'
     + (extra ? '<div class="adm-extra">' + extra + '</div>' : '') + '</div>';
-  let html = '<div class="panel"><h2>Resumo do mês</h2><p class="sub">Receita dos planos ativos e custos estimados pelo uso real. Os valores exatos estão nas faturas da OpenAI, do n8n e do Stripe.</p>'
+  // Atalho para as ferramentas de venda (página privada no claude.ai: só abre com a conta da Auryx).
+  let html = '<div class="panel"><h2>Ferramentas de venda</h2><p class="sub">Scripts de abordagem por WhatsApp, ligação e e-mail, registro das abordagens com o placar dos scripts e os arquivos para baixar (apresentações de salão, agência e clínica, e a planilha). Abre no claude.ai com a sua conta.</p>'
+    + '<a class="btn btn-primary" href="https://claude.ai/artifact/EfKwgyehPokuFhnZzcibyA" target="_blank" rel="noopener">Abrir scripts de venda</a></div>';
+  html += '<div class="panel"><h2>Resumo do mês</h2><p class="sub">Receita dos planos ativos e custos estimados pelo uso real. Os valores exatos estão nas faturas da OpenAI, do n8n e do Stripe.</p>'
     + '<div class="metric-grid" style="margin:0;">'
     + card('Receita mensal', brl(a.receita_mensal), (c.pagantes || 0) + ' pagantes')
     + card('Custos estimados', brl(k.total), 'OpenAI ' + brl(k.openai) + ' · n8n ' + brl(k.n8n) + ' · Stripe ' + brl(k.stripe), true)

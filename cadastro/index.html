@@ -636,6 +636,8 @@ btnNext.addEventListener("click", async ()=>{
     currentStep++;
     if (currentStep === TOTAL_STEPS) buildReview();
     showStep(currentStep);
+    registrarEtapa("etapa" + currentStep);
+    if (currentStep === TOTAL_STEPS) eventoMeta("CadastroEtapaWhatsApp");
     return;
   }
   if (currentStep === TOTAL_STEPS){
@@ -732,6 +734,29 @@ async function registrarOrigem(email){
     });
   }catch(e){ console.log("[cadastro] origem não registrada", e && e.message); }
 }
+/* Funil do cadastro (só para medir onde as pessoas desistem): cada etapa vai uma vez por visita, com a origem do anúncio.
+   Não guarda nada do que a pessoa digitou; o e-mail só vai na etapa "concluiu", para ligar ao negócio criado.
+   Os eventos da Meta aqui são personalizados (trackCustom) e não mudam a otimização da campanha. Nunca atrapalha o cadastro. */
+const SESSAO_FUNIL = (()=>{
+  const novo = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
+  try{ let x = sessionStorage.getItem("auryx_sessao"); if (!x){ x = novo(); sessionStorage.setItem("auryx_sessao", x); } return x; }catch(e){ return novo(); }
+})();
+const etapasEnviadas = new Set();
+function registrarEtapa(etapa, extra){
+  if (etapasEnviadas.has(etapa)) return;
+  etapasEnviadas.add(etapa);
+  try{
+    const o = window.auryxOrigem ? (window.auryxOrigem().ultima || {}) : {};
+    const interno = /FBAN|FBAV|FB_IAB|FBIOS|Instagram|WhatsApp|Messenger|Line\//i.test(navigator.userAgent || "");
+    fetch(SUPABASE_URL + "/rest/v1/rpc/registrar_etapa_cadastro", {
+      method: "POST", keepalive: true,
+      headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY },
+      body: JSON.stringify({ p_sessao: SESSAO_FUNIL, p_etapa: etapa, p_origem: o, p_navegador_interno: interno, p_idioma: lang,
+                             p_email: (extra && extra.email) || null, p_detalhe: (extra && extra.detalhe) || null })
+    }).catch(()=>{});
+  }catch(e){}
+}
+function eventoMeta(nome){ try { if (typeof fbq === "function") fbq("trackCustom", nome); } catch (e) {} }
 // Depois que o cadastro deu certo: liga o novo cliente a quem indicou (pelo e-mail). Nunca atrapalha o cadastro.
 async function registrarIndicacao(email){
   if (!CODIGO_IND || !email) return;
@@ -782,6 +807,7 @@ window.addEventListener("message", (event)=>{
 });
 
 function showFatal(key, detalhe){
+  registrarEtapa("erro", { detalhe: key });
   const el = document.getElementById("fatalMsg");
   el.textContent = I18N[lang][key] || I18N[lang]["err.fatal"];
   if (detalhe){
@@ -877,6 +903,7 @@ async function concluirConexao(response, motivo){
       }
       await registrarIndicacao(data.email);
       await registrarOrigem(data.email);
+      registrarEtapa("concluiu", { email: data.email });
       try { if (typeof fbq === "function") fbq("track", "CompleteRegistration", { content_name: "teste_gratis" }); } catch (e) {}
       showStep("success");
     }catch(e){
@@ -888,6 +915,8 @@ async function concluirConexao(response, motivo){
 
 async function submitForm(){
   document.getElementById("fatalMsg").classList.remove("show");
+  registrarEtapa("clicou_conectar");
+  eventoMeta("CadastroClicouConectar");
   if (typeof FB === "undefined"){ showFatal("err.popup"); return; }
   btnNext.disabled = true; btnNext.textContent = I18N[lang]["nav.sending"];
   signupInfo = null;
@@ -920,6 +949,8 @@ document.querySelectorAll(".langtoggle button").forEach(function(b){
   var sel = document.querySelector('select[name="idioma_padrao"]');
   if (sel) sel.value = lang;
 })();
+// Funil: conta a visita ao cadastro (uma vez por visita).
+registrarEtapa("abriu");
 </script>
 <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
 </body>

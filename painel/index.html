@@ -656,6 +656,7 @@ let dadosPainel = null;
 let adminDados = null;
 let adminLeads = null;
 let adminOrigens = null; let origensDias = 30;
+let adminFunil = null;   // funil do cadastro por anúncio (null = SQL ainda não rodou: a seção não aparece)
 let silencioDados = null;
 let cancelDados = null;
 let indicDados = null;
@@ -709,6 +710,7 @@ async function carregarPainel(){
   if (adminDados) { try { const x = await supa.rpc("admin_indicacoes"); adminIndic = (!x.error && x.data) ? x.data : null; } catch (e) { adminIndic = null; } }
   if (adminDados) { try { const l = await supa.rpc("admin_leads"); adminLeads = (!l.error && l.data) ? l.data : null; } catch (e) { adminLeads = null; } }
   if (adminDados) { try { const o = await supa.rpc("admin_origens", { p_dias: origensDias }); adminOrigens = (!o.error && o.data) ? o.data : null; } catch (e) { adminOrigens = null; } }
+  if (adminDados) { try { const f = await supa.rpc("admin_funil_anuncios", { p_dias: origensDias }); adminFunil = (!f.error && f.data) ? f.data : null; } catch (e) { adminFunil = null; } }
   render(data);
 }
 
@@ -1502,10 +1504,45 @@ function ligarOrigens(){
   if (sel) sel.addEventListener("change", async () => {
     origensDias = Number(sel.value); sel.disabled = true;
     try { const o = await supa.rpc("admin_origens", { p_dias: origensDias }); if (!o.error && o.data) adminOrigens = o.data; } catch (e) {}
+    try { const f = await supa.rpc("admin_funil_anuncios", { p_dias: origensDias }); if (!f.error && f.data) adminFunil = f.data; } catch (e) {}
     renderAdmin(); });
   const b = $("copiarParam");
   if (b) b.addEventListener("click", async () => { const m = $("copiarParamMsg");
     try { await navigator.clipboard.writeText(PARAM_META); m.className = "msg ok"; m.textContent = "Copiado ✓"; } catch (e) { m.className = "msg erro"; m.textContent = "Selecione e copie o texto."; } });
+}
+/* Funil por anúncio: cada etapa do cadastro por utm_content (o nome do anúncio), até o teste e o pagamento.
+   Mesmo período da tela "O que está funcionando". Só mede: não muda nada na campanha. */
+function renderFunil(){
+  const F = adminFunil; if (!F) return '';
+  const linhas = F.linhas || [];
+  const soma = k => linhas.reduce((t, x) => t + (Number(x[k]) || 0), 0);
+  const pct = (a, b) => b ? Math.round(100 * a / b) + '%' : '—';
+  const ab = soma('abriram'), app = soma('abriram_no_app'), wa = soma('chegaram_whatsapp'), cl = soma('clicaram_conectar'),
+        ca = soma('cadastros'), te = soma('em_teste'), pg = soma('pagantes');
+  const card = (rotulo, valor, extra) => '<div class="metric-card"><div class="label">' + rotulo + '</div><div class="value neutral">' + valor + '</div>'
+    + (extra ? '<div class="adm-extra">' + extra + '</div>' : '') + '</div>';
+  let h = '<div class="panel" id="funilPainel"><h2 style="margin:0;">Funil por anúncio</h2>'
+    + '<p class="sub" style="margin:4px 0 0;">Onde as pessoas param no cadastro, anúncio por anúncio, até o teste e o pagamento. Mesmo período da tabela acima'
+    + (F.desde ? '; conta a partir de ' + esc(dataBR(F.desde)) : '') + '.</p>'
+    + '<div class="metric-grid" style="margin:14px 0;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));">'
+    + card('Abriram o cadastro', ab, app ? pct(app, ab) + ' no app do Instagram/Facebook' : '')
+    + card('Chegaram em conectar', wa, pct(wa, ab) + ' de quem abriu')
+    + card('Clicaram em conectar', cl, pct(cl, wa) + ' de quem chegou')
+    + card('Cadastros', ca, pct(ca, cl) + ' de quem clicou')
+    + card('Pagantes', pg, te + ' em teste agora') + '</div>';
+  if (!linhas.length) h += '<p class="sub">Ainda sem dados neste período. As etapas começam a ser contadas a partir das próximas visitas ao cadastro.</p>';
+  else h += '<div class="tab-ped"><table><thead><tr><th>Campanha</th><th>Anúncio</th><th>Abriram</th><th>No app</th><th>Chegaram em conectar</th><th>Clicaram</th><th>Erros</th><th>Cadastros</th><th>Em teste</th><th>Pagantes</th></tr></thead><tbody>'
+    + linhas.map(x => '<tr><td class="c-res">' + esc(x.campanha) + '</td><td><b>' + esc(x.anuncio) + '</b></td><td>' + x.abriram + '</td><td>' + x.abriram_no_app
+      + '</td><td>' + x.chegaram_whatsapp + '</td><td>' + x.clicaram_conectar + '</td><td>' + x.com_erro + '</td><td><b>' + x.cadastros + '</b></td><td>' + x.em_teste
+      + '</td><td><b' + (x.pagantes ? ' style="color:var(--good);"' : '') + '>' + x.pagantes + '</b>' + (x.planos ? ' <span class="sub">(' + esc(x.planos) + ')</span>' : '') + '</td></tr>').join('')
+    + '</tbody></table></div>';
+  h += '<details class="ajuda" style="margin-top:14px;"><summary>Como ler esta tabela</summary>'
+    + '<p><b>Abriram:</b> visitas ao cadastro. <b>No app:</b> quantas abriram dentro do Instagram ou do Facebook, onde a janela da Meta costuma não abrir. '
+    + '<b>Chegaram em conectar:</b> preencheram tudo e chegaram no último passo. <b>Clicaram:</b> tocaram em "Conectar meu WhatsApp". '
+    + '<b>Erros:</b> a janela da Meta não abriu, foi fechada ou deu falha.</p>'
+    + '<p>Muita gente parando entre <b>Abriram</b> e <b>Chegaram</b>: o formulário está longo ou confuso. Parando entre <b>Clicaram</b> e <b>Cadastros</b>: o problema é a conexão do WhatsApp, não o anúncio.</p>'
+    + '<p><b>Pagante</b> = negócio com plano diferente do teste. A Meta continua otimizando a campanha por Complete registration; estas etapas são só para medir.</p></details></div>';
+  return h;
 }
 // Leads da página auryx.digital/kit (Kit de respostas prontas): quem baixou e quem já virou cliente
 function renderLeads(){
@@ -1563,7 +1600,7 @@ function renderAdmin(){
     : '<p class="sub" style="margin:6px 0 0;">Nenhum cliente perto do limite.</p>';
   html += '</div>';
   html += renderIndicacoesAdmin();
-  html += renderOrigens() + renderLeads();
+  html += renderOrigens() + renderFunil() + renderLeads();
   const cf = a.config || {};
   const campo = (id, rotulo, valor, passo) => '<div class="campo"><label for="cfg_' + id + '">' + rotulo + '</label><input id="cfg_' + id + '" type="number" step="' + (passo || '1') + '" min="0" value="' + esc(valor) + '"></div>';
   html += '<details class="cfg-agenda"><summary><span>' + icone("personalizar") + 'Valores usados no cálculo</span><span class="cfg-resumo">n8n ' + brl(cf.custo_n8n_brl) + ' · Stripe ' + cf.stripe_pct + '% + ' + brl(cf.stripe_fixo) + '</span></summary>'

@@ -1533,13 +1533,14 @@ function renderFunil(){
   if (!linhas.length) h += '<p class="sub">Ainda sem dados neste período. As etapas começam a ser contadas a partir das próximas visitas ao cadastro.</p>';
   else h += '<div class="tab-ped"><table><thead><tr><th>Campanha</th><th>Anúncio</th><th>Abriram</th><th>No app</th><th>Chegaram em conectar</th><th>Clicaram</th><th>Erros</th><th>Cadastros</th><th>Em teste</th><th>Pagantes</th></tr></thead><tbody>'
     + linhas.map(x => '<tr><td class="c-res">' + esc(x.campanha) + '</td><td><b>' + esc(x.anuncio) + '</b></td><td>' + x.abriram + '</td><td>' + x.abriram_no_app
+      + (x.navegadores ? '<div class="sub" style="font-size:11.5px;margin-top:2px;">' + esc(x.navegadores) + '</div>' : '')
       + '</td><td>' + x.chegaram_whatsapp + '</td><td>' + x.clicaram_conectar + '</td><td>' + x.com_erro + '</td><td><b>' + x.cadastros + '</b></td><td>' + x.em_teste
       + '</td><td><b' + (x.pagantes ? ' style="color:var(--good);"' : '') + '>' + x.pagantes + '</b>' + (x.planos ? ' <span class="sub">(' + esc(x.planos) + ')</span>' : '') + '</td></tr>').join('')
     + '</tbody></table></div>';
   h += '<details class="ajuda" style="margin-top:14px;"><summary>Como ler esta tabela</summary>'
     + '<p><b>Abriram:</b> visitas ao cadastro. <b>No app:</b> quantas abriram dentro do Instagram ou do Facebook, onde a janela da Meta costuma não abrir. '
     + '<b>Chegaram em conectar:</b> preencheram tudo e chegaram no último passo. <b>Clicaram:</b> tocaram em "Conectar meu WhatsApp". '
-    + '<b>Erros:</b> a janela da Meta não abriu, foi fechada ou deu falha.</p>'
+    + '<b>Erros:</b> a janela da Meta não abriu, foi fechada ou deu falha. Embaixo de <b>No app</b> aparecem os navegadores em que o cadastro foi aberto (instagram, facebook, chrome, safari…).</p>'
     + '<p>Muita gente parando entre <b>Abriram</b> e <b>Chegaram</b>: o formulário está longo ou confuso. Parando entre <b>Clicaram</b> e <b>Cadastros</b>: o problema é a conexão do WhatsApp, não o anúncio.</p>'
     + '<p><b>Pagante</b> = negócio com plano diferente do teste. A Meta continua otimizando a campanha por Complete registration; estas etapas são só para medir.</p></details></div>';
   return h;

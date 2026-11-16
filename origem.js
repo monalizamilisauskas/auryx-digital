@@ -6,7 +6,7 @@
   function ler() { try { var g = JSON.parse(localStorage.getItem(K) || "null"); return g && Date.now() - g.t < VALIDADE ? g : null; } catch (e) { return null; } }
   try {
     var p = new URLSearchParams(location.search), o = {};
-    ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "fbclid"].forEach(function (k) { var v = p.get(k); if (v) o[k] = v.slice(0, 120); });
+    ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "fbclid"].forEach(function (k) { var v = p.get(k); if (v) o[k] = v.replace(/\+/g, " ").replace(/\s+/g, " ").trim().slice(0, 120); });
     try { if (document.referrer) { var h = new URL(document.referrer).hostname; if (h && h !== location.hostname) o.ref = h; } } catch (e) {}
     var g = ler(), tem = Object.keys(o).length > 0;
     if (tem || !g) {

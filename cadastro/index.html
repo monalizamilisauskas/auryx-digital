@@ -742,18 +742,38 @@ const SESSAO_FUNIL = (()=>{
   try{ let x = sessionStorage.getItem("auryx_sessao"); if (!x){ x = novo(); sessionStorage.setItem("auryx_sessao", x); } return x; }catch(e){ return novo(); }
 })();
 const etapasEnviadas = new Set();
+// Navegador: os apps (Instagram, Facebook, WhatsApp…) abrem links num navegador próprio, onde a janela da Meta costuma não abrir.
+function tipoNavegador(){
+  const ua = navigator.userAgent || "";
+  if (/Instagram/i.test(ua)) return "instagram";
+  if (/FBAN|FBAV|FB_IAB|FBIOS|Messenger/i.test(ua)) return "facebook";
+  if (/WhatsApp/i.test(ua)) return "whatsapp";
+  if (/TikTok|musical_ly|Bytedance/i.test(ua)) return "tiktok";
+  if (/Line\//i.test(ua)) return "line";
+  if (/Android/i.test(ua) && /; wv\)/i.test(ua)) return "app-android";
+  if (/iPhone|iPad|iPod/i.test(ua) && !/Safari\//i.test(ua)) return "app-iphone";
+  if (/CriOS|Chrome\//i.test(ua)) return "chrome";
+  if (/Safari\//i.test(ua)) return "safari";
+  return "outro";
+}
+function navegadorInterno(){ return !["chrome", "safari", "outro"].includes(tipoNavegador()); }
 function registrarEtapa(etapa, extra){
   if (etapasEnviadas.has(etapa)) return;
   etapasEnviadas.add(etapa);
   try{
-    const o = window.auryxOrigem ? (window.auryxOrigem().ultima || {}) : {};
-    const interno = /FBAN|FBAV|FB_IAB|FBIOS|Instagram|WhatsApp|Messenger|Line\//i.test(navigator.userAgent || "");
-    fetch(SUPABASE_URL + "/rest/v1/rpc/registrar_etapa_cadastro", {
-      method: "POST", keepalive: true,
+    const bruto = window.auryxOrigem ? (window.auryxOrigem().ultima || {}) : {};
+    const o = {};
+    Object.keys(bruto).forEach(k => { o[k] = typeof bruto[k] === "string" ? bruto[k].replace(/\+/g, " ").replace(/\s+/g, " ").trim() : bruto[k]; });
+    const corpo = JSON.stringify({ p_sessao: SESSAO_FUNIL, p_etapa: etapa, p_origem: o, p_navegador_interno: navegadorInterno(),
+                                   p_navegador: tipoNavegador(), p_idioma: lang,
+                                   p_email: (extra && extra.email) || null, p_detalhe: (extra && extra.detalhe) || null });
+    // Sem "keepalive": alguns navegadores de app recusam pedidos com keepalive para outro site. Se falhar, tenta mais uma vez.
+    const enviar = () => fetch(SUPABASE_URL + "/rest/v1/rpc/registrar_etapa_cadastro", {
+      method: "POST",
       headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY, Authorization: "Bearer " + SUPABASE_KEY },
-      body: JSON.stringify({ p_sessao: SESSAO_FUNIL, p_etapa: etapa, p_origem: o, p_navegador_interno: interno, p_idioma: lang,
-                             p_email: (extra && extra.email) || null, p_detalhe: (extra && extra.detalhe) || null })
-    }).catch(()=>{});
+      body: corpo
+    }).then(r => { if (!r.ok) throw new Error("http " + r.status); });
+    enviar().catch(() => setTimeout(() => { enviar().catch(() => {}); }, 1500));
   }catch(e){}
 }
 function eventoMeta(nome){ try { if (typeof fbq === "function") fbq("trackCustom", nome); } catch (e) {} }
@@ -832,7 +852,7 @@ function waitForSignupInfo(ms){
 }
 
 // Navegador interno do Facebook/Instagram/WhatsApp (quem vem do anúncio): a janela da Meta costuma não abrir ali.
-const NAVEGADOR_INTERNO = /FBAN|FBAV|FB_IAB|FBIOS|Instagram|WhatsApp|Messenger|Line\//i.test(navigator.userAgent || "");
+const NAVEGADOR_INTERNO = navegadorInterno();
 if (NAVEGADOR_INTERNO) document.getElementById("inappAviso").classList.add("show");
 document.getElementById("btnCopiarLink").addEventListener("click", async ()=>{
   // Copia o endereço completo: mantém utm_* e fbclid do anúncio, para o cadastro feito no Chrome/Safari

@@ -809,7 +809,12 @@ function waitForSignupInfo(ms){
 const NAVEGADOR_INTERNO = /FBAN|FBAV|FB_IAB|FBIOS|Instagram|WhatsApp|Messenger|Line\//i.test(navigator.userAgent || "");
 if (NAVEGADOR_INTERNO) document.getElementById("inappAviso").classList.add("show");
 document.getElementById("btnCopiarLink").addEventListener("click", async ()=>{
-  const link = location.origin + "/cadastro" + (lang === "en" ? "?lang=en" : "");
+  // Copia o endereço completo: mantém utm_* e fbclid do anúncio, para o cadastro feito no Chrome/Safari
+  // continuar com a origem certa no painel e o Meta ligar o cadastro ao anúncio.
+  const u = new URL(location.href);
+  u.hash = "";
+  if (lang === "en") u.searchParams.set("lang", "en"); else u.searchParams.delete("lang");
+  const link = u.toString();
   try{ await navigator.clipboard.writeText(link); }catch(e){ window.prompt("", link); }
   document.getElementById("btnCopiarLink").textContent = I18N[lang]["inapp.copiado"];
 });
